@@ -1,4 +1,5 @@
 import type GroupData from '@data/faker/group';
+import CategoryData from '@data/faker/category';
 
 type CategoryCreator = {
   id?: number
@@ -9,6 +10,17 @@ type CategoryCreator = {
   metaTitle?: string
   metaDescription?: string
   groupAccess?: GroupData
+  coverImage?: string
+  thumbnailImage?: string
+  children?: CategoryData[]
 };
 
-export default CategoryCreator;
+type CategoryFilter = {
+  filterBy: string
+  value: string
+};
+
+export {
+  CategoryCreator,
+  CategoryFilter,
+};

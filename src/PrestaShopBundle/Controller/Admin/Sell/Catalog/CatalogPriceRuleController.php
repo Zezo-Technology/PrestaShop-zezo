@@ -137,12 +137,12 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
      * Deletes catalog price rule
      *
      * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute="admin_catalog_price_rules_index")
-     * @DemoRestricted(redirectRoute="admin_catalog_price_rules_index")
      *
      * @param int|string $catalogPriceRuleId
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_catalog_price_rules_index')]
     public function deleteAction($catalogPriceRuleId)
     {
         try {
@@ -162,12 +162,12 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
      * Deletes catalogPriceRules on bulk action
      *
      * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute="admin_catalog_price_rules_index")
-     * @DemoRestricted(redirectRoute="admin_catalog_price_rules_index")
      *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_catalog_price_rules_index')]
     public function bulkDeleteAction(Request $request)
     {
         $catalogPriceRuleIds = $this->getBulkCatalogPriceRulesFromRequest($request);
@@ -214,6 +214,7 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'enableSidebar' => true,
             'catalogPriceRuleForm' => $catalogPriceRuleForm->createView(),
+            'layoutTitle' => $this->trans('New catalog rule', 'Admin.Navigation.Menu'),
         ]);
     }
 
@@ -256,6 +257,13 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
             'enableSidebar' => true,
             'catalogPriceRuleForm' => $catalogPriceRuleForm->createView(),
             'catalogPriceRuleName' => $editableCatalogPriceRule->getName(),
+            'layoutTitle' => $this->trans(
+                'Editing price rule %name%',
+                'Admin.Navigation.Menu',
+                [
+                    '%name%' => $editableCatalogPriceRule->getName(),
+                ]
+            ),
         ]);
     }
 
@@ -282,7 +290,7 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
                 'Admin.Notifications.Error'
             ),
             CatalogPriceRuleNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
         ];
@@ -297,11 +305,7 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
      */
     private function getBulkCatalogPriceRulesFromRequest(Request $request)
     {
-        $catalogPriceRuleIds = $request->request->get('catalog_price_rule_bulk');
-
-        if (!is_array($catalogPriceRuleIds)) {
-            return [];
-        }
+        $catalogPriceRuleIds = $request->request->all('catalog_price_rule_bulk');
 
         foreach ($catalogPriceRuleIds as &$catalogPriceRuleId) {
             $catalogPriceRuleId = (int) $catalogPriceRuleId;
@@ -337,7 +341,7 @@ class CatalogPriceRuleController extends FrameworkBundleAdminController
         foreach ($catalogPriceRuleList->getCatalogPriceRules() as $catalogPriceRule) {
             $list[] = [
                 'id' => $catalogPriceRule->getCatalogPriceRuleId(),
-                'shop' => $catalogPriceRule->getShopName() ?? $this->trans('All shops', 'Admin.Global'),
+                'shop' => $catalogPriceRule->getShopName() ?? $this->trans('All stores', 'Admin.Global'),
                 'currency' => $catalogPriceRule->getCurrencyName() ?? $this->trans('All currencies', 'Admin.Global'),
                 'country' => $catalogPriceRule->getCountryName() ?? $this->trans('All countries', 'Admin.Global'),
                 'group' => $catalogPriceRule->getGroupName() ?? $this->trans('All groups', 'Admin.Global'),

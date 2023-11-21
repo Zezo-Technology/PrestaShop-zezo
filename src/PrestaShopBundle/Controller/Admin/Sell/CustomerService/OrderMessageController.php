@@ -65,7 +65,7 @@ class OrderMessageController extends FrameworkBundleAdminController
         return $this->render('@PrestaShop/Admin/Sell/CustomerService/OrderMessage/index.html.twig', [
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'enableSidebar' => true,
-            'layoutTitle' => $this->trans('Order Messages', 'Admin.Navigation.Menu'),
+            'layoutTitle' => $this->trans('Order messages', 'Admin.Navigation.Menu'),
             'layoutHeaderToolbarBtn' => [
                 'add' => [
                     'href' => $this->generateUrl('admin_order_messages_create'),
@@ -112,10 +112,10 @@ class OrderMessageController extends FrameworkBundleAdminController
         return $this->render('@PrestaShop/Admin/Sell/CustomerService/OrderMessage/create.html.twig', [
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'enableSidebar' => true,
-            'layoutTitle' => $this->trans('Add new', 'Admin.Actions'),
+            'layoutTitle' => $this->trans('New order message', 'Admin.Navigation.Menu'),
             'orderMessageForm' => $form->createView(),
             'multistoreInfoTip' => $this->trans(
-                'Note that this feature is available in all shops context only. It will be added to all your stores.',
+                'Note that this feature is only available in the "all stores" context. It will be added to all your stores.',
                 'Admin.Notifications.Info'
             ),
             'multistoreIsUsed' => $this->get('prestashop.adapter.multistore_feature')->isUsed(),
@@ -167,7 +167,7 @@ class OrderMessageController extends FrameworkBundleAdminController
         return $this->render('@PrestaShop/Admin/Sell/CustomerService/OrderMessage/edit.html.twig', [
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'enableSidebar' => true,
-            'layoutTitle' => sprintf($this->trans('Edit: %s', 'Admin.Actions'), $orderMessageName),
+            'layoutTitle' => $this->trans('Editing message %s', 'Admin.Navigation.Menu', [$orderMessageName]),
             'orderMessageForm' => $form->createView(),
         ]);
     }
@@ -214,13 +214,13 @@ class OrderMessageController extends FrameworkBundleAdminController
         try {
             $orderMessageIds = array_map(static function ($orderMessageId) {
                 return (int) $orderMessageId;
-            }, $request->request->get('order_message_order_messages_bulk'));
+            }, $request->request->all('order_message_order_messages_bulk'));
 
             $this->getCommandBus()->handle(new BulkDeleteOrderMessageCommand($orderMessageIds));
 
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         } catch (Exception $e) {
             $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages($e)));
@@ -252,7 +252,7 @@ class OrderMessageController extends FrameworkBundleAdminController
                 ),
             ],
             OrderMessageNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             OrderMessageNameAlreadyUsedException::class => $this->trans(

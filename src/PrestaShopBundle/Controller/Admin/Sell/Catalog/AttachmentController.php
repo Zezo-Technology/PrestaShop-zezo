@@ -124,7 +124,7 @@ class AttachmentController extends FrameworkBundleAdminController
         return $this->render('@PrestaShop/Admin/Sell/Catalog/Attachment/add.html.twig', [
             'lightDisplay' => $request->query->has('liteDisplaying'),
             'enableSidebar' => true,
-            'layoutTitle' => $this->trans('Add new file', 'Admin.Catalog.Feature'),
+            'layoutTitle' => $this->trans('New file', 'Admin.Navigation.Menu'),
             'attachmentForm' => $attachmentForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
         ]);
@@ -187,8 +187,8 @@ class AttachmentController extends FrameworkBundleAdminController
         return $this->render('@PrestaShop/Admin/Sell/Catalog/Attachment/edit.html.twig', [
             'enableSidebar' => true,
             'layoutTitle' => $this->trans(
-                'Edit: %value%',
-                'Admin.Catalog.Feature',
+                'Editing file %value%',
+                'Admin.Navigation.Menu',
                 ['%value%' => reset($names)]
             ),
             'attachmentForm' => $attachmentForm->createView(),
@@ -224,8 +224,8 @@ class AttachmentController extends FrameworkBundleAdminController
      * Deletes attachment
      *
      * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute="admin_attachments_index")
-     * @DemoRestricted(redirectRoute="admin_attachments_index")
      */
+    #[DemoRestricted(redirectRoute: 'admin_attachments_index')]
     public function deleteAction(int $attachmentId): RedirectResponse
     {
         try {
@@ -258,7 +258,7 @@ class AttachmentController extends FrameworkBundleAdminController
             $this->getCommandBus()->handle(new BulkDeleteAttachmentsCommand($attachmentIds));
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         } catch (Exception $e) {
             $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages($e)));
@@ -336,7 +336,7 @@ class AttachmentController extends FrameworkBundleAdminController
                 'Admin.Notifications.Error'
             ),
             AttachmentNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             AttachmentConstraintException::class => [
@@ -353,7 +353,7 @@ class AttachmentController extends FrameworkBundleAdminController
                     'Admin.Catalog.Notification'
                 ),
                 AttachmentConstraintException::EMPTY_DESCRIPTION => $this->trans(
-                    'Invalid description for %s language',
+                    'Invalid description for %s language.',
                     'Admin.Catalog.Notification'
                 ),
                 AttachmentConstraintException::INVALID_FIELDS => $this->trans(
@@ -361,7 +361,7 @@ class AttachmentController extends FrameworkBundleAdminController
                     'Admin.Notifications.Error'
                     ),
                 AttachmentConstraintException::INVALID_DESCRIPTION => $this->trans(
-                    'Invalid description for %s language',
+                    'Invalid description for %s language.',
                     'Admin.Catalog.Notification'
                 ),
                 AttachmentConstraintException::MISSING_NAME_IN_DEFAULT_LANGUAGE => $this->trans(
@@ -403,11 +403,7 @@ class AttachmentController extends FrameworkBundleAdminController
      */
     private function getBulkAttachmentsFromRequest(Request $request): array
     {
-        $attachmentIds = $request->request->get('attachment_files_bulk');
-
-        if (!is_array($attachmentIds)) {
-            return [];
-        }
+        $attachmentIds = $request->request->all('attachment_files_bulk');
 
         foreach ($attachmentIds as $i => $attachmentId) {
             $attachmentIds[$i] = (int) $attachmentId;

@@ -26,12 +26,11 @@
 
 namespace PrestaShopBundle\Entity\Repository;
 
-use Doctrine\DBAL\Driver\Connection;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManager;
 use PrestaShop\PrestaShop\Adapter\Configuration;
 use PrestaShop\PrestaShop\Adapter\ImageManager;
 use PrestaShop\PrestaShop\Adapter\LegacyContext as ContextAdapter;
-use PrestaShop\PrestaShop\Adapter\Product\ProductDataProvider;
 use PrestaShop\PrestaShop\Adapter\StockManager;
 use PrestaShop\PrestaShop\Core\Stock\StockManager as StockManagerCore;
 use PrestaShopBundle\Api\QueryParamsCollection;
@@ -39,6 +38,7 @@ use PrestaShopBundle\Api\Stock\Movement;
 use PrestaShopBundle\Api\Stock\MovementsCollection;
 use PrestaShopBundle\Entity\ProductIdentity;
 use PrestaShopBundle\Exception\ProductNotFoundException;
+use Product;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class StockRepository extends StockManagementRepository
@@ -120,7 +120,7 @@ class StockRepository extends StockManagementRepository
         $delta = $movement->getDelta();
 
         if ($productIdentity->getProductId() && $delta !== 0) {
-            $product = (new ProductDataProvider())->getProduct($productIdentity->getProductId());
+            $product = new Product($productIdentity->getProductId());
 
             if ($product->id) {
                 $configurationAdapter = new Configuration();
@@ -173,9 +173,9 @@ class StockRepository extends StockManagementRepository
         $statement = $this->connection->prepare($query);
         $this->bindStockManagementValues($statement, null, $productIdentity);
 
-        $statement->execute();
-        $rows = $statement->fetchAll();
-        $statement->closeCursor();
+        $result = $statement->executeQuery();
+        $rows = $result->fetchAllAssociative();
+        $result->free();
         $this->foundRows = $this->getFoundRows();
 
         if (count($rows) === 0) {
@@ -360,9 +360,9 @@ class StockRepository extends StockManagementRepository
                         WHERE id_product=:id_product';
             $statement = $this->connection->prepare($query);
             $statement->bindValue('id_product', (int) $row['product_id'], \PDO::PARAM_INT);
-            $statement->execute();
-            $this->totalCombinations[$row['product_id']] = $statement->fetchColumn(0);
-            $statement->closeCursor();
+            $result = $statement->executeQuery();
+            $this->totalCombinations[$row['product_id']] = $result->fetchOne();
+            $result->free();
         }
 
         return $this->totalCombinations[$row['product_id']];

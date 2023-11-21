@@ -24,6 +24,7 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 use PrestaShop\PrestaShop\Adapter\ServiceLocator;
+use PrestaShop\PrestaShop\Core\Image\ImageFormatConfiguration;
 use PrestaShopBundle\Translation\TranslatorComponent;
 
 abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation\Database\EntityInterface
@@ -292,17 +293,7 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
             }
         }
 
-        if (isset($parameters['_raw'])) {
-            @trigger_error(
-                'The _raw parameter is deprecated and will be removed in the next major version.',
-                E_USER_DEPRECATED
-            );
-            unset($parameters['_raw']);
-
-            return $this->translator->trans($id, $parameters, $domain, $locale);
-        }
-
-        return htmlspecialchars($this->translator->trans($id, $parameters, $domain, $locale), ENT_NOQUOTES);
+        return $this->translator->trans($id, $parameters, $domain, $locale);
     }
 
     /**
@@ -1196,9 +1187,9 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
             if (!in_array('required', $skip) && (!empty($data['required']) || in_array($field, $required_fields))) {
                 if (Tools::isEmpty($value)) {
                     if ($human_errors) {
-                        return $this->trans('The %s field is required.', [$this->displayFieldName($field, get_class($this))], 'Admin.Notifications.Error');
+                        return $this->trans('The %s field is required.', [htmlspecialchars($this->displayFieldName($field, get_class($this)))], 'Admin.Notifications.Error');
                     } else {
-                        return $this->trans('Property %s is empty.', [get_class($this) . '->' . $field], 'Admin.Notifications.Error');
+                        return $this->trans('Property %s is empty.', [get_class($this) . '->' . htmlspecialchars($field)], 'Admin.Notifications.Error');
                     }
                 }
             }
@@ -1212,7 +1203,7 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
 
         // Check field values
         if (!in_array('values', $skip) && !empty($data['values']) && is_array($data['values']) && !in_array($value, $data['values'])) {
-            return $this->trans('Property %1$s has a bad value (allowed values are: %2$s).', [get_class($this) . '->' . $field, implode(', ', $data['values'])], 'Admin.Notifications.Error');
+            return $this->trans('Property %1$s has a bad value (allowed values are: %2$s).', [get_class($this) . '->' . htmlspecialchars($field), implode(', ', $data['values'])], 'Admin.Notifications.Error');
         }
 
         // Check field size
@@ -1223,6 +1214,7 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
             }
 
             $length = Tools::strlen($value);
+
             if ($length < $size['min'] || $length > $size['max']) {
                 if ($human_errors) {
                     if (isset($data['lang']) && $data['lang']) {
@@ -1236,7 +1228,7 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
                     return $this->trans(
                         'The length of property %1$s is currently %2$d chars. It must be between %3$d and %4$d chars.',
                         [
-                            get_class($this) . '->' . $field,
+                            get_class($this) . '->' . htmlspecialchars($field),
                             $length,
                             $size['min'],
                             $size['max'],
@@ -1244,6 +1236,23 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
                         'Admin.Notifications.Error'
                     );
                 }
+            }
+        }
+
+        // Range validation allows you to check if the value is between the defined boundaries (min and max options)
+        if (!in_array('range', $skip) && isset($data['range']['min'], $data['range']['max'])) {
+            $range = $data['range'];
+            if ($value < $range['min'] || $value > $range['max']) {
+                return $this->trans(
+                    'The range of property %1$s is currently %2$d. It must be between %3$d and %4$d.',
+                    [
+                        get_class($this) . '->' . htmlspecialchars($field),
+                        htmlspecialchars($value),
+                        $range['min'],
+                        $range['max'],
+                    ],
+                    'Admin.Notifications.Error'
+                );
             }
         }
 
@@ -1255,7 +1264,7 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
 
             if (!empty($value)) {
                 $res = true;
-                if (Tools::strtolower($data['validate']) == 'iscleanhtml') {
+                if (Tools::strtolower($data['validate']) === 'iscleanhtml') {
                     if (!call_user_func(['Validate', $data['validate']], $value, $ps_allow_html_iframe)) {
                         $res = false;
                     }
@@ -1268,7 +1277,7 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
                     if ($human_errors) {
                         return $this->trans('The %s field is invalid.', [$this->displayFieldName($field, get_class($this))], 'Admin.Notifications.Error');
                     } else {
-                        return $this->trans('Property %s is not valid', [get_class($this) . '->' . $field], 'Admin.Notifications.Error');
+                        return $this->trans('Property %s is not valid', [get_class($this) . '->' . htmlspecialchars($field)], 'Admin.Notifications.Error');
                     }
                 }
             }
@@ -1947,11 +1956,27 @@ abstract class ObjectModelCore implements \PrestaShop\PrestaShop\Core\Foundation
                 return false;
             }
 
+            // Get image formats we will be deleting. It would probably be easier to use ImageFormatConfiguration::SUPPORTED_FORMATS,
+            // but we want to avoid any behavior change in minor/patch version.
+            $configuredImageFormats = ServiceLocator::get(ImageFormatConfiguration::class)->getGenerationFormats();
             $types = ImageType::getImagesTypes();
+
             foreach ($types as $image_type) {
                 if (file_exists($this->image_dir . $this->id . '-' . stripslashes($image_type['name']) . '.' . $this->image_format)
                 && !unlink($this->image_dir . $this->id . '-' . stripslashes($image_type['name']) . '.' . $this->image_format)) {
                     return false;
+                }
+
+                foreach ($configuredImageFormats as $imageFormat) {
+                    $file = $this->image_dir . $this->id . '-' . stripslashes($image_type['name']) . '.' . $imageFormat;
+                    if (file_exists($file)) {
+                        unlink($file);
+                    }
+
+                    $file = $this->image_dir . $this->id . '-' . stripslashes($image_type['name']) . '2x.' . $imageFormat;
+                    if (file_exists($file)) {
+                        unlink($file);
+                    }
                 }
             }
         }

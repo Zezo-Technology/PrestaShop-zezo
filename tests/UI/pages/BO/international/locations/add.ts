@@ -27,8 +27,8 @@ class AddZone extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Add new •';
-    this.pageTitleEdit = 'Edit: ';
+    this.pageTitleCreate = `New zone • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing zone';
 
     // Selectors
     this.nameInput = '#zone_name';
@@ -50,7 +50,7 @@ class AddZone extends BOBasePage {
     await this.setChecked(page, this.statusToggle(zoneData.status ? 1 : 0));
 
     // Save zone
-    await this.clickAndWaitForNavigation(page, this.saveZoneButton);
+    await this.clickAndWaitForURL(page, this.saveZoneButton);
 
     // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);

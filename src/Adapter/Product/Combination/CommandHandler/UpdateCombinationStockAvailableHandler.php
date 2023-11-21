@@ -30,6 +30,7 @@ namespace PrestaShop\PrestaShop\Adapter\Product\Combination\CommandHandler;
 
 use PrestaShop\PrestaShop\Adapter\Product\Combination\Update\CombinationStockProperties;
 use PrestaShop\PrestaShop\Adapter\Product\Combination\Update\CombinationStockUpdater;
+use PrestaShop\PrestaShop\Core\CommandBus\Attributes\AsCommandHandler;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\UpdateCombinationStockAvailableCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\CommandHandler\UpdateCombinationStockAvailableHandlerInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\StockModification;
@@ -37,6 +38,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Stock\ValueObject\StockModificatio
 /**
  * Updates combination stock available using legacy object model
  */
+#[AsCommandHandler]
 class UpdateCombinationStockAvailableHandler implements UpdateCombinationStockAvailableHandlerInterface
 {
     /**
@@ -65,18 +67,9 @@ class UpdateCombinationStockAvailableHandler implements UpdateCombinationStockAv
             $stockModification = StockModification::buildFixedQuantity($command->getFixedQuantity());
         }
 
-        // Now we only fill the properties existing in StockAvailable object model.
-        // Other properties related to stock (which exists in Combination object model) should be taken care by a unified UpdateProductCommand.
-        // @todo: once the unification is done this should be refacto as the CombinationStockProperties contains too many fields now
         $properties = new CombinationStockProperties(
             $stockModification,
-            null,
-            $command->getLocation(),
-            null,
-            null,
-            null,
-            null,
-            null
+            $command->getLocation()
         );
 
         $this->combinationStockUpdater->update($command->getCombinationId(), $properties, $command->getShopConstraint());

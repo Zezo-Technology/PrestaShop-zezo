@@ -51,6 +51,8 @@ class Install extends CommonPage {
 
   private readonly countryChosenSearchInput: string;
 
+  private readonly enableSslRadio: (value: number) => string;
+
   private readonly firstNameInput: string;
 
   private readonly lastNameInput: string;
@@ -145,6 +147,7 @@ class Install extends CommonPage {
     this.shopNameInput = '#infosShop';
     this.countryChosenSelect = '#infosCountry_chosen';
     this.countryChosenSearchInput = `${this.countryChosenSelect} .chosen-search input`;
+    this.enableSslRadio = (value: number) => `input[name="enable_ssl"][value="${value}"]`;
     this.firstNameInput = '#infosFirstname';
     this.lastNameInput = '#infosName';
     this.emailInput = '#infosEmail';
@@ -284,18 +287,19 @@ class Install extends CommonPage {
    * @return {Promise<void>}
    */
   async fillInformationForm(page: Page): Promise<void> {
-    await page.type(this.shopNameInput, global.INSTALL.SHOP_NAME);
+    await page.locator(this.shopNameInput).fill(global.INSTALL.SHOP_NAME);
 
     // Choosing country
     await page.click(this.countryChosenSelect);
-    await page.type(this.countryChosenSearchInput, global.INSTALL.COUNTRY);
+    await page.locator(this.countryChosenSearchInput).pressSequentially(global.INSTALL.COUNTRY);
     await page.keyboard.press('Enter');
+    await page.click(this.enableSslRadio(global.INSTALL.ENABLE_SSL ? 1 : 0));
 
-    await page.type(this.firstNameInput, global.BO.FIRSTNAME);
-    await page.type(this.lastNameInput, global.BO.LASTNAME);
-    await page.type(this.emailInput, global.BO.EMAIL);
-    await page.type(this.passwordInput, global.BO.PASSWD);
-    await page.type(this.repeatPasswordInput, global.BO.PASSWD);
+    await page.locator(this.firstNameInput).fill(global.BO.FIRSTNAME);
+    await page.locator(this.lastNameInput).fill(global.BO.LASTNAME);
+    await page.locator(this.emailInput).fill(global.BO.EMAIL);
+    await page.locator(this.passwordInput).fill(global.BO.PASSWD);
+    await page.locator(this.repeatPasswordInput).fill(global.BO.PASSWD);
   }
 
   /**

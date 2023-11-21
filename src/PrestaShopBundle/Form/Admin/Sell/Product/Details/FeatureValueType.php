@@ -28,7 +28,7 @@ declare(strict_types=1);
 
 namespace PrestaShopBundle\Form\Admin\Sell\Product\Details;
 
-use PrestaShop\PrestaShop\Core\Form\FormChoiceProviderInterface;
+use PrestaShopBundle\Form\Admin\Type\FeatureChoiceType;
 use PrestaShopBundle\Form\Admin\Type\IconButtonType;
 use PrestaShopBundle\Form\Admin\Type\TranslatableType;
 use PrestaShopBundle\Form\Admin\Type\TranslatorAwareType;
@@ -37,29 +37,17 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class FeatureValueType extends TranslatorAwareType
 {
-    /**
-     * @var FormChoiceProviderInterface
-     */
-    private $featuresChoiceProvider;
-
-    /**
-     * @var EventSubscriberInterface
-     */
-    private $featureValueListener;
-
     public function __construct(
         TranslatorInterface $translator,
         array $locales,
-        FormChoiceProviderInterface $featuresChoiceProvider,
-        EventSubscriberInterface $featureValueListener
+        protected readonly EventSubscriberInterface $featureValueListener
     ) {
         parent::__construct($translator, $locales);
-        $this->featuresChoiceProvider = $featuresChoiceProvider;
-        $this->featureValueListener = $featureValueListener;
     }
 
     /**
@@ -67,24 +55,23 @@ class FeatureValueType extends TranslatorAwareType
      */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
-        $features = $this->featuresChoiceProvider->getChoices();
-
         $builder
-            ->add('feature_id', ChoiceType::class, [
-                'choices' => $features,
+            ->add('feature_id', FeatureChoiceType::class, [
+                'empty_data' => null,
                 'required' => false,
-                'placeholder' => $this->trans('Choose a value', 'Admin.Catalog.Feature'),
-                'label' => $this->trans('Feature', 'Admin.Catalog.Feature'),
-                'attr' => [
-                    'data-toggle' => 'select2',
-                    'class' => 'feature-selector',
+                'placeholder' => $this->trans('Choose a feature', 'Admin.Catalog.Feature'),
+                'constraints' => [
+                    new NotBlank([
+                        'message' => $this->trans('Choose a feature', 'Admin.Catalog.Feature'),
+                    ]),
                 ],
             ])
             ->add('feature_value_id', ChoiceType::class, [
-                'required' => false,
-                'empty_data' => null,
+                'empty_data' => 0,
                 'placeholder' => $this->trans('Choose a value', 'Admin.Catalog.Feature'),
                 'label' => $this->trans('Pre-defined value', 'Admin.Catalog.Feature'),
+                'invalid_message' => $this->trans('Choose a value or provide a customized one', 'Admin.Catalog.Feature'),
+                'disabled' => true,
                 'attr' => [
                     'disabled' => true,
                     'data-toggle' => 'select2',

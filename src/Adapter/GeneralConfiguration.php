@@ -28,6 +28,7 @@ namespace PrestaShop\PrestaShop\Adapter;
 
 use Cookie;
 use PrestaShop\PrestaShop\Core\Configuration\DataConfigurationInterface;
+use PrestaShop\PrestaShop\Core\Http\CookieOptions;
 
 /**
  * Manages the configuration data about general options.
@@ -77,7 +78,7 @@ class GeneralConfiguration implements DataConfigurationInterface
         if ($this->validateConfiguration($configuration)) {
             if (!$this->validateSameSite($configuration['cookie_samesite'])) {
                 $errors[] = [
-                    'key' => 'The SameSite=None is only available in secure mode.',
+                    'key' => 'The SameSite=None attribute is only available in secure mode.',
                     'domain' => 'Admin.Advparameters.Notification',
                     'parameters' => [],
                 ];
@@ -106,7 +107,7 @@ class GeneralConfiguration implements DataConfigurationInterface
                 $configuration['back_cookie_lifetime']
             ) && in_array(
                 $configuration['cookie_samesite'],
-                Cookie::SAMESITE_AVAILABLE_VALUES
+                CookieOptions::SAMESITE_AVAILABLE_VALUES
             );
 
         return (bool) $isValid;
@@ -123,7 +124,7 @@ class GeneralConfiguration implements DataConfigurationInterface
     protected function validateSameSite(string $sameSite): bool
     {
         $forceSsl = $this->configuration->get('PS_SSL_ENABLED') && $this->configuration->get('PS_SSL_ENABLED_EVERYWHERE');
-        if ($sameSite === Cookie::SAMESITE_NONE) {
+        if ($sameSite === CookieOptions::SAMESITE_NONE) {
             return $forceSsl;
         }
 

@@ -90,7 +90,7 @@ class CartController extends FrameworkBundleAdminController
 
         return $this->render('@PrestaShop/Admin/Sell/Order/Cart/view.html.twig', [
             'cartView' => $cartView,
-            'layoutTitle' => $this->trans('View', 'Admin.Actions'),
+            'layoutTitle' => $this->trans('Cart #%s', 'Admin.Navigation.Menu', [$cartId]),
             'enableSidebar' => true,
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'cartKpi' => $kpiRow,
@@ -537,7 +537,7 @@ class CartController extends FrameworkBundleAdminController
         $minimalQuantity = $e instanceof MinimalQuantityException ? $e->getMinimalQuantity() : 0;
 
         return [
-            CartNotFoundException::class => $this->trans('The object cannot be loaded (or found)', 'Admin.Notifications.Error'),
+            CartNotFoundException::class => $this->trans('The object cannot be loaded (or found).', 'Admin.Notifications.Error'),
             CartRuleValidityException::class => $e->getMessage(),
             CartConstraintException::class => [
                 CartConstraintException::INVALID_QUANTITY => $this->trans(
@@ -619,7 +619,7 @@ class CartController extends FrameworkBundleAdminController
      */
     private function getErrorCode(Exception $e): int
     {
-        switch (get_class($e)) {
+        switch ($e::class) {
             case ProductOutOfStockException::class:
                 return Response::HTTP_CONFLICT;
         }

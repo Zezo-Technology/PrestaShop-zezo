@@ -43,6 +43,8 @@ use StockAvailable;
 use Validate;
 
 /**
+ * @deprecated since 8.1 and will be removed in next major.
+ *
  * This class will update/insert/delete data from DB / ORM about Product, for both Front and Admin interfaces.
  */
 class AdminProductDataUpdater implements ProductInterface
@@ -260,7 +262,7 @@ class AdminProductDataUpdater implements ProductInterface
         }
 
         foreach ($filterParams as $k => $v) {
-            if ($v == '' || strpos($k, 'filter_') !== 0) {
+            if ($v == '' || !str_starts_with($k, 'filter_')) {
                 continue;
             }
             if ($k == 'filter_category') {

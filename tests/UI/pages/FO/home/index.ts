@@ -12,8 +12,10 @@ import type {Page} from 'playwright';
  * @class
  * @extends FOBasePage
  */
-class Home extends FOBasePage {
+class HomePage extends FOBasePage {
   public readonly pageTitle: string;
+
+  public readonly successAddToCartMessage: string;
 
   private readonly carouselSliderId: string;
 
@@ -33,7 +35,7 @@ class Home extends FOBasePage {
 
   private readonly productsBlockDiv: (blockId: number) => string;
 
-  private readonly productArticle: (number: number) => string;
+  public productArticle: (number: number) => string;
 
   private readonly productImg: (number: number) => string;
 
@@ -43,11 +45,11 @@ class Home extends FOBasePage {
 
   private readonly productColorLink: (number: number, color: string) => string;
 
-  public readonly allProductLink: string;
+  private readonly allProductLink: string;
 
   private readonly allProductsBlockLink: (blockId: number) => string;
 
-  public readonly totalProducts: string;
+  private readonly totalProducts: string;
 
   private readonly productPrice: (number: number) => string;
 
@@ -103,6 +105,8 @@ class Home extends FOBasePage {
 
   private readonly addToCartButton: string;
 
+  private readonly blockCartLabel: string;
+
   private readonly blockCartModalDiv: string;
 
   private readonly blockCartModalCloseButton: string;
@@ -135,14 +139,23 @@ class Home extends FOBasePage {
 
   public readonly alreadyUsedEmailMessage: string;
 
+  public readonly productHummingbird: (number: number) => string;
+
+  public readonly productImgHummingbird: (number: number) => string;
+
+  public readonly quickviewButtonHummingbird: (number: number) => string;
+
+  public readonly blockCartModalCloseButtonHummingbird: string;
+
   /**
    * @constructs
    * Setting up texts and selectors to use on home page
    */
-  constructor() {
-    super();
+  constructor(theme: string = 'classic') {
+    super(theme);
 
     this.pageTitle = global.INSTALL.SHOP_NAME;
+    this.successAddToCartMessage = 'Product successfully added to your shopping cart';
 
     // Selectors of slider
     this.carouselSliderId = '#carousel';
@@ -199,6 +212,7 @@ class Home extends FOBasePage {
 
     // Block Cart Modal
     this.blockCartModalDiv = '#blockcart-modal';
+    this.blockCartLabel = '#myModalLabel';
     this.blockCartModalCloseButton = `${this.blockCartModalDiv} button.close`;
     this.cartModalProductNameBlock = `${this.blockCartModalDiv} .product-name`;
     this.cartModalProductPriceBlock = `${this.blockCartModalDiv} .product-price`;
@@ -216,6 +230,22 @@ class Home extends FOBasePage {
     // Newsletter subscription messages
     this.successSubscriptionMessage = 'You have successfully subscribed to this newsletter.';
     this.alreadyUsedEmailMessage = 'This email address is already registered.';
+
+    // Hummingbird
+    this.productHummingbird = (number: number) => `#content .products div:nth-child(${number})`;
+    this.productImgHummingbird = (number: number) => `${this.productHummingbird(number)} img`;
+    this.quickviewButtonHummingbird = (number: number) => `${this.productHummingbird(number)} .product-miniature__quickview `
+      + 'button';
+    this.blockCartModalCloseButtonHummingbird = `${this.blockCartModalDiv} button.btn-close`;
+  }
+
+  /**
+   *
+   * @param page {Page} Browser tab
+   * @returns {Promise<number>}
+   */
+  async getProductsNumber(page: Page): Promise<number> {
+    return this.getNumberFromText(page, this.totalProducts);
   }
 
   /**
@@ -252,9 +282,9 @@ class Home extends FOBasePage {
   /**
    * Click on slider number
    * @param page {Page} Browser tab
-   * @returns {Promise<string|null>}
+   * @returns {Promise<string>}
    */
-  async getSliderURL(page: Page): Promise<string | null> {
+  async getSliderURL(page: Page): Promise<string> {
     return this.getAttributeContent(page, this.carouselSliderURL, 'href');
   }
 
@@ -265,7 +295,7 @@ class Home extends FOBasePage {
    * @returns {Promise<void>}
    */
   async goToProductPage(page: Page, id: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.productImg(id));
+    await this.clickAndWaitForURL(page, this.productImg(id));
   }
 
   /**
@@ -294,7 +324,7 @@ class Home extends FOBasePage {
    * @return {Promise<void>}
    */
   async goToAllProductsPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.allProductLink);
+    await this.clickAndWaitForURL(page, this.allProductLink);
   }
 
   /**
@@ -392,7 +422,7 @@ class Home extends FOBasePage {
         throw new Error(`Block ${blockID} was not found`);
     }
 
-    await this.clickAndWaitForNavigation(page, columnSelector);
+    await this.clickAndWaitForURL(page, columnSelector);
   }
 
   /**
@@ -419,6 +449,14 @@ class Home extends FOBasePage {
    * @return {Promise<void>}
    */
   async quickViewProduct(page: Page, id: number): Promise<void> {
+    if (this.theme === 'hummingbird') {
+      await page.hover(this.productImgHummingbird(id));
+      await this.waitForVisibleSelector(page, this.quickviewButtonHummingbird(id));
+      await page.click(this.quickviewButtonHummingbird(id));
+
+      return;
+    }
+
     await page.hover(this.productImg(id));
     let displayed: boolean = false;
 
@@ -452,7 +490,7 @@ class Home extends FOBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<boolean>}
    */
-  isQuickViewProductModalVisible(page: Page): Promise<boolean> {
+  async isQuickViewProductModalVisible(page: Page): Promise<boolean> {
     return this.elementVisible(page, this.quickViewModalDiv, 2000);
   }
 
@@ -461,15 +499,26 @@ class Home extends FOBasePage {
    * @param page {Page} Browser tab
    * @param id {number} Index of product in list of products
    * @param quantityWanted {number} Quantity to order
-   * @return {Promise<void>}
+   * @return {Promise<string>}
    */
-  async addProductToCartByQuickView(page: Page, id: number, quantityWanted: number = 1): Promise<void> {
+  async addProductToCartByQuickView(page: Page, id: number, quantityWanted: number = 1): Promise<string> {
     await this.quickViewProduct(page, id);
     await this.setValue(page, this.quickViewQuantityWantedInput, quantityWanted);
     await Promise.all([
       this.waitForVisibleSelector(page, this.blockCartModalDiv),
       page.click(this.addToCartButton),
     ]);
+
+    return this.getTextContent(page, this.blockCartLabel);
+  }
+
+  /**
+   * Is add to cart button disabled
+   * @param page {Page} Browser tab
+   * @returns {Promise<boolean>}
+   */
+  async isAddToCartButtonDisabled(page: Page): Promise<boolean> {
+    return this.elementVisible(page, `${this.addToCartButton}[disabled]`, 1000);
   }
 
   /**
@@ -527,7 +576,7 @@ class Home extends FOBasePage {
    * @param quantity {number} The attributes data (size, color, quantity)
    * @returns {Promise<void>}
    */
-  async changeAttributesAndAddToCart(page: Page, attributes: ProductAttribute[], quantity: number) {
+  async changeAttributesAndAddToCart(page: Page, attributes: ProductAttribute[], quantity: number): Promise<void> {
     for (let i: number = 0; i < attributes.length; i++) {
       await this.changeAttributes(page, attributes[i]);
     }
@@ -538,10 +587,19 @@ class Home extends FOBasePage {
   /**
    * Get product with discount details from quick view modal
    * @param page {Page} Browser tab
-   * @returns {Promise<{discountPercentage: string, thumbImage: string, price: number, taxShippingDeliveryLabel: string,
-   * regularPrice: number, coverImage: string, name: string, shortDescription: string}>}
+   * @returns {Promise<{discountPercentage: string, thumbImage: string|null, price: number, taxShippingDeliveryLabel: string,
+   * regularPrice: number, coverImage: string|null, name: string, shortDescription: string}>}
    */
-  async getProductWithDiscountDetailsFromQuickViewModal(page: Page) {
+  async getProductWithDiscountDetailsFromQuickViewModal(page: Page): Promise<{
+    discountPercentage: string,
+    thumbImage: string|null,
+    price: number,
+    taxShippingDeliveryLabel: string,
+    regularPrice: number,
+    coverImage: string|null,
+    name: string,
+    shortDescription: string,
+  }> {
     return {
       name: await this.getTextContent(page, this.quickViewProductName),
       regularPrice: parseFloat((await this.getTextContent(page, this.quickViewRegularPrice)).replace('€', '')),
@@ -557,10 +615,17 @@ class Home extends FOBasePage {
   /**
    * Get product details from quick view modal
    * @param page {Page} Browser tab
-   * @returns {Promise<{thumbImage: string, price: number, taxShippingDeliveryLabel: string,
-   * coverImage: string, name: string, shortDescription: string}>}
+   * @returns {Promise<{thumbImage: string|null, price: number, taxShippingDeliveryLabel: string,
+   * coverImage: string|null, name: string, shortDescription: string}>}
    */
-  async getProductDetailsFromQuickViewModal(page: Page) {
+  async getProductDetailsFromQuickViewModal(page: Page): Promise<{
+    thumbImage: string|null,
+    price: number,
+    taxShippingDeliveryLabel: string,
+    coverImage: string|null,
+    name: string,
+    shortDescription: string,
+  }> {
     return {
       name: await this.getTextContent(page, this.quickViewProductName),
       price: parseFloat((await this.getTextContent(page, this.quickViewProductPrice)).replace('€', '')),
@@ -636,7 +701,11 @@ class Home extends FOBasePage {
    * @returns {Promise<boolean>}
    */
   async closeBlockCartModal(page: Page): Promise<boolean> {
-    await this.waitForSelectorAndClick(page, this.blockCartModalCloseButton);
+    if (this.theme === 'hummingbird') {
+      await this.waitForSelectorAndClick(page, this.blockCartModalCloseButtonHummingbird);
+    } else {
+      await this.waitForSelectorAndClick(page, this.blockCartModalCloseButton);
+    }
 
     return this.elementNotVisible(page, this.blockCartModalDiv, 1000);
   }
@@ -672,7 +741,7 @@ class Home extends FOBasePage {
     }
     /* eslint-enable no-await-in-loop */
 
-    await this.clickAndWaitForNavigation(page, this.productColorLink(id, color));
+    await this.clickAndWaitForURL(page, this.productColorLink(id, color));
   }
 
   /**
@@ -744,7 +813,7 @@ class Home extends FOBasePage {
    * @return {Promise<void>}
    */
   async proceedToCheckout(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.cartModalCheckoutLink);
+    await this.clickAndWaitForURL(page, this.cartModalCheckoutLink);
     await page.waitForLoadState('domcontentloaded');
   }
 
@@ -762,9 +831,9 @@ class Home extends FOBasePage {
    * Go to social sharing link
    * @param page {Page} Browser tab
    * @param socialSharing {string} The social network name
-   * @returns {Promise<string|null>}
+   * @returns {Promise<string>}
    */
-  async getSocialSharingLink(page: Page, socialSharing: string): Promise<string | null> {
+  async getSocialSharingLink(page: Page, socialSharing: string): Promise<string> {
     let selector;
 
     switch (socialSharing) {
@@ -801,4 +870,5 @@ class Home extends FOBasePage {
   }
 }
 
-export default new Home();
+const homePage = new HomePage();
+export {homePage, HomePage};

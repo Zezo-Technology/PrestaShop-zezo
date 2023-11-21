@@ -1,5 +1,7 @@
 import {ViewOrderBasePage} from '@pages/BO/orders/view/viewOrderBasePage';
 
+import type OrderShippingData from '@data/faker/orderShipping';
+
 import type {Frame, Page} from 'playwright';
 
 /**
@@ -8,7 +10,13 @@ import type {Frame, Page} from 'playwright';
  * @extends ViewOrderBasePage
  */
 class TabListBlock extends ViewOrderBasePage {
-  private readonly successBadge: (id: number) => string;
+  private readonly successBadge: string;
+
+  private readonly successBadgeNth: (id: number) => string;
+
+  private readonly successBadgeGift: string;
+
+  private readonly successBadgeReclyclable: string;
 
   private readonly historyTabContent: string;
 
@@ -40,7 +48,7 @@ class TabListBlock extends ViewOrderBasePage {
 
   private readonly generateInvoiceButton: string;
 
-  private readonly documentsTablegrid: string;
+  private readonly documentsTableGrid: string;
 
   private readonly documentsTableBody: string;
 
@@ -86,11 +94,15 @@ class TabListBlock extends ViewOrderBasePage {
 
   private readonly carrierSelect: string;
 
-  private readonly carriersSelectResult: string;
+  private readonly carrierSelect2: string;
+
+  private readonly carriersSelect2Result: string;
 
   private readonly carrierToSelect: (id: number) => string;
 
   private readonly updateCarrierButton: string;
+
+  private readonly cancelCarrierButton: string;
 
   private readonly giftMessage: string;
 
@@ -113,7 +125,10 @@ class TabListBlock extends ViewOrderBasePage {
   constructor() {
     super();
 
-    this.successBadge = (id: number) => `.tab-content span.badge-success:nth-child(${id + 3})`;
+    this.successBadge = '.tab-content span.badge-success';
+    this.successBadgeNth = (id: number) => `${this.successBadge}:nth-child(${id + 3})`;
+    this.successBadgeGift = `${this.successBadge}[data-badge="gift"]`;
+    this.successBadgeReclyclable = `${this.successBadge}[data-badge="recyclable"]`;
 
     // Status tab
     this.historyTabContent = '#historyTabContent';
@@ -133,8 +148,8 @@ class TabListBlock extends ViewOrderBasePage {
     this.documentTab = 'a#orderDocumentsTab';
     this.orderDocumentTabContent = '#orderDocumentsTabContent';
     this.generateInvoiceButton = `${this.orderDocumentTabContent} .btn.btn-primary`;
-    this.documentsTablegrid = '#documents-grid-table';
-    this.documentsTableBody = `${this.documentsTablegrid} tbody`;
+    this.documentsTableGrid = '#documents-grid-table';
+    this.documentsTableBody = `${this.documentsTableGrid} tbody`;
     this.documentsTableRow = (row: number) => `${this.documentsTableBody} tr:nth-child(${row})`;
     this.documentsTableColumn = (row: number, column: string) => `${this.documentsTableRow(row)} td.${column}`;
     this.documentDate = (row: number) => `${this.documentsTableColumn(row, 'documents-table-column-date')}`;
@@ -157,9 +172,11 @@ class TabListBlock extends ViewOrderBasePage {
     this.updateOrderShippingModal = '#updateOrderShippingModal';
     this.updateOrderShippingModalDialog = `${this.updateOrderShippingModal} div.modal-dialog`;
     this.trackingNumberInput = `${this.updateOrderShippingModalDialog} #update_order_shipping_tracking_number`;
-    this.carrierSelect = '#select2-update_order_shipping_new_carrier_id-container';
-    this.carriersSelectResult = '#select2-update_order_shipping_new_carrier_id-results';
-    this.carrierToSelect = (id: number) => `${this.carriersSelectResult} li:nth-child(${id})`;
+    this.carrierSelect = '#update_order_shipping_new_carrier_id';
+    this.carrierSelect2 = '#select2-update_order_shipping_new_carrier_id-container';
+    this.carriersSelect2Result = '#select2-update_order_shipping_new_carrier_id-results';
+    this.carrierToSelect = (id: number) => `${this.carriersSelect2Result} li:nth-child(${id})`;
+    this.cancelCarrierButton = `${this.updateOrderShippingModalDialog} button.btn-outline-secondary`;
     this.updateCarrierButton = `${this.updateOrderShippingModalDialog} button.btn-primary`;
     this.giftMessage = '#gift-message';
 
@@ -187,10 +204,28 @@ class TabListBlock extends ViewOrderBasePage {
     let badge: string = '';
 
     for (let i = 1; i <= numberOfBadges; i++) {
-      badge += await this.getTextContent(page, this.successBadge(i));
+      badge += await this.getTextContent(page, this.successBadgeNth(i));
     }
 
     return badge;
+  }
+
+  /**
+   * Return if the badge "Gift" is present
+   * @param page {Page} Browser tab
+   * @returns {Promise<boolean>}
+   */
+  async hasBadgeGift(page: Page): Promise<boolean> {
+    return this.elementVisible(page, this.successBadgeGift);
+  }
+
+  /**
+   Return if the badge "Recycled packaging" is present
+   * @param page {Page} Browser tab
+   * @returns {Promise<boolean>}
+   */
+  async hasBadgeRecyclable(page: Page): Promise<boolean> {
+    return this.elementVisible(page, this.successBadgeReclyclable);
   }
 
   // Methods for status tab
@@ -209,7 +244,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @returns {Promise<string>}
    */
   async clickOnUpdateStatus(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.secondUpdateStatusButton);
+    await page.click(this.secondUpdateStatusButton);
 
     return this.getAlertDangerBlockParagraphContent(page);
   }
@@ -222,7 +257,7 @@ class TabListBlock extends ViewOrderBasePage {
    */
   async updateOrderStatus(page: Page, status: string): Promise<string> {
     await this.selectByVisibleText(page, this.secondOrderStatusesSelect, status);
-    await this.clickAndWaitForNavigation(page, this.secondUpdateStatusButton);
+    await page.click(this.secondUpdateStatusButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -232,18 +267,18 @@ class TabListBlock extends ViewOrderBasePage {
    * @param page {Page|Frame} Browser tab
    * @returns {Promise<number>}
    */
-  async getStatusNumber(page: Page|Frame): Promise<number> {
+  async getStatusNumber(page: Page | Frame): Promise<number> {
     return this.getNumberFromText(page, this.historyTabContent);
   }
 
   /**
    * Get text from Column on history table
-   * @param page {Page} Browser tab
+   * @param page {Frame|Page} Browser tab
    * @param columnName {string} Column name on table
    * @param row {number} status row in table
    * @returns {Promise<string>}
    */
-  async getTextColumnFromHistoryTable(page: Page, columnName: string, row: number): Promise<string> {
+  async getTextColumnFromHistoryTable(page: Frame | Page, columnName: string, row: number): Promise<string> {
     return this.getTextContent(page, this.statusTableColumn(row, columnName));
   }
 
@@ -289,7 +324,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @returns {Promise<string>}
    */
   async getOrderNoteContent(page: Page): Promise<string> {
-    return this.getTextContent(page, this.orderNoteTextarea);
+    return this.getTextContent(page, this.orderNoteTextarea, false);
   }
 
   /**
@@ -320,7 +355,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<boolean>}
    */
-  isGenerateInvoiceButtonVisible(page: Page): Promise<boolean> {
+  async isGenerateInvoiceButtonVisible(page: Page): Promise<boolean> {
     return this.elementVisible(page, this.generateInvoiceButton, 1000);
   }
 
@@ -329,7 +364,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<number>}
    */
-  getDocumentsNumber(page: Page): Promise<number> {
+  async getDocumentsNumber(page: Page): Promise<number> {
     return this.getNumberFromText(page, `${this.documentTab} .count`);
   }
 
@@ -350,7 +385,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @returns {Promise<string>}
    */
   async generateInvoice(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.generateInvoiceButton);
+    await page.click(this.generateInvoiceButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -399,7 +434,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param row {number} Document row on table
    * @return {Promise<string|null>}
    */
-  downloadDocument(page: Page, row: number): Promise<string|null> {
+  async downloadDocument(page: Page, row: number): Promise<string | null> {
     return this.clickAndWaitForDownload(page, this.documentNumberLink(row));
   }
 
@@ -409,7 +444,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param row {number} Row of the invoice
    * @returns {Promise<string|null>}
    */
-  async downloadInvoice(page: Page, row: number = 1): Promise<string|null> {
+  async downloadInvoice(page: Page, row: number = 1): Promise<string | null> {
     await this.goToDocumentsTab(page);
 
     return this.downloadDocument(page, row);
@@ -481,7 +516,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<string|null>}
    */
-  async downloadDeliverySlip(page: Page): Promise<string|null> {
+  async downloadDeliverySlip(page: Page): Promise<string | null> {
     await this.goToDocumentsTab(page);
 
     // Delete the target because a new tab is opened when downloading the file
@@ -494,7 +529,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<number>}
    */
-  getCarriersNumber(page: Page): Promise<number> {
+  async getCarriersNumber(page: Page): Promise<number> {
     return this.getNumberFromText(page, `${this.carriersTab} .count`);
   }
 
@@ -515,9 +550,10 @@ class TabListBlock extends ViewOrderBasePage {
    * @returns {Promise<string>}
    */
   async getGiftMessage(page: Page): Promise<string> {
-    await this.waitForSelectorAndClick(page, this.carriersTab);
-
-    return this.getTextContent(page, this.giftMessage);
+    if (await this.elementVisible(page, this.giftMessage)) {
+      return this.getTextContent(page, this.giftMessage);
+    }
+    return '';
   }
 
   /**
@@ -548,18 +584,38 @@ class TabListBlock extends ViewOrderBasePage {
   }
 
   /**
+   * Click on cancel button and check if the modal is not visible
+   * @param page {Page} Browser tab
+   * @returns {Promise<boolean>}
+   */
+  async closeOrderShippingModal(page: Page): Promise<boolean> {
+    await page.click(this.cancelCarrierButton);
+
+    return this.elementNotVisible(page, this.updateOrderShippingModalDialog, 3000);
+  }
+
+  /**
    * Set shipping details
    * @param page {Page} Browser tab
-   * @param shippingData {{trackingNumber: string, carrier: string, carrierID: number}} Data to set on shipping form
+   * @param shippingData {OrderShippingData} Data to set on shipping form
    * @returns {Promise<string>}
    */
-  async setShippingDetails(page: Page, shippingData): Promise<string> {
+  async setShippingDetails(page: Page, shippingData: OrderShippingData): Promise<string> {
     await this.setValue(page, this.trackingNumberInput, shippingData.trackingNumber);
-    await page.click(this.carrierSelect);
+    await page.click(this.carrierSelect2);
     await this.waitForSelectorAndClick(page, this.carrierToSelect(shippingData.carrierID));
-    await this.clickAndWaitForNavigation(page, this.updateCarrierButton);
+    await page.click(this.updateCarrierButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
+  }
+
+  /**
+   * Get shipping carrier ID
+   * @param page {Page} Browser tab
+   * @returns {Promise<number>}
+   */
+  async getShippingCarrierID(page: Page): Promise<number> {
+    return parseInt(await this.getAttributeContent(page, `${this.carrierSelect} option[selected='selected']`, 'value'), 10);
   }
 
   // Methods for Merchandise returns tab
@@ -579,7 +635,7 @@ class TabListBlock extends ViewOrderBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<number>}
    */
-  getMerchandiseReturnsNumber(page: Page): Promise<number> {
+  async getMerchandiseReturnsNumber(page: Page): Promise<number> {
     return this.getNumberFromText(page, this.merchandisereturnCount);
   }
 

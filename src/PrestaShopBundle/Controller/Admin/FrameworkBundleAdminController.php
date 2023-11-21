@@ -30,11 +30,13 @@ use Exception;
 use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Grid\GridInterface;
 use PrestaShop\PrestaShop\Core\Help\Documentation;
-use PrestaShop\PrestaShop\Core\Localization\Locale;
 use PrestaShop\PrestaShop\Core\Localization\Locale\Repository as LocaleRepository;
+use PrestaShop\PrestaShop\Core\Localization\LocaleInterface;
 use PrestaShop\PrestaShop\Core\Module\Exception\ModuleErrorInterface;
 use PrestaShop\PrestaShop\Core\Security\Permission;
+use Psr\Container\ContainerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,10 +44,35 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * Extends The Symfony framework bundle controller to add common functions for PrestaShop needs.
+ *
+ * @deprecated since 9.0 to be removed in future versions (10+ at least, when it will not be used anymore),
+ * should stop using it in favor of PrestaShopAdminController.
  */
-class FrameworkBundleAdminController extends AbstractController
+class FrameworkBundleAdminController extends AbstractController implements ContainerAwareInterface
 {
+    /**
+     * @deprecated since 9.0
+     */
     public const PRESTASHOP_CORE_CONTROLLERS_TAG = 'prestashop.core.controllers';
+
+    /**
+     * Override to make this compatible with the ContainerAware signature, content should be the same as in the abstract.
+     * Do not override this neither use this, it will be removed in next versions. This overridden method
+     * along with the ContainerAwareInterface was added to skip the error sent by Symfony\Bundle\FrameworkBundle\Controller\ControllerResolver
+     * that forces the controllers extending AbstractController to be defined as service subscriber.
+     *
+     * This method allows us to keep controllers based on FrameworkBundleAdminController from being
+     * adapted. However, the core and the modules should stop using it in favor of PrestaShopAdminController
+     *
+     * @internal
+     */
+    public function setContainer(ContainerInterface $container = null): ?ContainerInterface
+    {
+        $previous = $this->container;
+        $this->container = $container;
+
+        return $previous;
+    }
 
     /**
      * @var string|null
@@ -82,21 +109,23 @@ class FrameworkBundleAdminController extends AbstractController
         $translator = $this->get('translator');
 
         foreach ($form->getErrors(true) as $error) {
-            if (!$error->getCause()) {
-                $formId = 'bubbling_errors';
-            } else {
+            if ($error->getCause() && method_exists($error->getCause(), 'getPropertyPath')) {
                 $formId = str_replace(
                     ['.', 'children[', ']', '_data'],
                     ['_', '', '', ''],
                     $error->getCause()->getPropertyPath()
                 );
+            } else {
+                $formId = 'bubbling_errors';
             }
 
             if ($error->getMessagePluralization()) {
-                $errors[$formId][] = $translator->transChoice(
+                $errors[$formId][] = $translator->trans(
                     $error->getMessageTemplate(),
-                    $error->getMessagePluralization(),
-                    $error->getMessageParameters(),
+                    array_merge(
+                        $error->getMessageParameters(),
+                        ['%count%' => $error->getMessagePluralization()]
+                    ),
                     'validators'
                 );
             } else {
@@ -159,10 +188,13 @@ class FrameworkBundleAdminController extends AbstractController
 
         $iso = (string) $legacyContext->getEmployeeLanguageIso();
 
-        return $this->generateUrl('admin_common_sidebar', [
+        $url = $this->generateUrl('admin_common_sidebar', [
             'url' => $this->container->get(Documentation::class)->generateLink($section, $iso),
             'title' => $title,
         ]);
+
+        //this line is allow to revert a new behaviour introduce in sf 5.4 which break the result we used to have
+        return strtr($url, ['%2F' => '%252F']);
     }
 
     /**
@@ -188,9 +220,9 @@ class FrameworkBundleAdminController extends AbstractController
     /**
      * Get the locale based on the context
      *
-     * @return Locale
+     * @return LocaleInterface
      */
-    protected function getContextLocale(): Locale
+    protected function getContextLocale(): LocaleInterface
     {
         $locale = $this->getContext()->getCurrentLocale();
         if (null !== $locale) {
@@ -491,7 +523,7 @@ class FrameworkBundleAdminController extends AbstractController
             return $e->getMessage();
         }
 
-        $exceptionType = get_class($e);
+        $exceptionType = $e::class;
         $exceptionCode = $e->getCode();
 
         if (isset($messages[$exceptionType])) {

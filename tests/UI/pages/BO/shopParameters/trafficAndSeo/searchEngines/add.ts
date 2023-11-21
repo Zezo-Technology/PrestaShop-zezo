@@ -26,8 +26,8 @@ class AddSearchEngine extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Search Engines •';
-    this.pageTitleEdit = 'Edit:';
+    this.pageTitleCreate = `Search Engines • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing search engine';
 
     // Form Selectors
     this.serverInput = '#search_engine_server';
@@ -51,7 +51,7 @@ class AddSearchEngine extends BOBasePage {
     await this.setValue(page, this.queryKeyInput, searchEngineData.queryKey);
 
     // Save form
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
 
     // Get successful message
     return this.getAlertSuccessBlockParagraphContent(page);

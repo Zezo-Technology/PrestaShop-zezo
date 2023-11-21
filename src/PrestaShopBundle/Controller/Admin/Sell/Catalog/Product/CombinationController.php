@@ -29,10 +29,10 @@ namespace PrestaShopBundle\Controller\Admin\Sell\Catalog\Product;
 
 use Exception;
 use PrestaShop\PrestaShop\Adapter\Product\Image\ProductImagePathFactory;
-use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\Attribute\QueryResult\Attribute;
-use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\Query\GetAttributeGroupList;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Attribute\QueryResult\Attribute;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\Query\GetAttributeGroupList;
+use PrestaShop\PrestaShop\Core\Domain\AttributeGroup\QueryResult\AttributeGroup;
 use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\Query\GetProductAttributeGroups;
-use PrestaShop\PrestaShop\Core\Domain\Product\AttributeGroup\QueryResult\AttributeGroup;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\BulkDeleteCombinationCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\DeleteCombinationCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Command\GenerateProductCombinationsCommand;
@@ -112,14 +112,14 @@ class CombinationController extends FrameworkBundleAdminController
     }
 
     /**
-     * @AdminSecurity("is_granted(['read'], request.get('_legacy_controller'))")
+     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
      *
      * @param Request $request
      * @param string $languageCode
      *
      * @return JsonResponse
      */
-    public function searchCombinationProductsAction(
+    public function searchCombinationsForAssociationAction(
         Request $request,
         string $languageCode
     ): JsonResponse {
@@ -162,7 +162,7 @@ class CombinationController extends FrameworkBundleAdminController
     }
 
     /**
-     * @AdminSecurity("is_granted(['read'], request.get('_legacy_controller'))")
+     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
      *
      * @param Request $request
      * @param int $productId
@@ -227,12 +227,14 @@ class CombinationController extends FrameworkBundleAdminController
         $bulkCombinationForm = $this->getBulkCombinationFormBuilder()->getForm([], [
             'product_id' => $productId,
             'country_id' => $this->get('prestashop.adapter.legacy.context')->getCountryId(),
+            'shop_id' => $this->getContextShopId(),
             'method' => Request::METHOD_PATCH,
         ]);
         $bulkCombinationForm->handleRequest($request);
 
         return $this->render('@PrestaShop/Admin/Sell/Catalog/Product/Combination/bulk.html.twig', [
             'bulkCombinationForm' => $bulkCombinationForm->createView(),
+            'lightDisplay' => true,
         ]);
     }
 
@@ -262,6 +264,7 @@ class CombinationController extends FrameworkBundleAdminController
                     'method' => Request::METHOD_PATCH,
                     'product_id' => $productId,
                     'country_id' => $this->get('prestashop.adapter.legacy.context')->getCountryId(),
+                    'shop_id' => $this->getContextShopId(),
                 ]);
             } catch (CombinationNotFoundException $e) {
                 $errors[] = $this->getErrorMessageForException($e, $this->getErrorMessages($e));
@@ -530,7 +533,7 @@ class CombinationController extends FrameworkBundleAdminController
             }
         } catch (Exception $e) {
             return $this->json(
-                ['errors' => [$this->getFallbackErrorMessage(get_class($e), $e->getCode(), $e->getMessage())]],
+                ['errors' => [$this->getErrorMessageForException($e, $this->getErrorMessages($e))]],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
@@ -553,7 +556,7 @@ class CombinationController extends FrameworkBundleAdminController
      */
     public function generateCombinationsAction(int $productId, ?int $shopId, Request $request): JsonResponse
     {
-        $requestAttributeGroups = $request->request->get('attributes');
+        $requestAttributeGroups = $request->request->all('attributes');
         $attributes = [];
         foreach ($requestAttributeGroups as $attributeGroupId => $requestAttributes) {
             $attributes[(int) $attributeGroupId] = array_map('intval', $requestAttributes);
@@ -750,7 +753,7 @@ class CombinationController extends FrameworkBundleAdminController
                 ),
             ],
             CombinationNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             CannotGenerateCombinationException::class => [

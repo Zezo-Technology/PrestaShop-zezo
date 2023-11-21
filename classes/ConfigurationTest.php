@@ -82,6 +82,7 @@ class ConfigurationTestCore
             'files' => false,
             'mails_dir' => 'mails',
             'openssl' => false,
+            'openssl_key_generation' => false,
             'simplexml' => false,
             'zip' => false,
             'fileinfo' => false,
@@ -398,13 +399,23 @@ class ConfigurationTestCore
         return function_exists('openssl_encrypt');
     }
 
-    public static function test_sessions()
+    public static function test_openssl_key_generation()
     {
-        if (!$path = @ini_get('session.save_path')) {
-            return true;
+        $privateKey = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+
+        if ($privateKey === false) {
+            return false;
         }
 
-        return is_writable($path);
+        return true;
+    }
+
+    public static function test_sessions()
+    {
+        return in_array(session_status(), [PHP_SESSION_ACTIVE, PHP_SESSION_NONE], true);
     }
 
     public static function test_dom()

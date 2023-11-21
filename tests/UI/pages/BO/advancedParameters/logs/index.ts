@@ -43,6 +43,10 @@ class Logs extends BOBasePage {
 
   private readonly paginationPreviousLink: string;
 
+  private readonly sendEmailToInput: string;
+
+  private readonly saveButton: string;
+
   /**
    * @constructs
    * Setting up texts and selectors to use on logs page
@@ -76,6 +80,10 @@ class Logs extends BOBasePage {
     this.paginationLabel = `${this.gridPanel} .col-form-label`;
     this.paginationNextLink = `${this.gridPanel} [data-role=next-page-link]`;
     this.paginationPreviousLink = `${this.gridPanel} [data-role='previous-page-link']`;
+
+    // Logs by email selectors
+    this.sendEmailToInput = '#form_logs_email_receivers';
+    this.saveButton = '#main-div div.card-footer button';
   }
 
   /*
@@ -88,7 +96,7 @@ class Logs extends BOBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForURL(page, this.filterResetButton);
     }
   }
 
@@ -136,7 +144,7 @@ class Logs extends BOBasePage {
       // Do nothing
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 
   /**
@@ -203,7 +211,7 @@ class Logs extends BOBasePage {
     let i: number = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
       await page.hover(this.sortColumnDiv(sortBy));
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -227,9 +235,11 @@ class Logs extends BOBasePage {
    * @returns {Promise<string>}
    */
   async selectPaginationLimit(page: Page, number: number): Promise<string> {
+    const currentUrl: string = page.url();
+
     await Promise.all([
       this.selectByVisibleText(page, this.paginationLimitSelect, number),
-      page.waitForNavigation({waitUntil: 'networkidle'}),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
     ]);
 
     return this.getPaginationLabel(page);
@@ -241,7 +251,7 @@ class Logs extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -252,7 +262,7 @@ class Logs extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }
@@ -265,10 +275,25 @@ class Logs extends BOBasePage {
    * @returns {Promise<void>}
    */
   async filterLogsByDate(page: Page, dateFrom: string, dateTo: string): Promise<void> {
-    await page.type(this.filterColumnInput('date_add_from'), dateFrom);
-    await page.type(this.filterColumnInput('date_add_to'), dateTo);
+    await page.locator(this.filterColumnInput('date_add_from')).fill(dateFrom);
+    await page.locator(this.filterColumnInput('date_add_to')).fill(dateTo);
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
+  }
+
+  // Methods for logs by email form
+
+  /**
+   * Set email
+   * @param page {Page} Browser tab
+   * @param email {string} Email to set in the input
+   * @returns {Promise<string>}
+   */
+  async setEmail(page: Page, email: string): Promise<string> {
+    await this.setValue(page, this.sendEmailToInput, email);
+    await this.waitForSelectorAndClick(page, this.saveButton);
+
+    return this.getAlertBlockContent(page);
   }
 }
 

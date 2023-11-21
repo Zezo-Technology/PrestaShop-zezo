@@ -44,6 +44,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\Image\Query\GetShopProductImages;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\QueryResult\ProductImage;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\QueryResult\Shop\ShopImageAssociation;
 use PrestaShop\PrestaShop\Core\Domain\Product\Image\QueryResult\Shop\ShopProductImagesCollection;
+use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopId;
 use PrestaShop\PrestaShop\Core\Exception\CoreException;
 use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\Builder\FormBuilderInterface;
@@ -51,7 +52,9 @@ use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\Handler\FormHandlerInterf
 use PrestaShop\PrestaShop\Core\Image\Exception\CannotUnlinkImageException;
 use PrestaShop\PrestaShop\Core\Image\Uploader\Exception\MemoryLimitException;
 use PrestaShop\PrestaShop\Core\Image\Uploader\Exception\UploadedImageConstraintException;
+use PrestaShop\PrestaShop\Core\Image\Uploader\Exception\UploadedImageSizeException;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
+use PrestaShopBundle\Entity\Shop;
 use PrestaShopBundle\Security\Annotation\AdminSecurity;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -60,18 +63,24 @@ use Symfony\Component\HttpFoundation\Response;
 class ImageController extends FrameworkBundleAdminController
 {
     /**
+     * Retrieves images for all shops, but the cover (which is multi-shop compatable) is retrieved based on $shopId
+     *
      * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message="You do not have permission to update this.")
      *
      * @param int $productId
+     * @param int $shopId
      *
      * @return JsonResponse
      */
-    public function getImagesAction(int $productId, Request $request): JsonResponse
+    public function getImagesForShopAction(int $productId, int $shopId): JsonResponse
     {
         /** @var ProductImage[] $images */
-        $images = $this->getQueryBus()->handle(new GetProductImages($productId, $request->attributes->get('shopConstraint')));
+        $images = $this->getQueryBus()->handle(new GetProductImages(
+            $productId,
+            ShopConstraint::shop($shopId)
+        ));
 
-        return new JsonResponse(array_map([$this, 'formatImage'], $images));
+        return $this->json(array_map([$this, 'formatImage'], $images));
     }
 
     /**
@@ -224,15 +233,18 @@ class ImageController extends FrameworkBundleAdminController
      */
     private function getProductImageJsonResponse(int $productImageId): JsonResponse
     {
-        $productImage = $this->getQueryBus()->handle(new GetProductImage($productImageId));
+        $productImage = $this->getQueryBus()->handle(new GetProductImage(
+            $productImageId,
+            ShopConstraint::shop($this->getContextShopId())
+        ));
 
-        return new JsonResponse($this->formatImage($productImage));
+        return $this->json($this->formatImage($productImage));
     }
 
     /**
      * @param ProductImage $image
      *
-     * @return array
+     * @return array<string, mixed>
      */
     private function formatImage(ProductImage $image): array
     {
@@ -243,6 +255,7 @@ class ImageController extends FrameworkBundleAdminController
             'image_url' => $image->getImageUrl(),
             'thumbnail_url' => $image->getThumbnailUrl(),
             'legends' => $image->getLocalizedLegends(),
+            'shop_ids' => $image->getShopIds(),
         ];
     }
 
@@ -286,9 +299,7 @@ class ImageController extends FrameworkBundleAdminController
      */
     private function getErrorMessages(Exception $e): array
     {
-        $iniConfig = $this->get('prestashop.core.configuration.ini_configuration');
-
-        return [
+        $messages = [
             ProductConstraintException::class => [
                 ProductConstraintException::INVALID_ID => $this->trans(
                     'Invalid ID.',
@@ -296,15 +307,10 @@ class ImageController extends FrameworkBundleAdminController
                 ),
             ],
             ProductImageNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             UploadedImageConstraintException::class => [
-                UploadedImageConstraintException::EXCEEDED_SIZE => $this->trans(
-                'Max file size allowed is "%s" bytes.',
-                'Admin.Notifications.Error',
-                    [$iniConfig->getUploadMaxSizeInBytes()]
-                ),
                 UploadedImageConstraintException::UNRECOGNIZED_FORMAT => $this->trans(
                     'Image format not recognized, allowed formats are: .gif, .jpg, .png',
                     'Admin.Notifications.Error'
@@ -329,9 +335,19 @@ class ImageController extends FrameworkBundleAdminController
                 'Admin.Notifications.Error'
             ),
             CannotRemoveCoverException::class => $this->trans(
-                'Cannot remove cover image',
+                'Cannot remove cover image.',
                 'Admin.Notifications.Error'
             ),
         ];
+
+        if ($e instanceof UploadedImageSizeException) {
+            $messages[UploadedImageSizeException::class] = $this->trans(
+                'Max file size allowed is "%s" bytes.',
+                'Admin.Notifications.Error',
+                [$e->getAllowedSizeBytes()]
+            );
+        }
+
+        return $messages;
     }
 }

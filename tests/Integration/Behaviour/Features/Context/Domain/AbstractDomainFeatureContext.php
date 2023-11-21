@@ -77,8 +77,14 @@ abstract class AbstractDomainFeatureContext implements Context
      */
     protected function referencesToIds(string $references): array
     {
+        if (empty($references)) {
+            return [];
+        }
+
         $ids = [];
         foreach (explode(',', $references) as $reference) {
+            $reference = trim($reference);
+
             if (!$this->getSharedStorage()->exists($reference)) {
                 throw new RuntimeException(sprintf('Reference %s does not exist in shared storage', $reference));
             }

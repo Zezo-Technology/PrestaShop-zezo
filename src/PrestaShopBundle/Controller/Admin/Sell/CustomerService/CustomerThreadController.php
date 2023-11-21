@@ -73,6 +73,7 @@ class CustomerThreadController extends FrameworkBundleAdminController
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'customerThreadGrid' => $this->presentGrid($customerThreadGrid),
             'enableSidebar' => true,
+            'layoutTitle' => $this->trans('Customer service', 'Admin.Navigation.Menu'),
         ]);
     }
 
@@ -116,7 +117,7 @@ class CustomerThreadController extends FrameworkBundleAdminController
             'forwardCustomerThreadForm' => $forwardCustomerThreadForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'enableSidebar' => true,
-            'layoutTitle' => $this->trans('View', 'Admin.Actions'),
+            'layoutTitle' => $this->trans('Customer thread #%s', 'Admin.Navigation.Menu', [$customerThreadId]),
         ]);
     }
 
@@ -350,7 +351,7 @@ class CustomerThreadController extends FrameworkBundleAdminController
 
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         } catch (CustomerThreadNotFoundException $e) {
             $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages()));
@@ -368,24 +369,24 @@ class CustomerThreadController extends FrameworkBundleAdminController
     {
         return [
             CustomerThreadNotFoundException::class => $this->trans(
-                'This customer thread does not exists',
+                'This customer thread does not exist.',
                 'Admin.International.Notification'
             ),
             CannotDeleteCustomerThreadException::class => $this->trans(
-                'Cannot delete this customer thread',
+                'Cannot delete this customer thread.',
                 'Admin.International.Notification'
             ),
             CustomerServiceException::class => [
                 CustomerServiceException::FAILED_TO_ADD_CUSTOMER_MESSAGE => $this->trans(
-                    'Failed to add customer message',
+                    'Failed to add customer message.',
                     'Admin.International.Notification'
                 ),
                 CustomerServiceException::FAILED_TO_UPDATE_STATUS => $this->trans(
-                    'Failed to update customer thread status',
+                    'Failed to update customer thread status.',
                     'Admin.International.Notification'
                 ),
                 CustomerServiceException::INVALID_COMMENT => $this->trans(
-                    'Comment is not valid',
+                    'Comment is not valid.',
                     'Admin.International.Notification'
                 ),
             ],
@@ -401,7 +402,7 @@ class CustomerThreadController extends FrameworkBundleAdminController
      */
     private function getBulkCustomerThreadsFromRequest(Request $request): array
     {
-        $customerThreadIds = $request->request->get('customer_thread_bulk');
+        $customerThreadIds = $request->request->all('customer_thread_bulk');
 
         if (!is_array($customerThreadIds)) {
             return [];

@@ -98,8 +98,11 @@ class CustomerAddressFormCore extends AbstractForm
         // 2) Detect country from browser language settings and matches BO enabled countries
         // 3) Default country set in BO
 
-        if (isset($params['id_country']) && (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id) {
-            $country = new Country($params['id_country'], $this->language->id);
+        if (isset($params['id_country'])) {
+            $country = (int) $params['id_country'] !== (int) $this->formatter->getCountry()->id
+                ? new Country($params['id_country'], $this->language->id)
+                : $this->formatter->getCountry()
+            ;
         } elseif (
             Tools::isCountryFromBrowserAvailable() &&
             Country::getByIso($countryIsoCode = Tools::getCountryIsoCodeFromHeader(), true)
@@ -131,8 +134,8 @@ class CustomerAddressFormCore extends AbstractForm
             }
         }
 
-        if (($hookReturn = Hook::exec('actionValidateCustomerAddressForm', ['form' => $this])) !== '') {
-            $is_valid &= (bool) $hookReturn;
+        if ($is_valid && Hook::exec('actionValidateCustomerAddressForm', ['form' => $this]) === false) {
+            $is_valid = false;
         }
 
         return $is_valid && parent::validate();

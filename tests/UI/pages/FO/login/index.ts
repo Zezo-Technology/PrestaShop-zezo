@@ -11,7 +11,7 @@ import type {Page} from 'playwright';
  * @class
  * @extends FOBasePage
  */
-class Login extends FOBasePage {
+class LoginPage extends FOBasePage {
   public readonly pageTitle: string;
 
   public readonly loginErrorText: string;
@@ -26,20 +26,20 @@ class Login extends FOBasePage {
 
   private readonly signInButton: string;
 
-  private readonly displayRegisterFormLink: string;
+  protected displayRegisterFormLink: string;
 
-  private readonly passwordReminderLink: string;
+  protected passwordReminderLink: string;
 
   private readonly showPasswordButton: string;
 
-  private readonly alertDangerTextBlock: string;
+  protected alertDangerTextBlock: string;
 
   /**
    * @constructs
    * Setting up texts and selectors to use on login page
    */
-  constructor() {
-    super();
+  constructor(theme: string = 'classic') {
+    super(theme);
 
     this.pageTitle = 'Login';
     this.loginErrorText = 'Authentication failed.';
@@ -71,7 +71,8 @@ class Login extends FOBasePage {
     await this.setValue(page, this.emailInput, customer.email);
     await this.setValue(page, this.passwordInput, customer.password);
     if (waitForNavigation) {
-      await this.clickAndWaitForNavigation(page, this.signInButton);
+      await this.clickAndWaitForLoadState(page, this.signInButton);
+      await this.elementNotVisible(page, this.signInButton, 2000);
     } else {
       await page.click(this.signInButton);
     }
@@ -89,18 +90,18 @@ class Login extends FOBasePage {
   /**
    * Get password type
    * @param page {Page} Browser tab
-   * @returns {Promise<string|null>}
+   * @returns {Promise<string>}
    */
-  async getPasswordType(page: Page): Promise<string|null> {
+  async getPasswordType(page: Page): Promise<string> {
     return this.getAttributeContent(page, this.passwordInput, 'type');
   }
 
   /**
    * Show password
    * @param page {Page} Browser tab
-   * @returns {Promise<string|null>}
+   * @returns {Promise<string>}
    */
-  async showPassword(page: Page): Promise<string|null> {
+  async showPassword(page: Page): Promise<string> {
     await this.waitForSelectorAndClick(page, this.showPasswordButton);
 
     return this.getAttributeContent(page, this.passwordInput, 'type');
@@ -112,7 +113,7 @@ class Login extends FOBasePage {
    * @returns {Promise<void>}
    */
   async goToCreateAccountPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.displayRegisterFormLink);
+    await this.clickAndWaitForURL(page, this.displayRegisterFormLink);
   }
 
   /**
@@ -121,8 +122,9 @@ class Login extends FOBasePage {
    * @returns {Promise<void>}
    */
   async goToPasswordReminderPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.passwordReminderLink);
+    await this.clickAndWaitForURL(page, this.passwordReminderLink);
   }
 }
 
-export default new Login();
+const loginPage = new LoginPage();
+export {loginPage, LoginPage};

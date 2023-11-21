@@ -29,6 +29,8 @@ namespace PrestaShop\PrestaShop\Adapter\Product;
 use PrestaShop\PrestaShop\Core\Exception\ProductException;
 
 /**
+ * @deprecated since 8.1 and will be removed in next major.
+ *
  * Can manage filter parameters from request in Product Catalogue Page.
  * For internal use only.
  */
@@ -47,7 +49,7 @@ final class ListParametersUpdater
     {
         if ($orderBy == 'position_ordering' && $hasCategoryFilter) {
             foreach (array_keys($filterParameters) as $key) {
-                if (strpos($key, 'filter_column_') === 0) {
+                if (str_starts_with($key, 'filter_column_')) {
                     $filterParameters[$key] = '';
                 }
             }

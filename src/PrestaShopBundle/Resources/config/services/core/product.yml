@@ -7,9 +7,6 @@ services:
     arguments:
       - '@translator'
       - '@prestashop.core.admin.data_provider.product_interface'
-
-  prestashop.core.product.csv_exporter:
-    alias: PrestaShop\PrestaShop\Core\Product\ProductCsvExporter
     deprecated: ~
 
   PrestaShop\PrestaShop\Core\Product\Combination\Generator\CombinationGenerator: ~

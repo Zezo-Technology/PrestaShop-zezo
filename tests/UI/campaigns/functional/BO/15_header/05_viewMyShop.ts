@@ -9,7 +9,7 @@ import testContext from '@utils/testContext';
 
 // Import pages
 import dashboardPage from '@pages/BO/dashboard';
-import foHomePage from '@pages/FO/home';
+import {homePage as foHomePage} from '@pages/FO/home';
 
 const baseContext: string = 'functional_BO_header_viewMyShop';
 
@@ -31,10 +31,10 @@ describe('BO - Header : View My Shop', async () => {
     await loginCommon.loginBO(this, page);
 
     const numPages = helper.getNumberTabs(browserContext);
-    await expect(numPages).to.be.eq(1);
+    expect(numPages).to.be.eq(1);
 
     const pageTitle = await dashboardPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(dashboardPage.pageTitle);
+    expect(pageTitle).to.contains(dashboardPage.pageTitle);
   });
 
   it('should click on View my shop', async function () {
@@ -43,9 +43,9 @@ describe('BO - Header : View My Shop', async () => {
     page = await dashboardPage.viewMyShop(page);
 
     const numPages = helper.getNumberTabs(browserContext);
-    await expect(numPages).to.be.eq(2);
+    expect(numPages).to.be.eq(2);
 
     const pageTitle = await foHomePage.getPageTitle(page);
-    await expect(pageTitle).to.contains(foHomePage.pageTitle);
+    expect(pageTitle).to.contains(foHomePage.pageTitle);
   });
 });

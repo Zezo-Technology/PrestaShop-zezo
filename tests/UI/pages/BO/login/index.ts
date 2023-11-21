@@ -47,7 +47,7 @@ class Login extends BOBasePage {
     this.passwordInput = '#passwd';
     this.submitLoginButton = '#submit_login';
     this.alertDangerDiv = '#error';
-    this.alertDangerTextBlock = `${this.alertDangerDiv} li`;
+    this.alertDangerTextBlock = `${this.alertDangerDiv} p`;
     // reset password selectors
     this.forgotPasswordLink = '#forgot-password-link';
     this.resetPasswordEmailFormField = '#email_forgot';
@@ -100,7 +100,7 @@ class Login extends BOBasePage {
   async clickOnLoginButton(page: Page, waitForNavigation: boolean): Promise<void> {
     // Wait for navigation if the login is successful
     if (waitForNavigation) {
-      await this.clickAndWaitForNavigation(page, this.submitLoginButton);
+      await this.clickAndWaitForURL(page, this.submitLoginButton);
     } else {
       await page.click(this.submitLoginButton);
     }

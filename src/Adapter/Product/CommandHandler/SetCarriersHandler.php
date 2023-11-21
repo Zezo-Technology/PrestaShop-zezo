@@ -28,27 +28,29 @@ declare(strict_types=1);
 
 namespace PrestaShop\PrestaShop\Adapter\Product\CommandHandler;
 
-use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductMultiShopRepository;
+use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductRepository;
+use PrestaShop\PrestaShop\Core\CommandBus\Attributes\AsCommandHandler;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\SetCarriersCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\CommandHandler\SetCarriersHandlerInterface;
 
 /**
  * Handles @var SetCarriersCommand using repository
  */
+#[AsCommandHandler]
 class SetCarriersHandler implements SetCarriersHandlerInterface
 {
     /**
-     * @var ProductMultiShopRepository
+     * @var ProductRepository
      */
-    private $productMultiShopRepository;
+    private $productRepository;
 
     /**
-     * @param ProductMultiShopRepository $productMultiShopRepository
+     * @param ProductRepository $productRepository
      */
     public function __construct(
-        ProductMultiShopRepository $productMultiShopRepository
+        ProductRepository $productRepository
     ) {
-        $this->productMultiShopRepository = $productMultiShopRepository;
+        $this->productRepository = $productRepository;
     }
 
     /**
@@ -56,7 +58,7 @@ class SetCarriersHandler implements SetCarriersHandlerInterface
      */
     public function handle(SetCarriersCommand $command): void
     {
-        $this->productMultiShopRepository->setCarrierReferences(
+        $this->productRepository->setCarrierReferences(
             $command->getProductId(),
             $command->getCarrierReferenceIds(),
             $command->getShopConstraint()

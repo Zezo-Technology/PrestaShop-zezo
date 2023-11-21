@@ -1,5 +1,5 @@
 import playwright, {
-  BrowserContext, Browser, BrowserType, Page,
+  BrowserContext, Browser, BrowserType, Page, APIRequestContext, request,
 } from 'playwright';
 
 require('./globals');
@@ -47,11 +47,24 @@ export default {
   },
 
   /**
+   * Create a API context
+   * @param url {string}
+   * @return {Promise<APIRequestContext>}
+   */
+  async createAPIContext(url: string): Promise<APIRequestContext> {
+    return request.newContext({
+      baseURL: url,
+      // @todo : Remove it when Playwright will accept self signed certificates
+      ignoreHTTPSErrors: true,
+    });
+  },
+
+  /**
    * Create a browser context
    * @param browser {Browser} Created browser context with options on global
    * @return {Promise<BrowserContext>}
    */
-  createBrowserContext(browser: Browser): Promise<BrowserContext> {
+  async createBrowserContext(browser: Browser): Promise<BrowserContext> {
     return browser.newContext(
       {
         acceptDownloads: global.BROWSER.acceptDownloads,
@@ -61,6 +74,11 @@ export default {
             width: global.BROWSER.width,
             height: global.BROWSER.height,
           },
+        permissions: [
+          'clipboard-read',
+        ],
+        // @todo : Remove it when Puppeteer will accept self signed certificates
+        ignoreHTTPSErrors: false,
       },
     );
   },
@@ -158,12 +176,22 @@ export default {
    * @param browser {Browser} Browser given
    * @returns {Promise<Page>}
    */
-  async getLastOpenedTab(browser: Browser): Promise<Page> {
+  async getLastOpenedTab(browser: Browser): Promise<Page | null> {
     // Get contexts
     const contexts = browser.contexts();
 
+    // Return null if no context found
+    if (contexts.length === 0) {
+      return null;
+    }
+
     // Get pages from last created context
     const tabs = contexts[contexts.length - 1].pages();
+
+    // Return null if no tabs found
+    if (tabs.length === 0) {
+      return null;
+    }
 
     return tabs[tabs.length - 1];
   },

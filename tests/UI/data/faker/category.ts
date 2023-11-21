@@ -1,6 +1,6 @@
 import Groups from '@data/demo/groups';
 import type GroupData from '@data/faker/group';
-import type CategoryCreator from '@data/types/category';
+import type {CategoryCreator} from '@data/types/category';
 
 import {faker} from '@faker-js/faker';
 
@@ -24,6 +24,12 @@ export default class CategoryData {
   public readonly metaDescription: string;
 
   public readonly groupAccess: GroupData;
+
+  public readonly coverImage: string|null;
+
+  public readonly thumbnailImage: string|null;
+
+  public readonly children: CategoryData[];
 
   /**
    * Constructor for class CategoryData
@@ -54,5 +60,14 @@ export default class CategoryData {
     /** @type {GroupData} Customer group that could access to the category */
     this.groupAccess = categoryToCreate.groupAccess
       || faker.helpers.arrayElement([Groups.customer, Groups.guest, Groups.visitor]);
+
+    /** @type {string|null} Category cover image of the category */
+    this.coverImage = categoryToCreate.coverImage || null;
+
+    /** @type {string|null} Category thumbnail of the category */
+    this.thumbnailImage = categoryToCreate.thumbnailImage || null;
+
+    /** @type {CategoryData[]} Category thumbnail of the category */
+    this.children = categoryToCreate.children || [];
   }
 }

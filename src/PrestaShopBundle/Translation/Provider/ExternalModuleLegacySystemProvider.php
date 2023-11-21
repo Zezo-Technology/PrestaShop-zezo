@@ -27,7 +27,7 @@
 namespace PrestaShopBundle\Translation\Provider;
 
 use InvalidArgumentException;
-use PrestaShop\PrestaShop\Core\Exception\FileNotFoundException;
+use PrestaShop\PrestaShop\Core\Translation\Exception\TranslationFilesNotFoundException;
 use PrestaShop\TranslationToolsBundle\Translation\Helper\DomainHelper;
 use PrestaShopBundle\Translation\DomainNormalizer;
 use PrestaShopBundle\Translation\Exception\UnsupportedLocaleException;
@@ -157,7 +157,7 @@ class ExternalModuleLegacySystemProvider extends AbstractProvider implements Use
                 ->setLocale($this->locale)
                 ->getXliffCatalogue()
             ;
-        } catch (FileNotFoundException $exception) {
+        } catch (TranslationFilesNotFoundException $exception) {
             $translationCatalogue = $this->buildTranslationCatalogueFromLegacyFiles();
         }
 
@@ -207,7 +207,8 @@ class ExternalModuleLegacySystemProvider extends AbstractProvider implements Use
 
         foreach ($catalogueFromPhpAndSmartyFiles->all() as $currentDomain => $items) {
             foreach (array_keys($items) as $translationKey) {
-                $legacyKey = md5($translationKey);
+                // Same as in Translate::getModuleTranslation()
+                $legacyKey = md5(preg_replace("/\\\*'/", "\'", $translationKey));
 
                 if ($catalogueFromLegacyTranslationFiles->has($legacyKey, $currentDomain)) {
                     $legacyFilesCatalogue->set(
@@ -289,7 +290,7 @@ class ExternalModuleLegacySystemProvider extends AbstractProvider implements Use
                 ->setModuleName($this->moduleName)
                 ->setLocale($this->locale)
                 ->getDefaultCatalogue();
-        } catch (FileNotFoundException $exception) {
+        } catch (TranslationFilesNotFoundException $exception) {
             // there are no xliff files for this module in the core
         }
 

@@ -28,6 +28,7 @@ namespace PrestaShopBundle\Controller\Admin\Sell\Catalog;
 
 use Exception;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\BulkDeleteProductCommand;
+use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Domain\ShowcaseCard\Query\GetShowcaseCardIsClosed;
 use PrestaShop\PrestaShop\Core\Domain\ShowcaseCard\ValueObject\ShowcaseCard;
 use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\Monitoring\DisabledProductGridDefinitionFactory;
@@ -111,6 +112,7 @@ class MonitoringController extends FrameworkBundleAdminController
             'productWithoutPriceGrid' => $this->presentGrid($productWithoutPriceGrid),
             'showcaseCardName' => ShowcaseCard::MONITORING_CARD,
             'isShowcaseCardClosed' => $isShowcaseCardClosed,
+            'layoutTitle' => $this->trans('Monitoring', 'Admin.Navigation.Menu'),
         ]);
     }
 
@@ -157,7 +159,10 @@ class MonitoringController extends FrameworkBundleAdminController
         $productIds = $this->getBulkProductsFromRequest($request, $gridIdentifiers);
 
         try {
-            $this->getCommandBus()->handle(new BulkDeleteProductCommand($productIds));
+            $this->getCommandBus()->handle(new BulkDeleteProductCommand(
+                $productIds,
+                ShopConstraint::shop($this->getContextShopId())
+            ));
             $this->addFlash(
                 'success',
                 $this->trans('Successful deletion', 'Admin.Notifications.Success')
@@ -177,11 +182,7 @@ class MonitoringController extends FrameworkBundleAdminController
      */
     private function getBulkProductsFromRequest(Request $request, array $gridIdentifiers): array
     {
-        $productIds = $request->request->get(sprintf('%s_%s', $gridIdentifiers['grid_id'], 'monitoring_products_bulk'));
-
-        if (!is_array($productIds)) {
-            return [];
-        }
+        $productIds = $request->request->all(sprintf('%s_%s', $gridIdentifiers['grid_id'], 'monitoring_products_bulk'));
 
         foreach ($productIds as $i => $productId) {
             $productIds[$i] = (int) $productId;

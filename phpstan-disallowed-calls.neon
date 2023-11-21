@@ -224,12 +224,6 @@ parameters:
               - StylesheetManager
               - Supplier
               - SupplierAddress
-              - SupplyOrder
-              - SupplyOrderDetail
-              - SupplyOrderHistory
-              - SupplyOrderReceiptHistory
-              - SupplyOrderState
-              - SupplyOrderStateLang
               - Tab
               - TabLang
               - Tag
@@ -256,9 +250,6 @@ parameters:
               - Uploader
               - Validate
               - ValidateConstraintTranslator
-              - Warehouse
-              - WarehouseAddress
-              - WarehouseProductLocation
               - WebserviceException
               - WebserviceKey
               - WebserviceOutputBuilder
@@ -277,23 +268,24 @@ parameters:
                 - src/Adapter/*
                 - src/PrestaShopBundle/Install/*
         -
-            class:
-              - src/Adapter/*
-            message: 'No adapters inside the prestashop bundle. Use core interfaces instead'
-            disallowIn:
-                - src/PrestaShopBundle/*
-                - src/Core/*
-        -
             class: 'Symfony\Component\Translation\TranslatorInterface'
             message: 'use Symfony\Contracts\Translation\TranslatorInterface instead'
             disallowIn:
                 - src/Core/*
+        -
+            class: 'Sensio\Bundle\FrameworkExtraBundle\Configuration\Template'
+            message: 'The @template annotation is deprecated and will be removed in future versions. We should not add any usages of it. '
+            disallowIn:
+                - src/PrestaShopBundle/*
   disallowedMethodCalls:
         -
-            method: 'PrestaShopBundle\Form\Admin\Type\CommonAbstractType::getConfiguration()'
-            message: 'Use dependency injection instead'
+            method: 'Psr\Container\ContainerInterface::get()'
+            message: "Please do not call the container from the controller, you can use $this->get() on the FrameworkBundleAdminController, or better, use dependency injection instead."
             disallowIn:
-                - src/*
+                - src/PrestaShopBundle/Controller/*
+            allowIn:
+                - src/PrestaShopBundle/Controller/Admin/FrameworkBundleAdminController.php
+                - src/PrestaShopBundle/Controller/Admin/PrestaShopAdminController.php
   disallowedConstants:
         -
             constant:
@@ -385,6 +377,7 @@ parameters:
                 - '_THEME_PROFILE_DIR_'
                 - '_THEMES_DIR_'
                 - 'PS_INSTALLATION_LOCK_FILE'
+                - '_PS_DISPLAY_ONLY_ERRORS_'
             message: 'Use dependency injection instead'
             disallowIn:
                 - src/PrestaShopBundle/*
@@ -392,6 +385,7 @@ parameters:
             allowIn:
                 - src/Adapter/*
                 - src/PrestaShopBundle/Install/*
+                - src/Core/Grid/Factory/FeatureValueGridFactory
         -
             class: PrestaShopBundle\Security\Voter\PageVoter
             constant: ['CREATE', 'READ', 'UPDATE', 'DELETE', 'LEVEL_DELETE', 'LEVEL_CREATE', 'LEVEL_READ', 'LEVEL_UPDATE']
@@ -402,6 +396,22 @@ parameters:
             class: AdminController
             constant: ['LEVEL_DELETE', 'LEVEL_ADD', 'LEVEL_VIEW', 'LEVEL_EDIT']
             message: 'Use \PrestaShop\PrestaShop\Core\Security\Permission constants instead.'
+            disallowIn:
+                - src/*
+                - classes/*
+                - controllers/*
+        -
+            class: CookieCore
+            constant: ['SAMESITE_NONE', 'SAMESITE_LAX', 'SAMESITE_STRICT', 'SAMESITE_AVAILABLE_VALUES']
+            message: 'Use \PrestaShop\PrestaShop\Core\Http\CookieOptions constants instead.'
+            disallowIn:
+                - src/*
+                - classes/*
+                - controllers/*
+        -
+            class: PrestaShopBundle\Form\Admin\Configure\AdvancedParameters\Administration\GeneralDataProvider
+            constant: ['MAX_COOKIE_VALUE']
+            message: 'Use \PrestaShop\PrestaShop\Core\Http\CookieOptions constants instead.'
             disallowIn:
                 - src/*
                 - classes/*

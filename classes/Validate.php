@@ -25,21 +25,22 @@
  */
 use Egulias\EmailValidator\EmailValidator;
 use Egulias\EmailValidator\Validation\MultipleValidationWithAnd;
-use Egulias\EmailValidator\Validation\NoRFCWarningsValidation;
 use Egulias\EmailValidator\Validation\RFCValidation;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Constraints\CustomerName;
 use PrestaShop\PrestaShop\Core\ConstraintValidator\Factory\CustomerNameValidatorFactory;
 use PrestaShop\PrestaShop\Core\Domain\Currency\ValueObject\NumericIsoCode;
+use PrestaShop\PrestaShop\Core\Domain\Customer\ValueObject\ApeCode;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\Isbn;
-use PrestaShop\PrestaShop\Core\Email\SwiftMailerValidation;
+use PrestaShop\PrestaShop\Core\Email\CyrillicCharactersInEmailValidation;
 use PrestaShop\PrestaShop\Core\Security\PasswordPolicyConfiguration;
+use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Validation;
 use ZxcvbnPhp\Zxcvbn;
 
 class ValidateCore
 {
     public const ORDER_BY_REGEXP = '/^(?:(`?)[\w!_-]+\1\.)?(?:(`?)[\w!_-]+\2)$/';
-    public const OBJECT_CLASS_NAME_REGEXP = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$/';
+    public const OBJECT_CLASS_NAME_REGEXP = '/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*(\\\\[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*)*$/';
     /**
      * Maximal 32 bits value: (2^32)-1
      *
@@ -47,32 +48,9 @@ class ValidateCore
      */
     public const MYSQL_UNSIGNED_INT_MAX = 4294967295;
 
-    /**
-     * @deprecated since 8.0.0 use PasswordPolicyConfiguration::CONFIGURATION_MINIMUM_LENGTH
-     */
-    public const ADMIN_PASSWORD_LENGTH = 8;
-
-    /**
-     * @deprecated since 8.0.0 use PasswordPolicyConfiguration::CONFIGURATION_MINIMUM_LENGTH
-     */
-    public const PASSWORD_LENGTH = 5;
-
     public static function isIp2Long($ip)
     {
         return preg_match('#^-?[0-9]+$#', (string) $ip);
-    }
-
-    /**
-     * @deprecated since PrestaShop 8.1 and will be removed in Prestashop 9.0
-     */
-    public static function isAnything()
-    {
-        @trigger_error(
-            'This function is deprecated PrestaShop 8.1 and will be removed in Prestashop 9.0.',
-            E_USER_DEPRECATED
-        );
-
-        return true;
     }
 
     /**
@@ -89,11 +67,19 @@ class ValidateCore
             return false;
         }
 
-        // Check if the value is correct according to both validators (RFC & SwiftMailer)
+        $validator = Validation::createValidator();
+        $errors = $validator->validate($email, new Email([
+            'mode' => 'loose',
+        ]));
+
+        if (count($errors) > 0) {
+            return false;
+        }
+
+        // Check if the value is correct according to both validators (RFC & CyrillicCharactersInEmailValidation)
         return (new EmailValidator())->isValid($email, new MultipleValidationWithAnd([
             new RFCValidation(),
-            new SwiftMailerValidation(), // special validation to be compatible with Swift Mailer
-            new NoRFCWarningsValidation(),
+            new CyrillicCharactersInEmailValidation(),
         ]));
     }
 
@@ -512,7 +498,8 @@ class ValidateCore
         $events .= '|onbounce|oncellchange|oncontextmenu|oncontrolselect|oncopy|oncut|ondataavailable|ondatasetchanged|ondatasetcomplete|ondeactivate|ondrag|ondragend|ondragenter|onmousewheel';
         $events .= '|ondragleave|ondragover|ondragstart|ondrop|onerrorupdate|onfilterchange|onfinish|onfocusin|onfocusout|onhashchange|onhelp|oninput|onlosecapture|onmessage|onmouseup|onmovestart';
         $events .= '|onoffline|ononline|onpaste|onpropertychange|onreadystatechange|onresizeend|onresizestart|onrowenter|onrowexit|onrowsdelete|onrowsinserted|onscroll|onsearch|onselectionchange';
-        $events .= '|onselectstart|onstart|onstop';
+        $events .= '|onselectstart|onstart|onstop|onanimationcancel|onanimationend|onanimationiteration|onanimationstart';
+        $events .= '|onpointerover|onpointerenter|onpointerdown|onpointermove|onpointerup|onpointerout|onpointerleave|onpointercancel|ongotpointercapture|onlostpointercapture';
 
         if (preg_match('/<[\s]*script/ims', $html) || preg_match('/(' . $events . ')[\s]*=/ims', $html) || preg_match('/.*script\:/ims', $html)) {
             return false;
@@ -543,8 +530,6 @@ class ValidateCore
      * @param string $password Password to validate
      *
      * @return bool Indicates whether the given string is a valid password
-     *
-     * @since 8.0.0
      */
     public static function isAcceptablePasswordScore(string $password): bool
     {
@@ -563,8 +548,6 @@ class ValidateCore
      * @param string $password Password to validate
      *
      * @return bool Indicates whether the given string is a valid password length
-     *
-     * @since 8.0.0
      */
     public static function isAcceptablePasswordLength(string $password): bool
     {
@@ -578,24 +561,6 @@ class ValidateCore
 
         // If value doesn't exist in database, use default behavior check
         return $passwordLength >= PasswordPolicyConfiguration::DEFAULT_MINIMUM_LENGTH && $passwordLength <= PasswordPolicyConfiguration::DEFAULT_MAXIMUM_LENGTH;
-    }
-
-    /**
-     * Check if plaintext password is valid
-     * Size is limited by `password_hash()` (72 chars).
-     *
-     * @param string $plaintextPasswd Password to validate
-     * @param int $size
-     *
-     * @return bool Indicates whether the given string is a valid plaintext password
-     *
-     * @since 1.7.0
-     * @deprecated since 8.0, use Validate::isAcceptablePasswordLength instead
-     */
-    public static function isPlaintextPassword($plaintextPasswd, $size = Validate::PASSWORD_LENGTH)
-    {
-        // The password length is limited by `password_hash()`
-        return Tools::strlen($plaintextPasswd) >= $size && Tools::strlen($plaintextPasswd) <= 72;
     }
 
     /**
@@ -613,14 +578,6 @@ class ValidateCore
     public static function isHashedPassword($hashedPasswd)
     {
         return Tools::strlen($hashedPasswd) == 32 || Tools::strlen($hashedPasswd) == 60;
-    }
-
-    /**
-     * @deprecated since 8.0
-     */
-    public static function isPasswdAdmin($passwd)
-    {
-        return Validate::isPlaintextPassword($passwd, Validate::ADMIN_PASSWORD_LENGTH);
     }
 
     /**
@@ -1313,7 +1270,7 @@ class ValidateCore
      */
     public static function isApe($ape)
     {
-        return (bool) preg_match('/^[0-9]{3,4}[a-zA-Z]{1}$/s', $ape);
+        return (bool) preg_match(ApeCode::PATTERN, $ape);
     }
 
     public static function isControllerName($name)

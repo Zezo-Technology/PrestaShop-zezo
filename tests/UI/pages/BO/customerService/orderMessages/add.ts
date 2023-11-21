@@ -35,9 +35,9 @@ class AddOrderMessage extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Add new';
-    this.pageTitleEdit = 'Edit:';
-    this.pageTitleView = 'View';
+    this.pageTitle = `New order message • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing message';
+    this.pageTitleView = 'Customer thread';
 
     // Selectors
     this.nameLangButton = '#order_message_name_dropdown';
@@ -85,7 +85,7 @@ class AddOrderMessage extends BOBasePage {
     await this.setValue(page, this.nameInput(2), orderMessageData.frName);
     await this.setValue(page, this.messageTextarea(2), orderMessageData.frMessage);
     // Save order message
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 }

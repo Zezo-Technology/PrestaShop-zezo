@@ -33,7 +33,7 @@ class EmailTheme extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Email Theme •';
+    this.pageTitle = `Email theme • ${global.INSTALL.SHOP_NAME}`;
     this.emailThemeConfigurationSuccessfulMessage = 'Email theme configuration saved successfully';
 
     // Configuration form selectors
@@ -58,7 +58,7 @@ class EmailTheme extends BOBasePage {
    */
   async selectDefaultEmailTheme(page: Page, emailTheme: string): Promise<string> {
     await this.selectByVisibleText(page, this.defaultEmailThemeSelect, emailTheme);
-    await this.clickAndWaitForNavigation(page, this.configurationFormSaveButton);
+    await this.clickAndWaitForLoadState(page, this.configurationFormSaveButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -71,17 +71,17 @@ class EmailTheme extends BOBasePage {
    * @return {Promise<void>}
    */
   async previewEmailTheme(page: Page, name: string): Promise<void> {
-    const tableRows: ElementHandle<HTMLElement|SVGElement>[] = await page.$$(this.tableRows);
+    const tableRows: ElementHandle<HTMLElement | SVGElement>[] = await page.$$(this.tableRows);
     let found: boolean = false;
 
     for (let i = 0; i < tableRows.length; i++) {
-      const textColumnName: string|null = await tableRows[i].$eval(this.columnName, (columnName) => columnName.textContent);
+      const textColumnName: string | null = await tableRows[i].$eval(this.columnName, (columnName) => columnName.textContent);
 
       if (textColumnName && textColumnName.includes(name)) {
         /* eslint-disable no-loop-func */
         await Promise.all([
           tableRows[i].$eval(this.columnActionPreviewLink, (el: HTMLElement) => el.click()),
-          page.waitForNavigation(),
+          page.waitForURL('**/mail_theme/preview/**'),
         ]);
         /* eslint-enable no-loop-func */
         found = true;

@@ -209,6 +209,7 @@ class AdminSearchControllerCore extends AdminController
             if (!$searchType || $searchType == 7) {
                 /* Handle module name */
                 if ($searchType == 7 && Validate::isModuleName($this->query) && ($module = Module::getInstanceByName($this->query)) && Validate::isLoadedObject($module)) {
+                    // @todo redirect directly to module manager with search prefilled, because this won't work anymore
                     Tools::redirectAdmin('index.php?tab=AdminModules&tab_module=' . $module->tab . '&module_name=' . $module->name . '&anchor=' . ucfirst($module->name) . '&token=' . Tools::getAdminTokenLite('AdminModules'));
                 }
 
@@ -278,7 +279,6 @@ class AdminSearchControllerCore extends AdminController
         );
         $result = Db::getInstance()->executeS($sql);
         $mainControllers = Dispatcher::getControllers([
-            _PS_ADMIN_DIR_ . '/tabs/',
             _PS_ADMIN_CONTROLLER_DIR_,
             _PS_OVERRIDE_DIR_ . 'controllers/admin/',
         ]);
@@ -305,8 +305,9 @@ class AdminSearchControllerCore extends AdminController
             }
 
             $sfRouteParams = (!empty($row['route_name'])) ? ['route' => $row['route_name']] : [];
+            $params = ['bo_query' => $this->query];
             $this->_list['features'][$row['name']][] = [
-                'link' => Context::getContext()->link->getAdminLink((string) $row['class_name'], true, $sfRouteParams),
+                'link' => Context::getContext()->link->getAdminLink((string) $row['class_name'], true, $sfRouteParams, $params),
             ];
         }
     }
@@ -502,6 +503,7 @@ class AdminSearchControllerCore extends AdminController
         );
 
         // Get additional search panels from hooks
+        // An array [module_name => module_output] will be returned
         $alternativeSearchPanelsFromModules = Hook::exec(
             'actionGetAlternativeSearchPanels',
             [
@@ -527,6 +529,7 @@ class AdminSearchControllerCore extends AdminController
                 'title' => $searchPanel->getTitle(),
                 'button_label' => $searchPanel->getButtonLabel(),
                 'link' => $searchPanel->getLink(),
+                'is_external_link' => $searchPanel->isExternalLink(),
             ];
         }
     }

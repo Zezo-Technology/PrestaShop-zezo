@@ -28,7 +28,7 @@ namespace PrestaShopBundle\Controller\Admin;
 
 use ImageManager;
 use PrestaShop\PrestaShop\Adapter\Product\AdminProductWrapper;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use PrestaShopBundle\Security\Annotation\AdminSecurity;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -36,12 +36,16 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
+ * @deprecated since 8.1 and will be removed in next major.
+ *
  * Admin controller for product images.
  */
 class ProductImageController extends FrameworkBundleAdminController
 {
     /**
      * Manage upload for product image.
+     *
+     * @AdminSecurity("is_granted('create', request.get('_legacy_controller')) || is_granted('update', request.get('_legacy_controller'))")
      *
      * @param int $idProduct
      * @param Request $request
@@ -108,6 +112,8 @@ class ProductImageController extends FrameworkBundleAdminController
     /**
      * Update images positions.
      *
+     * @AdminSecurity("is_granted('create', request.get('_legacy_controller')) || is_granted('update', request.get('_legacy_controller'))")
+     *
      * @param Request $request
      *
      * @return JsonResponse
@@ -128,14 +134,14 @@ class ProductImageController extends FrameworkBundleAdminController
     /**
      * Manage form image.
      *
-     * @Template("@PrestaShop/Admin/ProductImage/form.html.twig")
+     * @AdminSecurity("is_granted('create', request.get('_legacy_controller')) || is_granted('update', request.get('_legacy_controller'))")
      *
      * @param string|int $idImage
      * @param Request $request
      *
-     * @return array|JsonResponse|Response
+     * @return Response
      */
-    public function formAction($idImage, Request $request)
+    public function formAction($idImage, Request $request): Response
     {
         $locales = $this->get('prestashop.adapter.legacy.context')->getLanguages();
         $adminProductWrapper = $this->get(AdminProductWrapper::class);
@@ -182,14 +188,16 @@ class ProductImageController extends FrameworkBundleAdminController
             return $jsonResponse;
         }
 
-        return [
+        return $this->render('@PrestaShop/Admin/ProductImage/form.html.twig', [
             'image' => $image,
             'form' => $form->createView(),
-        ];
+        ]);
     }
 
     /**
      * Delete an image from its ID.
+     *
+     * @AdminSecurity("is_granted('create', request.get('_legacy_controller')) || is_granted('update', request.get('_legacy_controller'))")
      *
      * @param int $idImage
      * @param Request $request

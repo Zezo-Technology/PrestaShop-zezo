@@ -37,8 +37,8 @@ class AddTax extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Taxes •';
-    this.pageTitleEdit = 'Edit: ';
+    this.pageTitleCreate = `New tax • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing tax';
     this.successfulUpdateStatusMessage = 'The status has been successfully updated.';
 
     // Selectors
@@ -86,7 +86,7 @@ class AddTax extends BOBasePage {
     await this.setValue(page, this.rateInput, taxData.rate);
     await this.setChecked(page, this.statusToggleInput(taxData.enabled ? 1 : 0));
     // Save Tax
-    await this.clickAndWaitForNavigation(page, this.saveTaxButton);
+    await this.clickAndWaitForURL(page, this.saveTaxButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }

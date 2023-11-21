@@ -613,7 +613,7 @@ CREATE TABLE `PREFIX_customer` (
   `id_risk` int(10) unsigned NOT NULL DEFAULT '1',
   `company` varchar(255),
   `siret` varchar(14),
-  `ape` varchar(5),
+  `ape` varchar(6),
   `firstname` varchar(255) NOT NULL,
   `lastname` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
@@ -1269,7 +1269,8 @@ CREATE TABLE `PREFIX_orders` (
   KEY `id_shop_group` (`id_shop_group`),
   KEY (`current_state`),
   KEY `id_shop` (`id_shop`),
-  INDEX `date_add`(`date_add`)
+  INDEX `date_add`(`date_add`),
+  INDEX `invoice_date`(`invoice_date`)
 ) ENGINE=ENGINE_TYPE DEFAULT CHARSET=utf8mb4 COLLATION;
 
 /* Order tax detail */

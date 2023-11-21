@@ -28,9 +28,12 @@ declare(strict_types=1);
 
 namespace PrestaShopBundle\Api;
 
+/**
+ * @experimental
+ */
 final class Api
 {
-    public const API_BASE_PATH = '/new-api';
+    public const API_BASE_PATH = '/api';
 
     /**
      * This class is not meant to be instantiated as it is used to access encoding constants only.

@@ -43,6 +43,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
+ * @deprecated since 8.1 and will be removed in next major.
+ *
  * This form class is responsible to generate the product quantity form.
  */
 class ProductQuantity extends CommonAbstractType
@@ -118,41 +120,8 @@ class ProductQuantity extends CommonAbstractType
                 ]
             )
             ->add(
-                'advanced_stock_management',
-                FormType\CheckboxType::class,
-                [
-                    'required' => false,
-                    'label' => $this->translator->trans(
-                        'I want to use the advanced stock management system for this product.',
-                        [],
-                        'Admin.Catalog.Feature'
-                    ),
-                ]
-            )
-            ->add(
                 'pack_stock_type',
                 FormType\ChoiceType::class
-            )//see eventListener for details
-            ->add(
-                'depends_on_stock',
-                FormType\ChoiceType::class,
-                [
-                    'choices' => [
-                        $this->translator->trans(
-                            'The available quantities for the current product and its combinations are based on the stock in your warehouse (using the advanced stock management system). ',
-                            [],
-                            'Admin.Catalog.Feature'
-                        ) => 1,
-                        $this->translator->trans(
-                            'I want to specify available quantities manually.',
-                            [],
-                            'Admin.Catalog.Feature'
-                        ) => 0,
-                    ],
-                    'expanded' => true,
-                    'required' => true,
-                    'multiple' => false,
-                ]
             );
 
         if ($is_stock_management) {

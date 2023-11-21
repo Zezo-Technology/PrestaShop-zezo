@@ -10,7 +10,7 @@ import loginCommon from '@commonTests/BO/loginBO';
 import dashboardPage from '@pages/BO/dashboard';
 import productSettingsPage from '@pages/BO/shopParameters/productSettings';
 // Import FO pages
-import foHomePage from '@pages/FO/home';
+import {homePage as foHomePage} from '@pages/FO/home';
 import foProductPage from '@pages/FO/product';
 
 import {expect} from 'chai';
@@ -46,7 +46,7 @@ describe('BO - Shop Parameters - Product Settings : Enable delivery time in stoc
     );
 
     const pageTitle = await productSettingsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(productSettingsPage.pageTitle);
+    expect(pageTitle).to.contains(productSettingsPage.pageTitle);
   });
 
   const tests = [
@@ -59,7 +59,7 @@ describe('BO - Shop Parameters - Product Settings : Enable delivery time in stoc
       await testContext.addContextItem(this, 'testIdentifier', `${test.args.action}StockManagement`, baseContext);
 
       const result = await productSettingsPage.setDeliveryTimeInStock(page, test.args.deliveryTimeText);
-      await expect(result).to.contains(productSettingsPage.successfulUpdateMessage);
+      expect(result).to.contains(productSettingsPage.successfulUpdateMessage);
     });
 
     it('should view my shop', async function () {
@@ -69,7 +69,7 @@ describe('BO - Shop Parameters - Product Settings : Enable delivery time in stoc
       await foHomePage.changeLanguage(page, 'en');
 
       const isHomePage = await foHomePage.isHomePage(page);
-      await expect(isHomePage, 'Fail to open FO home page').to.be.true;
+      expect(isHomePage, 'Fail to open FO home page').to.eq(true);
     });
 
     it('should check delivery time block visibility', async function () {
@@ -78,7 +78,7 @@ describe('BO - Shop Parameters - Product Settings : Enable delivery time in stoc
       await foHomePage.goToProductPage(page, 4);
 
       const isDeliveryTimeBlockVisible = await foProductPage.isDeliveryInformationVisible(page);
-      await expect(isDeliveryTimeBlockVisible).to.equal(test.args.enable);
+      expect(isDeliveryTimeBlockVisible).to.equal(test.args.enable);
     });
 
     if (test.args.enable) {
@@ -86,7 +86,7 @@ describe('BO - Shop Parameters - Product Settings : Enable delivery time in stoc
         await testContext.addContextItem(this, 'testIdentifier', `deliveryTimeBlockText${index}`, baseContext);
 
         const deliveryTimeText = await foProductPage.getDeliveryInformationText(page);
-        await expect(deliveryTimeText).to.equal(test.args.deliveryTimeText);
+        expect(deliveryTimeText).to.equal(test.args.deliveryTimeText);
       });
     }
 
@@ -96,7 +96,7 @@ describe('BO - Shop Parameters - Product Settings : Enable delivery time in stoc
       page = await foProductPage.closePage(browserContext, page, 0);
 
       const pageTitle = await productSettingsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(productSettingsPage.pageTitle);
+      expect(pageTitle).to.contains(productSettingsPage.pageTitle);
     });
   });
 });

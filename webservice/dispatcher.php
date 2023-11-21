@@ -59,6 +59,12 @@ if (isset($_SERVER['PHP_AUTH_USER'])) {
 } elseif (isset($_GET['ws_key'])) {
     $key = $_GET['ws_key'];
 } else {
+    // Check if it is a preflight request before sending the 401 response
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        header('Access-Control-Allow-Headers: Authorization, Content-Type');
+        die('200 OK');
+    }
+
     header($_SERVER['SERVER_PROTOCOL'] . ' 401 Unauthorized');
     header('WWW-Authenticate: Basic realm="Welcome to PrestaShop Webservice, please enter the authentication key as the login. No password required."');
     die('401 Unauthorized');
@@ -91,7 +97,7 @@ if (!class_exists($class_name)) {
 WebserviceRequest::$ws_current_classname = $class_name;
 $request = call_user_func([$class_name, 'getInstance']);
 
-$result = $request->fetch($key, $method, $_GET['url'], $params, $bad_class_name, $input_xml);
+$result = $request->fetch($key, $method, ($_GET['url'] ?? ''), $params, $bad_class_name, $input_xml);
 // display result
 if (ob_get_length() != 0) {
     header('Content-Type: application/javascript');

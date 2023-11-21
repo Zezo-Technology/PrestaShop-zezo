@@ -25,8 +25,8 @@
  */
 
 use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagStateCheckerInterface;
 use PrestaShop\PrestaShop\Core\Image\ImageFormatConfiguration;
-use PrestaShopBundle\Entity\Repository\FeatureFlagRepository;
 
 /**
  * @property ImageType $object
@@ -35,7 +35,7 @@ class AdminImagesControllerCore extends AdminController
 {
     protected $start_time = 0;
     protected $max_execution_time = 7200;
-    protected $display_move;
+    protected $display_move = false;
 
     /**
      * @var bool
@@ -73,20 +73,6 @@ class AdminImagesControllerCore extends AdminController
             'suppliers' => ['title' => $this->trans('Suppliers', [], 'Admin.Global'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false],
             'stores' => ['title' => $this->trans('Stores', [], 'Admin.Global'), 'align' => 'center', 'type' => 'bool', 'callback' => 'printEntityActiveIcon', 'orderby' => false],
         ];
-
-        // No need to display the old image system migration tool except if product images are in _PS_PRODUCT_IMG_DIR_
-        $this->display_move = false;
-        $dir = _PS_PRODUCT_IMG_DIR_;
-        if (is_dir($dir)) {
-            if ($dh = opendir($dir)) {
-                while (($file = readdir($dh)) !== false && $this->display_move == false) {
-                    if (!is_dir($dir . DIRECTORY_SEPARATOR . $file) && $file[0] != '.' && is_numeric($file[0])) {
-                        $this->display_move = true;
-                    }
-                }
-                closedir($dh);
-            }
-        }
     }
 
     public function init()
@@ -97,9 +83,87 @@ class AdminImagesControllerCore extends AdminController
         parent::init();
 
         $this->canGenerateAvif = $this->get('PrestaShop\PrestaShop\Core\Image\AvifExtensionChecker')->isAvailable();
-        $this->isMultipleImageFormatFeatureEnabled = $this->get(FeatureFlagRepository::class)->isEnabled(FeatureFlagSettings::FEATURE_FLAG_MULTIPLE_IMAGE_FORMAT);
-        $this->imageFormatConfiguration = $this->get('PrestaShop\PrestaShop\Core\Image\ImageFormatConfiguration');
+        $this->isMultipleImageFormatFeatureEnabled = $this->get(FeatureFlagStateCheckerInterface::class)->isEnabled(FeatureFlagSettings::FEATURE_FLAG_MULTIPLE_IMAGE_FORMAT);
+        $this->imageFormatConfiguration = $this->get(ImageFormatConfiguration::class);
 
+        $formFields = [];
+
+        if ($this->isMultipleImageFormatFeatureEnabled) {
+            /* We will disable few image formats
+             * Base JPG is mandatory, see https://github.com/PrestaShop/PrestaShop/issues/30944
+             * AVIF support depends on platform - PHP version and required libraries available
+             */
+            $imageFormatsDisabled = [];
+            $imageFormatsDisabled['jpg'] = true;
+            if (!$this->canGenerateAvif) {
+                $imageFormatsDisabled['avif'] = true;
+            }
+
+            // Load configured formats to see what to check
+            $configuredImageFormats = $this->imageFormatConfiguration->getGenerationFormats();
+
+            $fields = [
+                'PS_IMAGE_FORMAT' => [
+                    'title' => $this->trans('Image formats to generate', [], 'Admin.Design.Feature'),
+                    'show' => true,
+                    'required' => true,
+                    'skip_clean_html' => true,
+                    'type' => 'checkbox',
+                    'multiple' => true,
+                    'choices' => [
+                        'jpg' => $this->trans('Base JPEG/PNG', [], 'Admin.Design.Feature'),
+                        'webp' => $this->trans('WebP', [], 'Admin.Design.Feature'),
+                        'avif' => $this->trans('AVIF', [], 'Admin.Design.Feature'),
+                    ],
+                    'value_multiple' => [
+                        'jpg' => in_array('jpg', $configuredImageFormats),
+                        'webp' => in_array('webp', $configuredImageFormats),
+                        'avif' => in_array('avif', $configuredImageFormats),
+                    ],
+                    'disabled' => $imageFormatsDisabled,
+                    'desc' => $this->trans('Choose which image formats you want to be generated. Base image will always have .jpg extension, other formats will have .webp or .avif.', [], 'Admin.Design.Help'),
+                ],
+                'PS_IMAGE_QUALITY' => [
+                    'title' => $this->trans('Base format', [], 'Admin.Design.Feature'),
+                    'show' => true,
+                    'required' => true,
+                    'type' => 'radio',
+                    'choices' => [
+                        'jpg' => $this->trans('Use JPEG', [], 'Admin.Design.Feature'),
+                        'png' => $this->trans('Use PNG only if the base image is in PNG format', [], 'Admin.Design.Feature'),
+                        'png_all' => $this->trans('Use PNG', [], 'Admin.Design.Feature'),
+                    ],
+                ],
+                'PS_AVIF_QUALITY' => [
+                    'title' => $this->trans('AVIF compression', [], 'Admin.Design.Feature'),
+                    'hint' => $this->trans('Ranges from 0 (worst quality, smallest file) to 100 (best quality, biggest file).', [], 'Admin.Design.Help') . ' ' . $this->trans('Recommended: 90.', [], 'Admin.Design.Help'),
+                    'validation' => 'isUnsignedId',
+                    'required' => $this->canGenerateAvif,
+                    'cast' => 'intval',
+                    'type' => 'text',
+                    'disabled' => !$this->canGenerateAvif,
+                ],
+            ];
+        } else {
+            $fields = [
+                'PS_IMAGE_QUALITY' => [
+                    'title' => $this->trans('Image format', [], 'Admin.Design.Feature'),
+                    'show' => true,
+                    'required' => true,
+                    'type' => 'radio',
+                    'choices' => [
+                        'jpg' => $this->trans('Use JPEG.', [], 'Admin.Design.Feature'),
+                        'png' => $this->trans('Use PNG only if the base image is in PNG format.', [], 'Admin.Design.Feature'),
+                        'png_all' => $this->trans('Use PNG for all images.', [], 'Admin.Design.Feature'),
+                        'webp' => $this->trans('Use WebP only if the base image is in WebP format.', [], 'Admin.Design.Feature'),
+                        'webp_all' => $this->trans('Use WebP for all images.', [], 'Admin.Design.Feature'),
+                    ],
+                ],
+            ];
+        }
+        $formFields = array_merge($formFields, $fields);
+
+        // Basic fields for both OLD and new format
         $fields = [
             'PS_JPEG_QUALITY' => [
                 'title' => $this->trans('JPEG compression', [], 'Admin.Design.Feature'),
@@ -186,34 +250,8 @@ class AdminImagesControllerCore extends AdminController
                 'suffix' => $this->trans('pixels', [], 'Admin.Design.Feature'),
                 'visibility' => Shop::CONTEXT_ALL,
             ],
-            'PS_HIGHT_DPI' => [
-                'type' => 'bool',
-                'title' => $this->trans('Generate high resolution images', [], 'Admin.Design.Feature'),
-                'required' => false,
-                'is_bool' => true,
-                'hint' => $this->trans('This will generate an additional file for each image (thus doubling your total amount of images). Resolution of these images will be twice higher.', [], 'Admin.Design.Help'),
-                'desc' => $this->trans('Enable to optimize the display of your images on high pixel density screens.', [], 'Admin.Design.Help'),
-                'visibility' => Shop::CONTEXT_ALL,
-            ],
         ];
-
-        if ($this->isMultipleImageFormatFeatureEnabled) {
-            $avifQualityField = [
-                'PS_AVIF_QUALITY' => [
-                    'title' => $this->trans('AVIF compression', [], 'Admin.Design.Feature'),
-                    'hint' => $this->trans('Ranges from 0 (worst quality, smallest file) to 100 (best quality, biggest file).', [], 'Admin.Design.Help') . ' ' . $this->trans('Recommended: 90.', [], 'Admin.Design.Help'),
-                    'validation' => 'isUnsignedId',
-                    'required' => $this->canGenerateAvif,
-                    'cast' => 'intval',
-                    'type' => 'text',
-                    'disabled' => !$this->canGenerateAvif,
-                ],
-            ];
-
-            $fields = array_merge($avifQualityField, $fields);
-        }
-
-        $fields = $this->getImageFormatForm($fields);
+        $formFields = array_merge($formFields, $fields);
 
         $this->fields_options = [
             'images' => [
@@ -223,22 +261,10 @@ class AdminImagesControllerCore extends AdminController
                 'bottom' => '',
                 'description' => $this->trans('JPEG images have a small file size and standard quality. PNG images have a larger file size, a higher quality and support transparency. Note that in all cases the image files will have the .jpg extension.', [], 'Admin.Design.Help') . '
 					<br /><br />' . $this->trans('WARNING: This feature may not be compatible with your theme, or with some of your modules. In particular, PNG mode is not compatible with the Watermark module. If you encounter any issues, turn it off by selecting "Use JPEG".', [], 'Admin.Design.Help'),
-                'fields' => $fields,
+                'fields' => $formFields,
                 'submit' => ['title' => $this->trans('Save', [], 'Admin.Actions')],
             ],
         ];
-
-        if ($this->display_move) {
-            $this->fields_options['product_images']['fields']['PS_LEGACY_IMAGES'] = [
-                'title' => $this->trans('Use the legacy image filesystem', [], 'Admin.Design.Feature'),
-                'hint' => $this->trans('This should be set to yes unless you successfully moved images in "Images" page under the "Preferences" menu.', [], 'Admin.Design.Help'),
-                'validation' => 'isBool',
-                'cast' => 'intval',
-                'required' => false,
-                'type' => 'bool',
-                'visibility' => Shop::CONTEXT_ALL,
-            ];
-        }
 
         $this->fields_form = [
             'legend' => [
@@ -421,6 +447,25 @@ class AdminImagesControllerCore extends AdminController
         ];
     }
 
+    public function beforeUpdateOptions()
+    {
+        // We check this only if new image system is enabled
+        // With the old system, PS_IMAGE_FORMAT is not present in the form
+        if (!$this->isMultipleImageFormatFeatureEnabled) {
+            return;
+        }
+
+        // Unset AVIF if not supported, add JPG if missing
+        foreach ($_POST['PS_IMAGE_FORMAT'] as $k => $v) {
+            if ($v == 'avif' && !$this->canGenerateAvif) {
+                unset($_POST['PS_IMAGE_FORMAT'][$k]);
+            }
+        }
+        if (!in_array('jpg', $_POST['PS_IMAGE_FORMAT'])) {
+            $_POST['PS_IMAGE_FORMAT'][] = 'jpg';
+        }
+    }
+
     public function updateOptionPsImageFormat($value): void
     {
         if ($this->access('edit') != '1') {
@@ -601,8 +646,12 @@ class AdminImagesControllerCore extends AdminController
             return false;
         }
 
-        $generate_high_dpi_images = (bool) Configuration::get('PS_HIGHT_DPI');
-        $imageConfiguredFormats = $this->imageFormatConfiguration->getGenerationFormats();
+        /*
+         * Let's resolve which formats we will use for image generation.
+         *
+         * In case of .jpg images, the actual format inside is decided by ImageManager.
+         */
+        $configuredImageFormats = $this->imageFormatConfiguration->getGenerationFormats();
 
         if (!$productsImages) {
             $formated_medium = ImageType::getFormattedName('medium');
@@ -619,32 +668,30 @@ class AdminImagesControllerCore extends AdminController
                             $image = str_replace('.', '_thumb.', $image);
                         }
 
-                        if (!file_exists($newDir . substr($image, 0, -4) . '-' . stripslashes($imageType['name']) . '.jpg')) {
-                            if (!file_exists($dir . $image) || !filesize($dir . $image)) {
-                                $this->errors[] = $this->trans('Source file does not exist or is empty (%filepath%)', ['%filepath%' => $dir . $image], 'Admin.Design.Notification');
-                            } elseif (!$this->isMultipleImageFormatFeatureEnabled && !ImageManager::resize($dir . $image, $newDir . substr(str_replace('_thumb.', '.', $image), 0, -4) . '-' . stripslashes($imageType['name']) . '.jpg', (int) $imageType['width'], (int) $imageType['height'])) {
-                                $this->errors[] = $this->trans('Failed to resize image file (%filepath%)', ['%filepath%' => $dir . $image], 'Admin.Design.Notification');
-                            }
-
-                            if ($generate_high_dpi_images) {
-                                if (!$this->isMultipleImageFormatFeatureEnabled && !ImageManager::resize($dir . $image, $newDir . substr($image, 0, -4) . '-' . stripslashes($imageType['name']) . '2x.jpg', (int) $imageType['width'] * 2, (int) $imageType['height'] * 2)) {
-                                    $this->errors[] = $this->trans('Failed to resize image file to high resolution (%filepath%)', ['%filepath%' => $dir . $image], 'Admin.Design.Notification');
-                                }
-                            }
-
-                            // image generation for when the multiple image feature is active
-                            foreach ($imageConfiguredFormats as $imageFormat) {
-                                if (!$this->isMultipleImageFormatFeatureEnabled) {
-                                    break;
-                                }
-
-                                ImageManager::resize($dir . $image, $newDir . substr(str_replace('_thumb.', '.', $image), 0, -4) . '-' . stripslashes($imageType['name']) . '.' . $imageFormat, (int) $imageType['width'], (int) $imageType['height'], $imageFormat, true);
-
-                                if ($generate_high_dpi_images) {
-                                    ImageManager::resize($dir . $image, $newDir . substr(str_replace('_thumb.', '.', $image), 0, -4) . '-' . stripslashes($imageType['name']) . '2x.' . $imageFormat, (int) $imageType['width'] * 2, (int) $imageType['height'] * 2, $imageFormat, true);
+                        foreach ($configuredImageFormats as $imageFormat) {
+                            // For JPG images, we let Imagemanager decide what to do and choose between JPG/PNG.
+                            // For webp and avif extensions, we want it to follow our command and ignore the original format.
+                            $forceFormat = ($imageFormat !== 'jpg');
+                            // If thumbnail does not exist
+                            if (!file_exists($newDir . substr($image, 0, -4) . '-' . stripslashes($imageType['name']) . '.' . $imageFormat)) {
+                                // Check if original image exists
+                                if (!file_exists($dir . $image) || !filesize($dir . $image)) {
+                                    $this->errors[] = $this->trans('Source file does not exist or is empty (%filepath%)', ['%filepath%' => $dir . $image], 'Admin.Design.Notification');
+                                } else {
+                                    if (!ImageManager::resize(
+                                        $dir . $image,
+                                        $newDir . substr(str_replace('_thumb.', '.', $image), 0, -4) . '-' . stripslashes($imageType['name']) . '.' . $imageFormat,
+                                        (int) $imageType['width'],
+                                        (int) $imageType['height'],
+                                        $imageFormat,
+                                        $forceFormat
+                                        )) {
+                                        $this->errors[] = $this->trans('Failed to resize image file (%filepath%)', ['%filepath%' => $dir . $image], 'Admin.Design.Notification');
+                                    }
                                 }
                             }
                         }
+
                         // stop 4 seconds before the timeout, just enough time to process the end of the page on a slow server
                         if (time() - $this->start_time > $this->max_execution_time - 4) {
                             return 'timeout';
@@ -658,22 +705,19 @@ class AdminImagesControllerCore extends AdminController
                 $existing_img = $dir . $imageObj->getExistingImgPath() . '.jpg';
                 if (file_exists($existing_img) && filesize($existing_img)) {
                     foreach ($type as $imageType) {
-                        if (!file_exists($dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '.jpg')) {
-                            if (!$this->isMultipleImageFormatFeatureEnabled && !ImageManager::resize($existing_img, $dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '.jpg', (int) $imageType['width'], (int) $imageType['height'])) {
-                                $this->errors[] = $this->trans(
-                                    'Original image is corrupt (%filename%) for product ID %id% or bad permission on folder.',
-                                    [
-                                        '%filename%' => $existing_img,
-                                        '%id%' => (int) $imageObj->id_product,
-                                    ],
-                                    'Admin.Design.Notification'
-                                );
-                            }
-                        }
-
-                        if ($generate_high_dpi_images) {
-                            if (!file_exists($dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '2x.jpg')) {
-                                if (!ImageManager::resize($existing_img, $dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '2x.jpg', (int) $imageType['width'] * 2, (int) $imageType['height'] * 2)) {
+                        foreach ($configuredImageFormats as $imageFormat) {
+                            // For JPG images, we let Imagemanager decide what to do and choose between JPG/PNG.
+                            // For webp and avif extensions, we want it to follow our command and ignore the original format.
+                            $forceFormat = ($imageFormat !== 'jpg');
+                            if (!file_exists($dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '.' . $imageFormat)) {
+                                if (!ImageManager::resize(
+                                    $existing_img,
+                                    $dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '.' . $imageFormat,
+                                    (int) $imageType['width'],
+                                    (int) $imageType['height'],
+                                    $imageFormat,
+                                    $forceFormat
+                                )) {
                                     $this->errors[] = $this->trans(
                                         'Original image is corrupt (%filename%) for product ID %id% or bad permission on folder.',
                                         [
@@ -683,21 +727,6 @@ class AdminImagesControllerCore extends AdminController
                                         'Admin.Design.Notification'
                                     );
                                 }
-                            }
-                        }
-
-                        foreach ($imageConfiguredFormats as $imageFormat) {
-                            if (!$this->isMultipleImageFormatFeatureEnabled) {
-                                break;
-                            }
-                            if ($imageFormat === 'avif' && !$this->canGenerateAvif) {
-                                continue;
-                            }
-                            if (!file_exists($dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '.' . $imageFormat)) {
-                                ImageManager::resize($existing_img, $dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '.' . $imageFormat, (int) $imageType['width'], (int) $imageType['height'], $imageFormat, true);
-                            }
-                            if ($generate_high_dpi_images && !file_exists($dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '2x.' . $imageFormat)) {
-                                ImageManager::resize($existing_img, $dir . $imageObj->getExistingImgPath() . '-' . stripslashes($imageType['name']) . '2x.' . $imageFormat, (int) $imageType['width'] * 2, (int) $imageType['height'] * 2, $imageFormat, true);
                             }
                         }
                     }
@@ -732,8 +761,13 @@ class AdminImagesControllerCore extends AdminController
     protected function _regenerateNoPictureImages($dir, $type, $languages)
     {
         $errors = false;
-        $generate_high_dpi_images = (bool) Configuration::get('PS_HIGHT_DPI');
-        $imageConfiguredFormats = $this->imageFormatConfiguration->getGenerationFormats();
+
+        /*
+         * Let's resolve which formats we will use for image generation.
+         *
+         * In case of .jpg images, the actual format inside is decided by ImageManager.
+         */
+        $configuredImageFormats = $this->imageFormatConfiguration->getGenerationFormats();
 
         foreach ($type as $image_type) {
             foreach ($languages as $language) {
@@ -741,28 +775,20 @@ class AdminImagesControllerCore extends AdminController
                 if (!file_exists($file)) {
                     $file = _PS_PRODUCT_IMG_DIR_ . Language::getIsoById((int) Configuration::get('PS_LANG_DEFAULT')) . '.jpg';
                 }
-
-                if ($this->isMultipleImageFormatFeatureEnabled) {
-                    foreach ($imageConfiguredFormats as $imageFormat) {
-                        if (!file_exists($dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '.' . $imageFormat)) {
-                            if (!ImageManager::resize($file, $dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '.' . $imageFormat, (int) $image_type['width'], (int) $image_type['height'])) {
-                                $errors = true;
-                            }
-                            if ($generate_high_dpi_images && !ImageManager::resize($file, $dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '2x.' . $imageFormat, (int) $image_type['width'] * 2, (int) $image_type['height'] * 2)) {
-                                $errors = true;
-                            }
-                        }
-                    }
-                } else {
-                    if (!file_exists($dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '.jpg')) {
-                        if (!ImageManager::resize($file, $dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '.jpg', (int) $image_type['width'], (int) $image_type['height'])) {
+                foreach ($configuredImageFormats as $imageFormat) {
+                    // For JPG images, we let Imagemanager decide what to do and choose between JPG/PNG.
+                    // For webp and avif extensions, we want it to follow our command and ignore the original format.
+                    $forceFormat = ($imageFormat !== 'jpg');
+                    if (!file_exists($dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '.' . $imageFormat)) {
+                        if (!ImageManager::resize(
+                            $file,
+                            $dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '.' . $imageFormat,
+                            (int) $image_type['width'],
+                            (int) $image_type['height'],
+                            $imageFormat,
+                            $forceFormat
+                        )) {
                             $errors = true;
-                        }
-
-                        if ($generate_high_dpi_images) {
-                            if (!ImageManager::resize($file, $dir . $language['iso_code'] . '-default-' . stripslashes($image_type['name']) . '2x.jpg', (int) $image_type['width'] * 2, (int) $image_type['height'] * 2)) {
-                                $errors = true;
-                            }
                         }
                     }
                 }
@@ -901,6 +927,11 @@ class AdminImagesControllerCore extends AdminController
         return count($this->errors) > 0 ? false : true;
     }
 
+    /**
+     * AdminController::initContent() override.
+     *
+     * @see AdminController::initContent()
+     */
     public function initContent()
     {
         if ($this->display != 'edit' && $this->display != 'add') {
@@ -946,59 +977,5 @@ class AdminImagesControllerCore extends AdminController
         }
 
         return parent::processDelete();
-    }
-
-    private function getImageFormatForm(array $fields): array
-    {
-        if ($this->isMultipleImageFormatFeatureEnabled) {
-            $imageFormatsDisabled = [];
-            $imageFormatsDisabled['jpg'] = true; // jpg is mandatory, see https://github.com/PrestaShop/PrestaShop/issues/30944
-
-            if (false === $this->canGenerateAvif) {
-                $imageFormatsDisabled['avif'] = true;
-            }
-            $key = 'PS_IMAGE_FORMAT';
-            $configuredImageFormats = $this->imageFormatConfiguration->getGenerationFormats();
-            $value = [
-                'title' => $this->trans('Image format', [], 'Admin.Design.Feature'),
-                'show' => true,
-                'required' => true,
-                'skip_clean_html' => true,
-                'type' => 'checkbox',
-                'multiple' => true,
-                'choices' => [
-                    'jpg' => $this->trans('JPEG', [], 'Admin.Design.Feature'),
-                    'png' => $this->trans('PNG', [], 'Admin.Design.Feature'),
-                    'webp' => $this->trans('WebP', [], 'Admin.Design.Feature'),
-                    'avif' => $this->trans('AVIF', [], 'Admin.Design.Feature'),
-                ],
-                'value_multiple' => [
-                    'jpg' => in_array('jpg', $configuredImageFormats),
-                    'png' => in_array('png', $configuredImageFormats),
-                    'webp' => in_array('webp', $configuredImageFormats),
-                    'avif' => in_array('avif', $configuredImageFormats),
-                ],
-                'disabled' => $imageFormatsDisabled,
-            ];
-
-            return [$key => $value] + $fields;
-        }
-
-        $key = 'PS_IMAGE_QUALITY';
-        $value = [
-            'title' => $this->trans('Image format', [], 'Admin.Design.Feature'),
-            'show' => true,
-            'required' => true,
-            'type' => 'radio',
-            'choices' => [
-                'jpg' => $this->trans('Use JPEG.', [], 'Admin.Design.Feature'),
-                'png' => $this->trans('Use PNG only if the base image is in PNG format.', [], 'Admin.Design.Feature'),
-                'png_all' => $this->trans('Use PNG for all images.', [], 'Admin.Design.Feature'),
-                'webp' => $this->trans('Use WebP only if the base image is in WebP format.', [], 'Admin.Design.Feature'),
-                'webp_all' => $this->trans('Use WebP for all images.', [], 'Admin.Design.Feature'),
-            ],
-        ];
-
-        return [$key => $value] + $fields;
     }
 }

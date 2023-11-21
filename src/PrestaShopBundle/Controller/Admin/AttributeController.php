@@ -33,6 +33,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
+ * @deprecated since 8.1 and will be removed in next major.
+ *
  * Admin controller for the attribute / attribute group.
  */
 class AttributeController extends FrameworkBundleAdminController
@@ -119,7 +121,7 @@ class AttributeController extends FrameworkBundleAdminController
         foreach ($options as $idGroup => $attributes) {
             foreach ($attributes as $attribute) {
                 //If attribute is a group attribute, replace group data by all attributes group
-                if (false !== strpos($attribute, 'group')) {
+                if (str_contains($attribute, 'group')) {
                     $allGroupAttributes = $this->get('prestashop.adapter.data_provider.attribute')->getAttributeIdsByGroup((int) $idGroup, true);
                     foreach ($allGroupAttributes as $groupAttribute) {
                         $newOptions[$idGroup][$groupAttribute] = $groupAttribute;
@@ -226,7 +228,7 @@ class AttributeController extends FrameworkBundleAdminController
         $legacyResponse = false;
 
         if ($request->request->has('attribute-ids')) {
-            $attributeIds = $request->request->get('attribute-ids');
+            $attributeIds = $request->request->all('attribute-ids');
             foreach ($attributeIds as $attributeId) {
                 $legacyResponse = $this->get(AdminAttributeGeneratorControllerWrapper::class)
                     ->ajaxProcessDeleteProductAttribute($attributeId, $idProduct);

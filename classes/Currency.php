@@ -480,12 +480,10 @@ class CurrencyCore extends ObjectModel
             Configuration::updateValue('PS_CURRENCY_DEFAULT', $result['id_currency']);
         }
 
-        $this->deleted = true;
-
         // Remove currency restrictions
         $res = Db::getInstance()->delete('module_currency', 'id_currency = ' . (int) $this->id);
 
-        return $res && $this->update();
+        return $res && $this->softDelete();
     }
 
     /**
@@ -1092,20 +1090,6 @@ class CurrencyCore extends ObjectModel
         }
 
         return self::$currencies[(int) ($id)];
-    }
-
-    /**
-     * Get conversion rate.
-     *
-     * @return int|string
-     *
-     * @deprecated 1.7.2.0, use Currency::getConversionRate() instead
-     */
-    public function getConversationRate()
-    {
-        Tools::displayAsDeprecated('Use Currency::getConversionRate() instead');
-
-        return $this->getConversionRate();
     }
 
     /**

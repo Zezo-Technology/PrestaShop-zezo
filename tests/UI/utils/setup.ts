@@ -1,8 +1,7 @@
-import 'module-alias/register';
 import helper from '@utils/helpers';
 import files from '@utils/files';
 
-let screenshotNumber = 1;
+let screenshotNumber: number = 1;
 
 /**
  * @module MochaHelper
@@ -56,12 +55,14 @@ afterEach(async function () {
     const currentTab = await helper.getLastOpenedTab(this.browser);
 
     // Take a screenshot
-    await currentTab.screenshot(
-      {
-        path: `${global.SCREENSHOT.FOLDER}/fail_test_${screenshotNumber}.png`,
-        fullPage: true,
-      },
-    );
+    if (currentTab !== null) {
+      await currentTab.screenshot(
+        {
+          path: `${global.SCREENSHOT.FOLDER}/fail_test_${screenshotNumber}.png`,
+          fullPage: true,
+        },
+      );
+    }
 
     screenshotNumber += 1;
   }

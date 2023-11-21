@@ -21,7 +21,7 @@ class AddEmployee extends EmployeeBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Add new •';
+    this.pageTitleCreate = `New employee • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.passwordInput = '#employee_password';
@@ -49,7 +49,7 @@ class AddEmployee extends EmployeeBasePage {
     }
     // replace toggle by 1 in the selector if active = YES / 0 if active = NO
     await this.setChecked(page, this.statusToggleInput(employeeData.active ? 1 : 0));
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForLoadState(page, this.saveButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }

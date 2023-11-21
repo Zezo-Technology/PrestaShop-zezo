@@ -24,6 +24,8 @@ class AddShop extends BOBasePage {
 
   private readonly saveButton: string;
 
+  private readonly sourceStoreSelect: string;
+
   /**
    * @constructs
    * Setting up texts and selectors to use on add shop page
@@ -40,6 +42,7 @@ class AddShop extends BOBasePage {
     this.shopGroupSelect = '#id_shop_group';
     this.categoryRootSelect = '#id_category';
     this.saveButton = '#shop_form_submit_btn';
+    this.sourceStoreSelect = '#importFromShop';
   }
 
   /*
@@ -53,16 +56,28 @@ class AddShop extends BOBasePage {
    * @returns {Promise<string>}
    */
   async setShop(page: Page, shopData: ShopData): Promise<string> {
+    const currentUrl: string = page.url();
+
     await this.setValue(page, this.nameInput, shopData.name);
     await this.selectByVisibleText(page, this.shopGroupSelect, shopData.shopGroup);
+    await this.setValue(page, this.colorInput, shopData.color);
     await this.selectByVisibleText(page, this.categoryRootSelect, shopData.categoryRoot);
 
     await Promise.all([
       page.$eval(this.saveButton, (el: HTMLElement) => el.click()),
-      page.waitForNavigation({waitUntil: 'networkidle', timeout: 30000}),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle', timeout: 30000}),
     ]);
 
     return this.getTextContent(page, this.alertSuccessBlock);
+  }
+
+  /**
+   * Get source store
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async getSourceStore(page: Page): Promise<string> {
+    return this.getTextContent(page, `${this.sourceStoreSelect} option[selected]`, false);
   }
 }
 

@@ -92,6 +92,7 @@ class CreditSlipController extends FrameworkBundleAdminController
             'creditSlipGrid' => $this->presentGrid($creditSlipGrid),
             'pdfByDateForm' => $pdfByDateForm->createView(),
             'creditSlipOptionsForm' => $creditSlipOptionsForm->createView(),
+            'layoutTitle' => $this->trans('Credit slips', 'Admin.Navigation.Menu'),
         ]);
     }
 
@@ -195,7 +196,7 @@ class CreditSlipController extends FrameworkBundleAdminController
                 ),
             ],
             MissingDataException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
         ];

@@ -8,11 +8,11 @@ import type {Page} from 'playwright';
  * @extends BOBasePage
  */
 export default class EmployeeBasePage extends BOBasePage {
-  public readonly pageTitleEdit: string;
+  public readonly pageTitleEdit: (firstName: string, lastName: string) => string;
 
-  public readonly firstNameInput: string;
+  protected readonly firstNameInput: string;
 
-  public readonly lastNameInput: string;
+  protected readonly lastNameInput: string;
 
   protected readonly emailInput: string;
 
@@ -37,7 +37,8 @@ export default class EmployeeBasePage extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleEdit = 'Edit:';
+    this.pageTitleEdit = (firstName: string, lastName: string) => `Editing ${firstName} ${lastName}'s profile • `
+      + `${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.firstNameInput = '#employee_firstname';
@@ -77,6 +78,6 @@ export default class EmployeeBasePage extends BOBasePage {
    * @returns {Promise<void>}
    */
   async cancel(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.cancelButton);
+    await this.clickAndWaitForURL(page, this.cancelButton);
   }
-};
+}

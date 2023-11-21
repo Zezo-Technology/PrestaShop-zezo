@@ -14,6 +14,10 @@ class Currencies extends LocalizationBasePage {
 
   public readonly successfulUpdateStatusMessage: string;
 
+  public readonly cannotDisableDefaultCurrencyMessage: string;
+
+  public readonly cannotDeleteDefaultCurrencyMessage: string;
+
   private readonly newCurrencyLink: string;
 
   private readonly gridPanel: string;
@@ -21,6 +25,14 @@ class Currencies extends LocalizationBasePage {
   private readonly gridTable: string;
 
   private readonly gridHeaderTitle: string;
+
+  private readonly bulkActionsToggleButton: string;
+
+  private readonly enableSelectionButton: string;
+
+  private readonly disableSelectionButton: string;
+
+  private readonly deleteSelectionButton: string;
 
   private readonly filterColumn: (filterBy: string) => string;
 
@@ -35,6 +47,10 @@ class Currencies extends LocalizationBasePage {
   private readonly tableEmptyRow: string;
 
   private readonly tableColumn: (row: number, column: string) => string;
+
+  private readonly bulkSelectColumn: (row: number) => string;
+
+  private readonly bulkSelectColumnCheckbox: (row: number) => string;
 
   private readonly statusColumn: (row: number) => string;
 
@@ -79,6 +95,8 @@ class Currencies extends LocalizationBasePage {
 
     this.pageTitle = 'Currencies • ';
     this.successfulUpdateStatusMessage = 'The status has been successfully updated.';
+    this.cannotDisableDefaultCurrencyMessage = 'You cannot disable the default currency';
+    this.cannotDeleteDefaultCurrencyMessage = 'You cannot delete the default currency';
 
     // Header Selectors
     this.newCurrencyLink = '#page-header-desc-configuration-add';
@@ -87,6 +105,12 @@ class Currencies extends LocalizationBasePage {
     this.gridPanel = '#currency_grid_panel';
     this.gridTable = '#currency_grid_table';
     this.gridHeaderTitle = `${this.gridPanel} h3.card-header-title`;
+
+    // Bulk
+    this.bulkActionsToggleButton = `${this.gridPanel} button.js-bulk-actions-btn`;
+    this.enableSelectionButton = `${this.gridPanel} #currency_grid_bulk_action_enable_selection`;
+    this.disableSelectionButton = `${this.gridPanel} #currency_grid_bulk_action_disable_selection`;
+    this.deleteSelectionButton = `${this.gridPanel} #currency_grid_bulk_action_delete_selection`;
 
     // Filters
     this.filterColumn = (filterBy: string) => `${this.gridTable} #currency_${filterBy}`;
@@ -98,12 +122,14 @@ class Currencies extends LocalizationBasePage {
     this.tableRow = (row: number) => `${this.tableBody} tr:nth-child(${row})`;
     this.tableEmptyRow = `${this.tableBody} tr.empty_row`;
     this.tableColumn = (row: number, column: string) => `${this.tableRow(row)} td.column-${column}`;
-    // enable column
+    // Column Bulk Select
+    this.bulkSelectColumn = (row: number) => this.tableColumn(row, 'currency_bulk');
+    this.bulkSelectColumnCheckbox = (row: number) => `${this.bulkSelectColumn(row)} .md-checkbox label`;
+    // Column Enabled
     this.statusColumn = (row: number) => `${this.tableColumn(row, 'active')} .ps-switch`;
     this.statusColumnToggleInput = (row: number) => `${this.statusColumn(row)} input`;
-
-    // Actions buttons in row
-    this.actionsColumn = (row: number) => `${this.tableRow(row)} td.column-actions`;
+    // Columns Actions
+    this.actionsColumn = (row: number) => this.tableColumn(row, 'actions');
     this.dropdownToggleButton = (row: number) => `${this.actionsColumn(row)} a.dropdown-toggle`;
     this.dropdownToggleMenu = (row: number) => `${this.actionsColumn(row)} div.dropdown-menu`;
     this.deleteRowLink = (row: number) => `${this.dropdownToggleMenu(row)} a.grid-delete-row-link`;
@@ -135,7 +161,7 @@ class Currencies extends LocalizationBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewCurrencyPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.newCurrencyLink);
+    await this.clickAndWaitForURL(page, this.newCurrencyLink);
   }
 
   /* filter Method */
@@ -159,7 +185,8 @@ class Currencies extends LocalizationBasePage {
       // Do nothing
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await page.click(this.filterSearchButton);
+    await this.elementVisible(page, this.filterResetButton);
   }
 
   /* Reset Methods */
@@ -170,7 +197,8 @@ class Currencies extends LocalizationBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (await this.elementVisible(page, this.filterResetButton, 2000)) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForLoadState(page, this.filterResetButton);
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
   }
 
@@ -204,6 +232,15 @@ class Currencies extends LocalizationBasePage {
    */
   async getTextColumnFromTableCurrency(page: Page, row: number, column: string): Promise<string> {
     return this.getTextContent(page, this.tableColumn(row, column));
+  }
+
+  /**
+   * Get text for empty table
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async getTextForEmptyTable(page: Page): Promise<string> {
+    return this.getTextContent(page, this.tableEmptyRow);
   }
 
   /**
@@ -259,11 +296,52 @@ class Currencies extends LocalizationBasePage {
    */
   async setStatus(page: Page, row: number = 1, valueWanted: boolean = true): Promise<boolean> {
     if (await this.getStatus(page, row) !== valueWanted) {
-      await this.clickAndWaitForNavigation(page, this.statusColumn(row));
+      await this.clickAndWaitForLoadState(page, this.statusColumn(row));
+      await this.elementVisible(page, this.alertTextBlock);
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Select Row in table
+   * @param page {Page} Browser tab
+   * @param row {number} Row on table to delete
+   * @returns {Promise<void>}
+   */
+  async selectRow(page: Page, row: number): Promise<void> {
+    await page.$eval(this.bulkSelectColumnCheckbox(row), (el: HTMLElement) => el.click());
+  }
+
+  /**
+   * Returns if the button for "Bulk Actions" is enabled
+   * @param page {Page} Browser tab
+   * @returns {Promise<void>}
+   */
+  async isBulkActionsEnabled(page: Page): Promise<boolean> {
+    return this.elementVisible(page, `${this.bulkActionsToggleButton}:not([disabled])`, 1000);
+  }
+
+  /**
+   * Delete all Taxes with Bulk Actions
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async bulkDeleteCurrencies(page: Page): Promise<string> {
+    // Click on Button Bulk actions
+    await Promise.all([
+      page.click(this.bulkActionsToggleButton),
+      this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
+    ]);
+    // Click on delete and wait for modal
+    await Promise.all([
+      page.click(this.deleteSelectionButton),
+      this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
+    ]);
+    await this.clickAndWaitForLoadState(page, this.confirmDeleteButton);
+    await this.elementNotVisible(page, this.confirmDeleteModal);
+    return this.getAlertSuccessBlockParagraphContent(page);
   }
 
   /**
@@ -287,7 +365,10 @@ class Currencies extends LocalizationBasePage {
     ]);
     await this.confirmDeleteCurrency(page);
 
-    return this.getAlertSuccessBlockParagraphContent(page);
+    if (await this.elementVisible(page, this.alertSuccessBlockParagraph, 2000)) {
+      return this.getAlertSuccessBlockParagraphContent(page);
+    }
+    return this.getAlertDangerBlockParagraphContent(page);
   }
 
   /**
@@ -296,7 +377,7 @@ class Currencies extends LocalizationBasePage {
    * @return {Promise<void>}
    */
   async confirmDeleteCurrency(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton);
+    await this.clickAndWaitForURL(page, this.confirmDeleteButton);
   }
 
   /**
@@ -306,7 +387,7 @@ class Currencies extends LocalizationBasePage {
    * @returns {Promise<void>}
    */
   async goToEditCurrencyPage(page: Page, row: number = 1): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.editRowLink(row));
+    await this.clickAndWaitForURL(page, this.editRowLink(row));
   }
 
   /**
@@ -315,7 +396,7 @@ class Currencies extends LocalizationBasePage {
    * @returns {Promise<string>}
    */
   async updateExchangeRate(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.updateExchangeRatesButton);
+    await page.click(this.updateExchangeRatesButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -337,9 +418,11 @@ class Currencies extends LocalizationBasePage {
    * @returns {Promise<string>}
    */
   async selectPaginationLimit(page: Page, number: number): Promise<string> {
+    const currentUrl: string = page.url();
+
     await Promise.all([
       this.selectByVisibleText(page, this.paginationLimitSelect, number),
-      page.waitForNavigation({waitUntil: 'networkidle'}),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
     ]);
 
     return this.getPaginationLabel(page);
@@ -351,7 +434,7 @@ class Currencies extends LocalizationBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -362,7 +445,7 @@ class Currencies extends LocalizationBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }
@@ -382,7 +465,7 @@ class Currencies extends LocalizationBasePage {
     let i = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
       await page.hover(this.sortColumnDiv(sortBy));
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 

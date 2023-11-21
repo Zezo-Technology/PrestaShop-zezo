@@ -28,20 +28,29 @@ export default class LocalizationBasePage extends BOBasePage {
 
   /* Header Methods */
   /**
-   * Go to languages page
+   * Go to Localization tab
+   * @param page {Page} Browser tab
+   * @return {Promise<void>}
+   */
+  async goToSubTabLocalizations(page: Page): Promise<void> {
+    await this.clickAndWaitForURL(page, this.localizationNavItemLink);
+  }
+
+  /**
+   * Go to Languages tab
    * @param page {Page} Browser tab
    * @return {Promise<void>}
    */
   async goToSubTabLanguages(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.languagesNavItemLink);
+    await this.clickAndWaitForURL(page, this.languagesNavItemLink);
   }
 
   /**
-   * Go to currencies page
+   * Go to Currencies tab
    * @param page {Page} Browser tab
    * @return {Promise<void>}
    */
   async goToSubTabCurrencies(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.currenciesNavItemLink);
+    await this.clickAndWaitForURL(page, this.currenciesNavItemLink);
   }
-};
+}

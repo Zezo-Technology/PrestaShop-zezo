@@ -1,5 +1,8 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
+// Import data
+import CustomerServiceOptionsData from '@data/faker/customerServiceOptions';
+
 import type {Page} from 'playwright';
 
 /**
@@ -66,6 +69,24 @@ class CustomerService extends BOBasePage {
 
   private readonly contactOptionSaveButton: string;
 
+  private readonly imapUrlInput: string;
+
+  private readonly imapPortInput: string;
+
+  private readonly imapUserInput: string;
+
+  private readonly imapPasswordInput: string;
+
+  private readonly deleteMessageToggleInput: (toggle: string) => string;
+
+  private readonly createNewThreadToggleInput: (toggle: string) => string;
+
+  private readonly imapOptionsSslToggleInput: (toggle: string) => string;
+
+  private readonly customerServiceOptionsSaveButton: string;
+
+  private readonly runSyncButton: string;
+
   /**
    * @constructs
    * Setting up titles and selectors to use on customer service page
@@ -121,6 +142,17 @@ class CustomerService extends BOBasePage {
     this.allowFileUploadingToggleInput = (toggle: string) => `#PS_CUSTOMER_SERVICE_FILE_UPLOAD_${toggle}`;
     this.defaultMessageTextarea = '#PS_CUSTOMER_SERVICE_SIGNATURE_1 textarea';
     this.contactOptionSaveButton = `${this.contactOptionForm} button[name='submitOptionscustomer_thread']`;
+
+    // Customer service options selectors
+    this.imapUrlInput = '#conf_id_PS_SAV_IMAP_URL input';
+    this.imapPortInput = '#conf_id_PS_SAV_IMAP_PORT input';
+    this.imapUserInput = '#conf_id_PS_SAV_IMAP_USER input';
+    this.imapPasswordInput = '#conf_id_PS_SAV_IMAP_PWD input[type=password]';
+    this.deleteMessageToggleInput = (toEnable: string) => `#PS_SAV_IMAP_DELETE_MSG_${toEnable}`;
+    this.createNewThreadToggleInput = (toEnable: string) => `#PS_SAV_IMAP_CREATE_THREADS_${toEnable}`;
+    this.imapOptionsSslToggleInput = (toEnable: string) => `#PS_SAV_IMAP_OPT_SSL_${toEnable}`;
+    this.customerServiceOptionsSaveButton = '#customer_thread_fieldset_general div.panel-footer button';
+    this.runSyncButton = '#run_sync';
   }
 
   /* Header Methods */
@@ -133,7 +165,8 @@ class CustomerService extends BOBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (await this.elementVisible(page, this.filterResetButton, 2000)) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForLoadState(page, this.filterResetButton);
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
   }
 
@@ -147,15 +180,17 @@ class CustomerService extends BOBasePage {
    * @return {Promise<void>}
    */
   async filterTable(page: Page, filterType: string, filterBy: string, value: string): Promise<void> {
+    const currentUrl: string = page.url();
+
     switch (filterType) {
       case 'input':
         await this.setValue(page, this.filterColumn(filterBy), value.toString());
-        await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+        await this.clickAndWaitForURL(page, this.filterSearchButton);
         break;
 
       case 'select':
         await Promise.all([
-          page.waitForNavigation({waitUntil: 'networkidle'}),
+          page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
           this.selectByVisibleText(page, this.filterColumn(filterBy), value ? 'Yes' : 'No'),
         ]);
         break;
@@ -275,7 +310,7 @@ class CustomerService extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToViewMessagePage(page: Page, row: number = 1): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.tableColumnActionsViewLink(row));
+    await this.clickAndWaitForURL(page, this.tableColumnActionsViewLink(row));
   }
 
   /**
@@ -293,7 +328,8 @@ class CustomerService extends BOBasePage {
     await page.click(this.tableColumnActionsDeleteLink(row));
 
     // Confirm delete action
-    await this.clickAndWaitForNavigation(page, this.deleteModalButtonYes);
+    await page.click(this.deleteModalButtonYes);
+    await this.elementNotVisible(page, this.deleteModalButtonYes);
 
     // Get successful message
     return this.getAlertSuccessBlockContent(page);
@@ -307,7 +343,8 @@ class CustomerService extends BOBasePage {
    */
   async allowFileUploading(page: Page, toEnable: boolean = true): Promise<string> {
     await this.setChecked(page, this.allowFileUploadingToggleInput(toEnable ? 'on' : 'off'));
-    await this.clickAndWaitForNavigation(page, this.contactOptionSaveButton);
+    await page.click(this.contactOptionSaveButton);
+    await this.elementNotVisible(page, this.allowFileUploadingToggleInput(!toEnable ? 'on' : 'off'));
 
     return this.getAlertSuccessBlockContent(page);
   }
@@ -320,9 +357,38 @@ class CustomerService extends BOBasePage {
    */
   async setDefaultMessage(page: Page, message: string): Promise<string> {
     await page.fill(this.defaultMessageTextarea, message);
-    await this.clickAndWaitForNavigation(page, this.contactOptionSaveButton);
+    await page.click(this.contactOptionSaveButton);
 
     return this.getAlertSuccessBlockContent(page);
+  }
+
+  // Methods for customer service options
+  /**
+   * Set customer service options
+   * @param page {Page} Browser tab
+   * @param optionsData {CustomerServiceOptionsData} Data to set in customer service options form
+   * @returns {Promise<string>}
+   */
+  async setCustomerServiceOptions(page: Page, optionsData: CustomerServiceOptionsData): Promise<string> {
+    await page.locator(this.imapUrlInput).fill(optionsData.imapUrl);
+    await page.locator(this.imapPortInput).fill(optionsData.imapPort);
+    await page.locator(this.imapUserInput).fill(optionsData.imapUser);
+    await page.locator(this.imapPasswordInput).fill(optionsData.imapPassword);
+    await this.setChecked(page, this.deleteMessageToggleInput(optionsData.deleteMessage ? 'on' : 'off'));
+    await this.setChecked(page, this.createNewThreadToggleInput(optionsData.createNewThreads ? 'on' : 'off'));
+    await this.setChecked(page, this.imapOptionsSslToggleInput(optionsData.imapOptionsSsl ? 'on' : 'off'));
+    await page.locator(this.customerServiceOptionsSaveButton).click();
+
+    return this.getAlertSuccessBlockContent(page);
+  }
+
+  /**
+   * Is run sync button visible
+   * @param page {Page} Browser tab
+   * @returns {Promise<boolean>}
+   */
+  async isRunSyncButtonVisible(page: Page): Promise<boolean> {
+    return this.elementVisible(page, this.runSyncButton, 2000);
   }
 }
 

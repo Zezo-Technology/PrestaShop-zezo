@@ -291,7 +291,7 @@
 													</div>
 												{/foreach}
 												<script type="text/javascript">
-													$(document).ready(function() {
+													$(function() {
 														$(".textarea-autosize").autosize();
 													});
 												</script>
@@ -332,7 +332,7 @@
 								{if $field['is_invisible']}
 								<div class="col-lg-9 col-lg-offset-3">
 									<p class="alert alert-warning row-margin-top">
-										{l s='You can\'t change the value of this configuration field in the context of this shop.'}
+										{l s='You can\'t change the value of this configuration field in this store\'s context.'}
 									</p>
 								</div>
 								{/if}
@@ -381,7 +381,7 @@
 	var pathCSS = '{$smarty.const._THEME_CSS_DIR_|addslashes}';
 	var ad = '{$ad|addslashes}';
 
-	$(document).ready(function(){
+	$(function(){
 		{block name="autoload_tinyMCE"}
 			tinySetup({
 				editor_selector :"autoload_rte"

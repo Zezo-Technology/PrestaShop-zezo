@@ -34,14 +34,14 @@ use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\CommandBuilder\CommandBuilder;
 use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\CommandBuilder\CommandBuilderConfig;
 use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\CommandBuilder\DataField;
-use PrestaShopBundle\Form\Admin\Extension\DisablingSwitchExtension;
+use PrestaShopBundle\Form\Extension\DisablingSwitchExtension;
 
 /**
  * This command builder builds the unified UpdateCombinationCommand which includes many sub scopes of the combination
  * edition, to clarify the configuration each sub-domain is configured separately but in the end we use one config, one
  * builder and one command for the whole Combination fields updates.
  */
-class UpdateCombinationCommandsBuilder implements MultiShopCombinationCommandsBuilderInterface
+class UpdateCombinationCommandsBuilder implements CombinationCommandsBuilderInterface
 {
     /**
      * @var string

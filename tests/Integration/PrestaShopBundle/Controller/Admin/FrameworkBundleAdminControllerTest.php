@@ -36,11 +36,12 @@ use Link;
 use PrestaShop\PrestaShop\Adapter\Currency\CurrencyDataProvider;
 use PrestaShop\PrestaShop\Adapter\LegacyContext;
 use PrestaShop\PrestaShop\Core\Addon\Theme\Theme;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagStateCheckerInterface;
 use PrestaShop\PrestaShop\Core\Kpi\Row\KpiRowPresenterInterface;
 use PrestaShopBundle\Entity\Repository\FeatureFlagRepository;
 use Psr\Log\NullLogger;
 use Shop;
-use Symfony\Bundle\FrameworkBundle\Client;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Routing\Router;
 use Symfony\Component\Translation\Translator;
@@ -51,7 +52,7 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
     use ContextMockerTrait;
 
     /**
-     * @var Client
+     * @var KernelBrowser
      */
     protected $client;
 
@@ -69,11 +70,6 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
     {
         parent::setUp();
         self::mockContext();
-
-        // Symfony
-        self::bootKernel();
-        global $kernel;
-        $kernel = self::$kernel;
 
         $this->client = self::createClient();
         $this->router = self::$kernel->getContainer()->get('router');
@@ -210,7 +206,14 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
 
         $mockFeatureFlagRepository->method('isEnabled')->willReturn(false);
 
+        $mockFeatureFlagStateChecker = $this->getMockBuilder(FeatureFlagStateCheckerInterface::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $mockFeatureFlagStateChecker->method('isEnabled')->willReturn(false);
+
         self::$kernel->getContainer()->set(FeatureFlagRepository::class, $mockFeatureFlagRepository);
+        self::$kernel->getContainer()->set(FeatureFlagStateCheckerInterface::class, $mockFeatureFlagStateChecker);
         self::$kernel->getContainer()->set('prestashop.adapter.data_provider.currency', $currencyDataProviderMock);
         self::$kernel->getContainer()->set('prestashop.adapter.legacy.context', $legacyContextMock);
         self::$kernel->getContainer()->set('prestashop.core.kpi_row.presenter', $kpiRowPresenterMock);
@@ -305,16 +308,20 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
             'admin_order_messages_create' => ['Add new', 'admin_order_messages_create'],
             'admin_order_messages_index' => ['Order messages', 'admin_order_messages_index'],
             'admin_order_preferences' => ['Order Preferences', 'admin_order_preferences'],
+            'admin_order_return_states_create' => ['Add new', 'admin_order_states'],
+            'admin_order_states' => ['Order States', 'admin_order_states'],
+            'admin_order_states_create' => ['Add new', 'admin_order_states'],
             'admin_orders_create' => ['Add new', 'admin_orders_create'],
             'admin_orders_index' => ['Orders', 'admin_orders_index'],
+            'admin_outstanding_index' => ['Outstanding', 'admin_outstanding_index'],
             'admin_payment_methods' => ['Payment Methods', 'admin_payment_methods'],
             'admin_payment_preferences' => ['Payment preferences', 'admin_payment_preferences'],
             'admin_performance' => ['Performance', 'admin_performance'],
             'admin_permissions_index' => ['Permissions', 'admin_permissions_index'],
             'admin_preferences' => ['Preferences', 'admin_preferences'],
             'admin_product_preferences' => ['Product Preferences', 'admin_product_preferences'],
-            'admin_profiles_create' => ['Add new profile', 'admin_profiles_create'],
-            'admin_profiles_index' => ['Profiles', 'admin_profiles_index'],
+            'admin_profiles_create' => ['Add new role', 'admin_profiles_create'],
+            'admin_profiles_index' => ['Roles', 'admin_profiles_index'],
             'admin_search_engines_create' => ['Add new', 'admin_search_engines_create'],
             'admin_search_engines_index' => ['Search Engines', 'admin_search_engines_index'],
             'admin_shipping_preferences' => ['Shipping Preferences', 'admin_shipping_preferences'],

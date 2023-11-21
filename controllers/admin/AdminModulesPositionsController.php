@@ -237,6 +237,11 @@ class AdminModulesPositionsControllerCore extends AdminController
         }
     }
 
+    /**
+     * AdminController::initContent() override.
+     *
+     * @see AdminController::initContent()
+     */
     public function initContent()
     {
         $this->addjqueryPlugin('sortable');
@@ -254,12 +259,6 @@ class AdminModulesPositionsControllerCore extends AdminController
 
     public function initPageHeaderToolbar()
     {
-        $this->page_header_toolbar_btn['save'] = [
-            'href' => self::$currentIndex . '&addToHook' . ($this->display_key ? '&show_modules=' . $this->display_key : '') . '&token=' . $this->token,
-            'desc' => $this->trans('Transplant a module', [], 'Admin.Design.Feature'),
-            'icon' => 'process-icon-anchor',
-        ];
-
         return parent::initPageHeaderToolbar();
     }
 
@@ -558,12 +557,14 @@ class AdminModulesPositionsControllerCore extends AdminController
      */
     public function ajaxProcessGetPossibleHookingListForModule()
     {
-        $module_id = (int) Tools::getValue('module_id');
-        if ($module_id == 0) {
-            die('{"hasError" : true, "errors" : ["Wrong module ID."]}');
-        }
+        if ($this->access('view')) {
+            $module_id = (int) Tools::getValue('module_id');
+            if ($module_id == 0) {
+                die('{"hasError" : true, "errors" : ["Wrong module ID."]}');
+            }
 
-        $module_instance = Module::getInstanceById($module_id);
-        die(json_encode($module_instance->getPossibleHooksList()));
+            $module_instance = Module::getInstanceById($module_id);
+            die(json_encode($module_instance->getPossibleHooksList()));
+        }
     }
 }

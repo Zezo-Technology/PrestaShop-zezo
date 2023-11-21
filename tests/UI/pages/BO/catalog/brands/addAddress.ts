@@ -43,7 +43,7 @@ class AddBrandAddress extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Add new address • ';
+    this.pageTitle = `New brand address • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.brandSelect = 'select#manufacturer_address_id_manufacturer';
@@ -85,7 +85,7 @@ class AddBrandAddress extends BOBasePage {
     await this.setValue(page, this.otherInput, brandAddressData.other);
 
     // Click on Save button and successful message
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 }

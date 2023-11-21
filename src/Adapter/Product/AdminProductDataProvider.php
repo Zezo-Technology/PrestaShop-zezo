@@ -45,6 +45,8 @@ use StockAvailable;
 use Tools;
 
 /**
+ * @deprecated since 8.1 and will be removed in next major.
+ *
  * Data provider for new Architecture, about Product object model.
  *
  * This class will provide data from DB / ORM about Products for the Admin interface.
@@ -85,7 +87,7 @@ class AdminProductDataProvider extends AbstractAdminQueryBuilder implements Prod
         $employee = Context::getContext()->employee;
         $employeeId = $employee->id ?: 0;
 
-        $cachedFilters = $this->cache->getItem("app.product_filters_${employeeId}");
+        $cachedFilters = $this->cache->getItem("app.product_filters_{$employeeId}");
 
         if (!$cachedFilters->isHit()) {
             $shop = Context::getContext()->shop;
@@ -127,7 +129,7 @@ class AdminProductDataProvider extends AbstractAdminQueryBuilder implements Prod
     {
         $filters = $this->getPersistedFilterParameters();
         foreach ($filters as $filterKey => $filterValue) {
-            if (strpos($filterKey, 'filter_column_') === 0 && $filterValue !== '') {
+            if (str_starts_with($filterKey, 'filter_column_') && $filterValue !== '') {
                 return true; // break at first column filter found
             }
         }
@@ -169,7 +171,7 @@ class AdminProductDataProvider extends AbstractAdminQueryBuilder implements Prod
         $employee = Context::getContext()->employee;
         $employeeId = $employee->id ?: 0;
 
-        $this->cache->deleteItem("app.product_filters_${employeeId}");
+        $this->cache->deleteItem("app.product_filters_{$employeeId}");
     }
 
     /**
@@ -216,7 +218,7 @@ class AdminProductDataProvider extends AbstractAdminQueryBuilder implements Prod
         $showPositionColumn = $this->isCategoryFiltered();
         if ($orderBy == 'position_ordering' && $showPositionColumn) {
             foreach ($filterParams as $key => $param) {
-                if (strpos($key, 'filter_column_') === 0) {
+                if (str_starts_with($key, 'filter_column_')) {
                     $filterParams[$key] = '';
                 }
             }
@@ -320,7 +322,7 @@ class AdminProductDataProvider extends AbstractAdminQueryBuilder implements Prod
             if (!$filterValue && $filterValue !== '0') {
                 continue;
             }
-            if (strpos($filterParam, 'filter_column_') === 0) {
+            if (str_starts_with($filterParam, 'filter_column_')) {
                 $filterValue = Db::getInstance()->escape($filterValue, in_array($filterParam, [
                     'filter_column_id_product',
                     'filter_column_sav_quantity',

@@ -215,11 +215,7 @@ class AddressController extends FrameworkBundleAdminController
      */
     private function getBulkAddressesFromRequest(Request $request): array
     {
-        $addressIds = $request->request->get('address_addresses_bulk');
-
-        if (!is_array($addressIds)) {
-            return [];
-        }
+        $addressIds = $request->request->all('address_addresses_bulk');
 
         foreach ($addressIds as $i => $addressId) {
             $addressIds[$i] = (int) $addressId;
@@ -311,6 +307,7 @@ class AddressController extends FrameworkBundleAdminController
             'customerId' => $customerId,
             'customerInformation' => $customerInfo,
             'enableSidebar' => true,
+            'layoutTitle' => $this->trans('New address', 'Admin.Navigation.Menu'),
             'displayInIframe' => $request->query->has('submitFormAjax'),
             'addressForm' => $addressForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
@@ -386,7 +383,7 @@ class AddressController extends FrameworkBundleAdminController
             'enableSidebar' => true,
             'customerId' => $editableAddress->getCustomerId()->getValue(),
             'customerInformation' => $customerInfo,
-            'layoutTitle' => $this->trans('Edit', 'Admin.Actions'),
+            'layoutTitle' => $this->trans('Editing address %alias%', 'Admin.Navigation.Menu', ['%alias%' => $editableAddress->getAddressAlias()]),
             'displayInIframe' => $request->query->has('submitFormAjax'),
             'addressForm' => $addressForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
@@ -487,7 +484,7 @@ class AddressController extends FrameworkBundleAdminController
             'enableSidebar' => true,
             'customerId' => $editableAddress->getCustomerId()->getValue(),
             'customerInformation' => $customerInfo,
-            'layoutTitle' => $this->trans('Edit', 'Admin.Actions'),
+            'layoutTitle' => $this->trans('Editing address %alias%', 'Admin.Navigation.Menu', ['%alias%' => $editableAddress->getAddressAlias()]),
             'addressForm' => $addressForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'cancelPath' => $this->generateUrl('admin_orders_view', ['orderId' => $orderId]),
@@ -588,7 +585,7 @@ class AddressController extends FrameworkBundleAdminController
             'enableSidebar' => true,
             'customerId' => $editableAddress->getCustomerId()->getValue(),
             'customerInformation' => $customerInfo,
-            'layoutTitle' => $this->trans('Edit', 'Admin.Actions'),
+            'layoutTitle' => $this->trans('Editing address %alias%', 'Admin.Navigation.Menu', ['%alias%' => $editableAddress->getAddressAlias()]),
             'addressForm' => $addressForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'cancelPath' => $this->generateUrl('admin_carts_view', ['cartId' => $cartId]),
@@ -619,7 +616,7 @@ class AddressController extends FrameworkBundleAdminController
                 $e instanceof BulkDeleteAddressException ? implode(', ', $e->getAddressIds()) : ''
             ),
             AddressNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             CannotSetRequiredFieldsForAddressException::class => $this->trans(
@@ -676,15 +673,15 @@ class AddressController extends FrameworkBundleAdminController
                 ),
             ],
             CustomerNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             CountryNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             CustomerByEmailNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
         ];

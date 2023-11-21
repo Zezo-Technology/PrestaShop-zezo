@@ -79,6 +79,7 @@ class EmailController extends FrameworkBundleAdminController
             'emailLogsGrid' => $presentedEmailLogsGrid ?? null,
             'isEmailLogsEnabled' => $isEmailLogsEnabled,
             'enableSidebar' => true,
+            'layoutTitle' => $this->trans('E-mail', 'Admin.Navigation.Menu'),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
         ]);
     }
@@ -113,7 +114,6 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Process email configuration saving.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
      * @AdminSecurity(
      *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))",
      *     message="Access denied."
@@ -123,6 +123,7 @@ class EmailController extends FrameworkBundleAdminController
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
     public function saveOptionsAction(Request $request)
     {
         $formHandler = $this->getEmailConfigurationFormHandler();
@@ -148,13 +149,13 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Delete selected email logs.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
      * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message="Access denied.")
      *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
     public function deleteBulkAction(Request $request)
     {
         $mailLogsToDelete = $request->request->get('email_logs_delete_email_logs');
@@ -167,7 +168,7 @@ class EmailController extends FrameworkBundleAdminController
         } else {
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         }
 
@@ -177,11 +178,11 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Delete all email logs.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
      * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message="Access denied.")
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
     public function deleteAllAction()
     {
         $mailLogsEraser = $this->get('prestashop.adapter.email.email_log_eraser');
@@ -196,13 +197,13 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Delete single email log.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
      * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message="Access denied.")
      *
      * @param int $mailId
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
     public function deleteAction($mailId)
     {
         $mailLogsEraser = $this->get('prestashop.adapter.email.email_log_eraser');
@@ -213,7 +214,7 @@ class EmailController extends FrameworkBundleAdminController
         } else {
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         }
 

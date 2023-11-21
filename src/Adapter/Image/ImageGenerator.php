@@ -28,14 +28,11 @@ declare(strict_types=1);
 
 namespace PrestaShop\PrestaShop\Adapter\Image;
 
-use Configuration;
 use ImageManager;
 use ImageType;
-use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
 use PrestaShop\PrestaShop\Core\Image\Exception\ImageOptimizationException;
 use PrestaShop\PrestaShop\Core\Image\ImageFormatConfiguration;
 use PrestaShop\PrestaShop\Core\Image\Uploader\Exception\ImageUploadException;
-use PrestaShopBundle\Entity\Repository\FeatureFlagRepository;
 use PrestaShopException;
 
 /**
@@ -43,38 +40,28 @@ use PrestaShopException;
  */
 class ImageGenerator
 {
-    /**
-     * @var FeatureFlagRepository
-     */
-    private $featureFlagRepository;
-
-    /**
-     * @var ImageFormatConfiguration
-     */
-    private $imageFormatConfiguration;
-
-    public function __construct(FeatureFlagRepository $featureFlagRepository, ImageFormatConfiguration $imageFormatConfiguration)
-    {
-        $this->featureFlagRepository = $featureFlagRepository;
-        $this->imageFormatConfiguration = $imageFormatConfiguration;
+    public function __construct(
+        private readonly ImageFormatConfiguration $imageFormatConfiguration
+    ) {
     }
 
     /**
      * @param string $imagePath
      * @param ImageType[] $imageTypes
+     * @param int $imageId
      *
      * @return bool
      *
      * @throws ImageOptimizationException
      * @throws ImageUploadException
      */
-    public function generateImagesByTypes(string $imagePath, array $imageTypes): bool
+    public function generateImagesByTypes(string $imagePath, array $imageTypes, int $imageId = 0): bool
     {
         $resized = true;
 
         try {
             foreach ($imageTypes as $imageType) {
-                $resized &= $this->resize($imagePath, $imageType);
+                $resized &= $this->resize($imagePath, $imageType, $imageId);
             }
         } catch (PrestaShopException $e) {
             throw new ImageOptimizationException('Unable to resize one or more of your pictures.');
@@ -92,47 +79,36 @@ class ImageGenerator
      *
      * @param string $filePath
      * @param ImageType $imageType
+     * @param int $imageId
      *
      * @return bool
      */
-    protected function resize(string $filePath, ImageType $imageType): bool
+    protected function resize(string $filePath, ImageType $imageType, int $imageId = 0): bool
     {
-        $fileExtension = pathinfo($filePath, PATHINFO_EXTENSION);
-
         if (!is_file($filePath)) {
             throw new ImageUploadException(sprintf('File "%s" does not exist', $filePath));
         }
 
-        //@todo: hardcoded extension as it was in legacy code. Changing it would be a huge BC break.
-        //@todo: in future we should consider using extension by mimeType
-        $destinationExtension = '.jpg';
-        $width = $imageType->width;
-        $height = $imageType->height;
-
-        if (Configuration::get('PS_HIGHT_DPI')) {
-            $destinationExtension = '2x' . $destinationExtension;
-            $width *= 2;
-            $height *= 2;
-        }
-
-        if (!$this->featureFlagRepository->isEnabled(FeatureFlagSettings::FEATURE_FLAG_MULTIPLE_IMAGE_FORMAT)) {
-            return ImageManager::resize(
-                $filePath,
-                sprintf('%s-%s%s', rtrim($filePath, '.' . $fileExtension), stripslashes($imageType->name), $destinationExtension),
-                $width,
-                $height,
-                trim(mime_content_type($filePath), 'image/'));
-        }
+        /*
+         * Let's resolve which formats we will use for image generation.
+         *
+         * In case of .jpg images, the actual format inside is decided by ImageManager.
+         */
+        $configuredImageFormats = $this->imageFormatConfiguration->getGenerationFormats();
 
         $result = true;
 
-        foreach ($this->imageFormatConfiguration->getGenerationFormats() as $imageFormat) {
+        foreach ($configuredImageFormats as $imageFormat) {
+            // For JPG images, we let Imagemanager decide what to do and choose between JPG/PNG.
+            // For webp and avif extensions, we want it to follow our command and ignore the original format.
+            $forceFormat = ($imageFormat !== 'jpg');
             if (!ImageManager::resize(
                 $filePath,
-                sprintf('%s-%s.%s', rtrim($filePath, '.' . $fileExtension), stripslashes($imageType->name), $imageFormat),
-                $width,
-                $height,
-                trim(mime_content_type($filePath), 'image/')
+                sprintf('%s-%s.%s', dirname($filePath) . DIRECTORY_SEPARATOR . $imageId, stripslashes($imageType->name), $imageFormat),
+                $imageType->width,
+                $imageType->height,
+                $imageFormat,
+                $forceFormat
             )) {
                 $result = false;
             }

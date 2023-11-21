@@ -41,8 +41,8 @@ class AddLanguage extends LocalizationBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Add new •';
-    this.pageEditTitle = 'Edit:';
+    this.pageTitle = `New language • ${global.INSTALL.SHOP_NAME}`;
+    this.pageEditTitle = 'Editing language';
 
     // Selectors
     this.nameInput = '#language_name';
@@ -82,7 +82,7 @@ class AddLanguage extends LocalizationBasePage {
     await this.setChecked(page, this.statusToggleInput(languageData.enabled ? 1 : 0));
 
     // Save and return result
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }

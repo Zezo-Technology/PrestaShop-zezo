@@ -81,8 +81,6 @@ class AdminModelAdapterTest extends KernelTestCase
                 'specificPricePriority_3' => '',
             ],
             'step3' => [
-                'advanced_stock_management' => '',
-                'depends_on_stock' => '',
                 'qty_0' => '',
                 'combinations' => [],
                 'out_of_stock' => '',
@@ -185,11 +183,11 @@ class AdminModelAdapterTest extends KernelTestCase
             self::$kernel->getContainer()->get(Tools::class),
             self::$kernel->getContainer()->get('prestashop.adapter.data_provider.product'),
             self::$kernel->getContainer()->get('prestashop.adapter.data_provider.supplier'),
-            self::$kernel->getContainer()->get('prestashop.adapter.data_provider.warehouse'),
             self::$kernel->getContainer()->get('prestashop.adapter.data_provider.feature'),
             self::$kernel->getContainer()->get('prestashop.adapter.data_provider.pack'),
             self::$kernel->getContainer()->get('prestashop.adapter.shop.context'),
             self::$kernel->getContainer()->get('prestashop.adapter.data_provider.tax'),
+            self::$kernel->getContainer()->get('prestashop.adapter.legacy.configuration'),
             self::$kernel->getContainer()->get('router'),
             self::$kernel->getContainer()->get(FloatParser::class)
         );

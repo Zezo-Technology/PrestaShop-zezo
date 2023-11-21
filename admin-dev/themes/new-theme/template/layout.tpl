@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="{$iso}">
 <head>
-  {$header}
+    {$header}
 </head>
 
 <body
-  class="lang-{$iso_user}{if $lang_is_rtl} lang-rtl{/if} {$controller_name|escape|strtolower}{if $collapse_menu} page-sidebar-closed{/if}{if isset($is_multishop) && $is_multishop} multishop-enabled{/if}{if isset($lite_display) && $lite_display} light_display_layout{/if}{if isset($debug_mode) && $debug_mode == true} developer-mode{/if}"
+  class="lang-{$iso_user}{if $lang_is_rtl} lang-rtl{/if} {$controller_name|escape|strtolower}{if $collapse_menu} page-sidebar-closed{/if}{if isset($is_multishop) && $is_multishop} multishop-enabled{/if}{if isset($lite_display) && $lite_display} light_display_layout{/if}{if !empty($debug_mode)} developer-mode{/if}"
   {if isset($js_router_metadata.base_url)}data-base-url="{$js_router_metadata.base_url}"{/if}
   {if isset($js_router_metadata.token)}data-token="{$js_router_metadata.token}"{/if}
 >
@@ -22,16 +22,16 @@
       <span id="shop_version">{$ps_version}</span>
 
       <div class="component" id="quick-access-container">
-        {include file="components/layout/quick_access.tpl"}
+          {include file="components/layout/quick_access.tpl"}
       </div>
       <div class="component component-search" id="header-search-container">
         <div class="component-search-body">
           <div class="component-search-top">
-            {include file="components/layout/search_form.tpl"}
+              {include file="components/layout/search_form.tpl"}
             <button class="component-search-cancel d-none">{l|escape s='Cancel' d='Admin.Actions'}</button>
           </div>
 
-          {include file="components/layout/mobile_quickaccess.tpl"}
+            {include file="components/layout/mobile_quickaccess.tpl"}
         </div>
 
         <div class="component-search-background d-none"></div>
@@ -44,7 +44,7 @@
              data-toggle="pstooltip"
              data-placement="bottom"
              data-html="true"
-             title="<p class=&quot;text-left&quot;><strong>{l|escape s='Your shop is in debug mode.' d='Admin.Navigation.Notification'}</strong></p><p class=&quot;text-left&quot;>{l|escape s='All the PHP errors and messages are displayed. When you no longer need it, [1]turn off[/1] this mode.' html=true sprintf=['[1]' => '<strong>', '[/1]' => '</strong>'] d='Admin.Navigation.Notification'}</p>"
+             title="<p class=&quot;text-left&quot;><strong>{l|escape s='Your store is in debug mode.' d='Admin.Navigation.Notification'}</strong></p><p class=&quot;text-left&quot;>{l|escape s='All the PHP errors and messages are displayed. When you no longer need it, [1]turn off[/1] this mode.' html=true sprintf=['[1]' => '<strong>', '[/1]' => '</strong>'] d='Admin.Navigation.Notification'}</p>"
              href="{$link->getAdminLink('AdminPerformance')|escape:'html':'UTF-8'}"
           >
             <i class="material-icons">bug_report</i>
@@ -55,14 +55,14 @@
 
       {if isset($maintenance_mode) && $maintenance_mode == true}
         {capture name="title"}
-          <p class="text-left text-nowrap">
+          <p class="text-left">
             <strong>{l s='Your store is in maintenance mode.' d='Admin.Navigation.Notification'}</strong>
           </p>
           <p class="text-left">
-              {l s='Your visitors and customers cannot access your shop while in maintenance mode.' d='Admin.Navigation.Notification'}
+              {l s='Your visitors and customers cannot access your store while in maintenance mode.' d='Admin.Navigation.Notification'}
           </p>
           <p class="text-left">
-              {l s='To manage the maintenance settings, go to Shop Parameters > Maintenance tab.' d='Admin.Navigation.Notification'}
+              {l s='To manage the maintenance settings, go to Shop Parameters > General > Maintenance tab.' d='Admin.Navigation.Notification'}
           </p>
           {if isset($maintenance_allow_admins) && $maintenance_allow_admins}
             <p class="text-left">
@@ -90,17 +90,17 @@
       <div class="header-right">
         {if !isset($hideLegacyStoreContextSelector) || !$hideLegacyStoreContextSelector}
           <div class="component" id="header-shop-list-container">
-            {include file="components/layout/shop_list.tpl"}
+              {include file="components/layout/shop_list.tpl"}
           </div>
         {/if}
         {if $show_new_orders || $show_new_customers || $show_new_messages}
           <div class="component header-right-component" id="header-notifications-container">
-            {include file="components/layout/notifications_center.tpl"}
+              {include file="components/layout/notifications_center.tpl"}
           </div>
         {/if}
 
         <div class="component" id="header-employee-container">
-          {include file="components/layout/employee_dropdown.tpl"}
+            {include file="components/layout/employee_dropdown.tpl"}
         </div>
         {if isset($displayBackOfficeTop)}{$displayBackOfficeTop}{/if}
       </div>
@@ -109,10 +109,12 @@
 {/if}
 
 {if $display_header}
-  {include file='components/layout/nav_bar.tpl'}
+    {include file='components/layout/nav_bar.tpl'}
 {/if}
 
-{if isset($page_header_toolbar)}{$page_header_toolbar}{/if}
+{if isset($page_header_toolbar)}
+    {$page_header_toolbar}
+{/if}
 
 <div id="main-div">
     {if $install_dir_exists}
@@ -141,11 +143,10 @@
 </div>
 
 {if (!isset($lite_display) || (isset($lite_display) && !$lite_display))}
-  {include file='components/layout/non-responsive.tpl'}
   <div class="mobile-layer"></div>
 
   {if $display_footer}
-    {include file='footer.tpl'}
+      {include file='footer.tpl'}
   {/if}
 {/if}
 

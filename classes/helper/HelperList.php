@@ -34,6 +34,11 @@ use PrestaShop\PrestaShop\Core\Routing\Exception\BuilderNotFoundException;
  */
 class HelperListCore extends Helper
 {
+    /**
+     * @var int|null
+     */
+    public $id;
+
     /** @var int size which is used for lists image thumbnail generation. */
     public const LIST_THUMBNAIL_SIZE = 45;
 
@@ -75,6 +80,11 @@ class HelperListCore extends Helper
 
     public $position_identifier;
 
+    /**
+     * @var string|null
+     */
+    public $position_group_identifier;
+
     public $table_id;
 
     /** @var string */
@@ -112,6 +122,7 @@ class HelperListCore extends Helper
 
     public $bulk_actions = false;
     public $force_show_bulk_actions = false;
+    public $force_hide_bulk_actions_btn = false;
     public $specificConfirmDelete = null;
     public $colorOnBackground;
 
@@ -377,7 +388,7 @@ class HelperListCore extends Helper
                 } elseif (isset($params['image'])) {
                     // item_id is the product id in a product image context, else it is the image id.
                     $item_id = isset($params['image_id']) ? $tr[$params['image_id']] : $id;
-                    if ($params['image'] != 'p' || Configuration::get('PS_LEGACY_IMAGES')) {
+                    if ($params['image'] != 'p') {
                         $path_to_image = _PS_IMG_DIR_ . $params['image'] . '/' . $item_id . (isset($tr['id_image']) ? '-' . (int) $tr['id_image'] : '') . '.' . $this->imageType;
                     } else {
                         $path_to_image = _PS_IMG_DIR_ . $params['image'] . '/' . Image::getImgFolderStatic($tr['id_image']) . (int) $tr['id_image'] . '.' . $this->imageType;
@@ -802,6 +813,7 @@ class HelperListCore extends Helper
             'toolbar_scroll' => $this->toolbar_scroll,
             'toolbar_btn' => $this->toolbar_btn,
             'has_bulk_actions' => $this->hasBulkActions($has_value),
+            'hide_bulk_actions_btn' => $this->force_hide_bulk_actions_btn,
             'filters_has_value' => (bool) $has_value,
         ]);
 

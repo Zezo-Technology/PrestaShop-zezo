@@ -138,7 +138,7 @@ class AddOrder extends BOBasePage {
 
   private readonly cartRuleErrorText: string;
 
-  private readonly addVoucherBUtton: string;
+  private readonly addVoucherButton: string;
 
   private readonly vouchersTable: string;
 
@@ -160,7 +160,7 @@ class AddOrder extends BOBasePage {
 
   private readonly invoiceAddressSelect: string;
 
-  private readonly invoiceAddressdetails: string;
+  private readonly invoiceAddressDetails: string;
 
   private readonly invoiceAddressEditButton: string;
 
@@ -223,7 +223,7 @@ class AddOrder extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Create order •';
+    this.pageTitle = `New order • ${global.INSTALL.SHOP_NAME}`;
     this.noCustomerFoundText = 'No customers found';
     this.noProductFoundText = 'No products found';
     this.cartRuleAlreadyExistErrorText = 'This voucher is already in your cart';
@@ -306,7 +306,7 @@ class AddOrder extends BOBasePage {
     this.searchCartRuleResultBox = '#search-cart-rules-result-box';
     this.searchCartRuleResultFound = '#cart-rules-search-block li.js-found-cart-rule.found-cart-rule';
     this.cartRuleErrorText = '#js-cart-rule-error-text';
-    this.addVoucherBUtton = '#js-add-cart-rule-btn';
+    this.addVoucherButton = '#js-add-cart-rule-btn';
     this.vouchersTable = '#cart-rules-table';
     this.vouchersTableBody = `${this.vouchersTable} tbody`;
     this.vouchersTableRows = `${this.vouchersTableBody} tr`;
@@ -320,7 +320,7 @@ class AddOrder extends BOBasePage {
     this.deliveryAddressDetails = '#delivery-address-details';
     this.deliveryAddressEditButton = '#js-delivery-address-edit-btn';
     this.invoiceAddressSelect = '#invoice-address-select';
-    this.invoiceAddressdetails = '#invoice-address-details';
+    this.invoiceAddressDetails = '#invoice-address-details';
     this.invoiceAddressEditButton = '#js-invoice-address-edit-btn';
 
     // Shipping form selectors
@@ -421,12 +421,14 @@ class AddOrder extends BOBasePage {
 
     const customerFrame = await page.frame({url: /sell\/customers\/new/gmi});
 
-    await addCustomerPage.fillCustomerForm(customerFrame, customerData);
+    if (!customerFrame) {
+      throw new Error('The customerFrame doesn\'t exist!');
+    }
 
-    await Promise.all([
-      customerFrame.click(addCustomerPage.saveCustomerButton),
-      this.waitForHiddenSelector(page, this.iframe),
-    ]);
+    await addCustomerPage.closeSfToolBar(customerFrame!);
+    await addCustomerPage.createEditCustomer(customerFrame!, customerData, false);
+
+    await this.waitForHiddenSelector(page, this.iframe);
 
     return this.getCustomerNameFromResult(page);
   }
@@ -463,7 +465,7 @@ class AddOrder extends BOBasePage {
    * Get customer Iframe
    * @param page {Page} Browser tab
    * @param customerID {number} Id of customer to check
-   * @returns {*}
+   * @returns {Frame | null}
    */
   getCustomerIframe(page: Page, customerID: number): Frame | null {
     return page.frame({url: new RegExp(`sell/customers/${customerID}/view`, 'gmi')});
@@ -842,7 +844,7 @@ class AddOrder extends BOBasePage {
    * @returns {Promise<boolean>}
    */
   async clickOnAddVoucherButton(page: Page): Promise<boolean> {
-    await this.waitForSelectorAndClick(page, this.addVoucherBUtton);
+    await this.waitForSelectorAndClick(page, this.addVoucherButton);
     await this.waitForVisibleSelector(page, this.iframe);
 
     return this.elementVisible(page, this.iframe, 2000);
@@ -939,7 +941,7 @@ class AddOrder extends BOBasePage {
   async getInvoiceAddressDetails(page: Page): Promise<string> {
     await page.waitForTimeout(2000);
 
-    return this.getTextContent(page, this.invoiceAddressdetails);
+    return this.getTextContent(page, this.invoiceAddressDetails);
   }
 
   /**
@@ -1025,7 +1027,8 @@ class AddOrder extends BOBasePage {
    */
   async setDeliveryOption(page: Page, deliveryOptionName: string, isFreeShipping: boolean = false): Promise<string> {
     await this.selectByVisibleText(page, this.deliveryOptionSelect, deliveryOptionName);
-    await page.$eval(this.freeShippingToggleInput(isFreeShipping ? 1 : 0), (el: HTMLElement) => el.click());
+    await page.waitForTimeout(1000);
+    await this.setFreeShipping(page, isFreeShipping);
     if (isFreeShipping) {
       await this.waitForVisibleSelector(page, this.vouchersTable);
     }
@@ -1061,7 +1064,7 @@ class AddOrder extends BOBasePage {
    * @returns {Promise<void>}
    */
   async setFreeShipping(page: Page, isEnabled: boolean): Promise<void> {
-    await this.setChecked(page, this.freeShippingToggleInput(isEnabled ? 1 : 0), isEnabled);
+    await page.$eval(this.freeShippingToggleInput(isEnabled ? 1 : 0), (el: HTMLElement) => el.click());
   }
 
   /**
@@ -1145,19 +1148,25 @@ class AddOrder extends BOBasePage {
   }
 
   /**
-   * Set more actions
+   * Set more actions "Pre Filled Order"
    * @param page {Page} Browser tab
-   * @param action {string} Action to select
-   * @returns {Promise<Page|string>}
+   * @returns {Promise<string>}
    */
-  // eslint-disable-next-line consistent-return
-  async setMoreActions(page: Page, action: string): Promise<Page | string> {
+  async setMoreActionsPreFilledOrder(page: Page): Promise<string> {
     await this.waitForSelectorAndClick(page, this.moreActionsDropDownButton);
-    if (action === 'pre-filled order') {
-      await this.waitForSelectorAndClick(page, this.sendOrderMailButton);
 
-      return this.getTextContent(page, this.summarySuccessMessageBlock);
-    }
+    await this.waitForSelectorAndClick(page, this.sendOrderMailButton);
+
+    return this.getTextContent(page, this.summarySuccessMessageBlock);
+  }
+
+  /**
+   * Set more actions "Proceed to Checkout"
+   * @param page {Page} Browser tab
+   * @returns {Promise<Page>}
+   */
+  async setMoreActionsProceedToCheckout(page: Page): Promise<Page> {
+    await this.waitForSelectorAndClick(page, this.moreActionsDropDownButton);
     return this.openLinkWithTargetBlank(page, this.proceedOrderLink, 'body a');
   }
 
@@ -1191,7 +1200,7 @@ class AddOrder extends BOBasePage {
    */
   async clickOnCreateOrderButton(page: Page, waitForNavigation: boolean = true): Promise<boolean> {
     if (waitForNavigation) {
-      await this.clickAndWaitForNavigation(page, this.createOrderButton);
+      await this.clickAndWaitForURL(page, this.createOrderButton);
     } else {
       await this.waitForSelectorAndClick(page, this.createOrderButton);
     }
@@ -1251,7 +1260,7 @@ class AddOrder extends BOBasePage {
     await this.setOrderStatus(page, orderToMake.status);
 
     // Create the order
-    await this.clickAndWaitForNavigation(page, this.createOrderButton);
+    await this.clickAndWaitForURL(page, this.createOrderButton);
   }
 }
 

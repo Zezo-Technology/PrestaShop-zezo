@@ -12,7 +12,7 @@ class Search extends BOBasePage {
 
   public readonly successfulUpdateStatusMessage: string;
 
-  private readonly settingsUpdateMessage: string;
+  public readonly settingsUpdateMessage: string;
 
   private readonly addNewAliasLink: string;
 
@@ -77,6 +77,26 @@ class Search extends BOBasePage {
   private readonly bulkEnableButton: string;
 
   private readonly bulkDisableButton: string;
+
+  private readonly paginationDiv: string;
+
+  private readonly paginationLimitSelect: string;
+
+  private readonly paginationListOpen: string;
+
+  private readonly paginationNumber: (number: number) => string;
+
+  private readonly paginationRightBlock: string;
+
+  private readonly paginationLabel: string;
+
+  private readonly paginationNextLink: string;
+
+  private readonly paginationPreviousLink: string;
+
+  private readonly tableHead: string;
+
+  private readonly sortColumnDiv: (column: string, direction: string) => string;
 
   private readonly aliasForm: string;
 
@@ -150,6 +170,20 @@ class Search extends BOBasePage {
     this.bulkEnableButton = `${this.bulkActionDropdownMenu} li:nth-child(4)`;
     this.bulkDisableButton = `${this.bulkActionDropdownMenu} li:nth-child(5)`;
 
+    // Pagination selectors
+    this.paginationDiv = `${this.gridForm} .pagination`;
+    this.paginationLimitSelect = `${this.paginationDiv}  button.dropdown-toggle`;
+    this.paginationListOpen = `${this.paginationDiv}.open`;
+    this.paginationNumber = (number: number) => `${this.gridForm} div.row li a[data-items='${number}']`;
+    this.paginationRightBlock = `${this.paginationDiv}.pull-right`;
+    this.paginationLabel = `${this.paginationRightBlock} li.active a`;
+    this.paginationNextLink = `${this.paginationRightBlock} i.icon-angle-right`;
+    this.paginationPreviousLink = `${this.paginationRightBlock} i.icon-angle-left`;
+
+    // Sort Selectors
+    this.tableHead = `${this.gridTable} thead`;
+    this.sortColumnDiv = (column: string, direction: string) => `${this.tableHead} a.${direction}-sort-column-${column}-link`;
+
     // Search form
     this.aliasForm = '#alias_fieldset_search';
     this.fuzzySearchLabel = (status: string) => `#PS_SEARCH_FUZZY_${status}`;
@@ -167,7 +201,7 @@ class Search extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToAddNewAliasPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewAliasLink);
+    await this.clickAndWaitForURL(page, this.addNewAliasLink);
   }
 
   /**
@@ -176,7 +210,7 @@ class Search extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToTagsPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.tagsTabLink);
+    await this.clickAndWaitForURL(page, this.tagsTabLink);
   }
 
   /* Filter methods */
@@ -196,7 +230,7 @@ class Search extends BOBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForURL(page, this.filterResetButton);
     }
     await this.waitForVisibleSelector(page, this.filterSearchButton, 2000);
   }
@@ -220,15 +254,17 @@ class Search extends BOBasePage {
    * @return {Promise<void>}
    */
   async filterTable(page: Page, filterType: string, filterBy: string, value: string): Promise<void> {
+    const currentUrl: string = page.url();
+
     switch (filterType) {
       case 'input':
-        await this.setValue(page, this.filterColumn(filterBy), value.toString());
-        await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+        await this.setValue(page, this.filterColumn(filterBy), value);
+        await this.clickAndWaitForURL(page, this.filterSearchButton);
         break;
 
       case 'select':
         await Promise.all([
-          page.waitForNavigation({waitUntil: 'networkidle'}),
+          page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
           this.selectByVisibleText(page, this.filterColumn(filterBy), value === '1' ? 'Yes' : 'No'),
         ]);
         break;
@@ -246,7 +282,7 @@ class Search extends BOBasePage {
    * @return {Promise<void>}
    */
   async gotoEditAliasPage(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.tableColumnActionsEditLink(row));
+    await this.clickAndWaitForURL(page, this.tableColumnActionsEditLink(row));
   }
 
   /**
@@ -264,7 +300,7 @@ class Search extends BOBasePage {
         columnSelector = this.tableColumnAliases(row);
         break;
 
-      case 'result':
+      case 'search':
         columnSelector = this.tableColumnSearch(row);
         break;
 
@@ -284,6 +320,24 @@ class Search extends BOBasePage {
   }
 
   /**
+   * Get content from all rows
+   * @param page {Page} Browser tab
+   * @param columnName {string} Column name to get all text content
+   * @return {Promise<Array<string>>}
+   */
+  async getAllRowsColumnContent(page: Page, columnName: string): Promise<string[]> {
+    const rowsNumber = await this.getNumberOfElementInGrid(page);
+    const allRowsContentTable: string[] = [];
+
+    for (let i = 1; i <= rowsNumber; i++) {
+      const rowContent = await this.getTextColumn(page, i, columnName);
+      allRowsContentTable.push(rowContent);
+    }
+
+    return allRowsContentTable;
+  }
+
+  /**
    * Delete alias from row
    * @param page {Page} Browser tab
    * @param row {number} Row on table
@@ -291,14 +345,14 @@ class Search extends BOBasePage {
    */
   async deleteAlias(page: Page, row: number): Promise<string> {
     await Promise.all([
-      page.click(this.tableColumnActionsToggleButton(row)),
+      page.locator(this.tableColumnActionsToggleButton(row)).click(),
       this.waitForVisibleSelector(page, this.tableColumnActionsDeleteLink(row)),
     ]);
 
-    await page.click(this.tableColumnActionsDeleteLink(row));
+    await page.locator(this.tableColumnActionsDeleteLink(row)).click();
 
     // Confirm delete action
-    await this.clickAndWaitForNavigation(page, this.deleteModalButtonYes);
+    await this.clickAndWaitForURL(page, this.deleteModalButtonYes);
 
     // Get successful message
     return this.getAlertSuccessBlockContent(page);
@@ -311,10 +365,10 @@ class Search extends BOBasePage {
    * @return {Promise<void>}
    */
   async bulkSelectRows(page: Page): Promise<void> {
-    await page.click(this.bulkActionMenuButton);
+    await page.locator(this.bulkActionMenuButton).click();
 
     await Promise.all([
-      page.click(this.selectAllLink),
+      page.locator(this.selectAllLink).click(),
       this.waitForHiddenSelector(page, this.selectAllLink),
     ]);
   }
@@ -330,10 +384,10 @@ class Search extends BOBasePage {
     await this.bulkSelectRows(page);
 
     // Click on Button Bulk actions
-    await page.click(this.bulkActionMenuButton);
+    await page.locator(this.bulkActionMenuButton).click();
 
     // Click on delete
-    await this.clickAndWaitForNavigation(page, this.bulkDeleteLink);
+    await this.clickAndWaitForURL(page, this.bulkDeleteLink);
 
     return this.getAlertSuccessBlockContent(page);
   }
@@ -349,10 +403,10 @@ class Search extends BOBasePage {
     await this.bulkSelectRows(page);
 
     // Click on Button Bulk actions
-    await page.click(this.bulkActionMenuButton);
+    await page.locator(this.bulkActionMenuButton).click();
 
     // Click on enable/Disable and wait for modal
-    await this.clickAndWaitForNavigation(page, enable ? this.bulkEnableButton : this.bulkDisableButton);
+    await this.clickAndWaitForURL(page, enable ? this.bulkEnableButton : this.bulkDisableButton);
 
     return this.getTextContent(page, this.alertSuccessBlock);
   }
@@ -363,7 +417,7 @@ class Search extends BOBasePage {
    * @param row {number} Row on table
    * @return {Promise<boolean>}
    */
-  getStatus(page: Page, row: number): Promise<boolean> {
+  async getStatus(page: Page, row: number): Promise<boolean> {
     return this.elementVisible(page, this.tableColumnStatusEnabledIcon(row), 500);
   }
 
@@ -377,7 +431,7 @@ class Search extends BOBasePage {
   async setStatus(page: Page, row: number, valueWanted: boolean = true): Promise<boolean> {
     await this.waitForVisibleSelector(page, this.tableColumnStatus(row), 2000);
     if (await this.getStatus(page, row) !== valueWanted) {
-      await page.click(this.tableColumnStatus(row));
+      await page.locator(this.tableColumnStatus(row)).click();
       await this.waitForVisibleSelector(
         page,
         (valueWanted ? this.tableColumnStatusEnabledIcon(row) : this.tableColumnStatusDisabledIcon(row)),
@@ -385,6 +439,64 @@ class Search extends BOBasePage {
       return true;
     }
     return false;
+  }
+
+  /* Pagination methods */
+  /**
+   * Get pagination label
+   * @param page {Page} Browser tab
+   * @return {Promise<string>}
+   */
+  async getPaginationLabel(page: Page): Promise<string> {
+    return this.getTextContent(page, this.paginationLabel);
+  }
+
+  /**
+   * Select pagination limit
+   * @param page {Page} Browser tab
+   * @param number {number} Value of pagination limit to select
+   * @returns {Promise<string>}
+   */
+  async selectPaginationLimit(page: Page, number: number): Promise<string> {
+    await page.locator(this.paginationLimitSelect).click();
+    await this.waitForVisibleSelector(page, this.paginationListOpen);
+    await this.clickAndWaitForURL(page, this.paginationNumber(number));
+
+    return this.getPaginationLabel(page);
+  }
+
+  /**
+   * Click on next
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async paginationNext(page: Page): Promise<string> {
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
+
+    return this.getPaginationLabel(page);
+  }
+
+  /**
+   * Click on previous
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async paginationPrevious(page: Page): Promise<string> {
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
+
+    return this.getPaginationLabel(page);
+  }
+
+  /* Sort methods */
+  /**
+   * Sort table
+   * @param page {Page} Browser tab
+   * @param sortBy {string} Column to sort with
+   * @param sortDirection {string} Sort direction asc or desc
+   * @return {Promise<void>}
+   */
+  async sortTable(page: Page, sortBy: string, sortDirection: string): Promise<void> {
+    await this.clickAndWaitForURL(page, `${this.sortColumnDiv(sortBy, sortDirection)} i`);
   }
 
   // Methods for search form
@@ -396,7 +508,9 @@ class Search extends BOBasePage {
    */
   async setFuzzySearch(page: Page, toEnable: boolean = true): Promise<string> {
     await this.setChecked(page, this.fuzzySearchLabel(toEnable ? 'on' : 'off'));
-    await this.clickAndWaitForNavigation(page, this.saveFormButton);
+    await this.clickAndWaitForLoadState(page, this.saveFormButton);
+    await this.elementNotVisible(page, this.fuzzySearchLabel(!toEnable ? 'on' : 'off'), 2000);
+
     return this.getAlertSuccessBlockContent(page);
   }
 }

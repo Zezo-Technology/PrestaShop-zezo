@@ -33,8 +33,8 @@ class AddState extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Add new •';
-    this.pageTitleEdit = 'Edit: ';
+    this.pageTitleCreate = `New state • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing state';
 
     // Selectors
     this.nameInput = '#state_name';
@@ -63,7 +63,7 @@ class AddState extends BOBasePage {
     await this.setChecked(page, this.statusToggle(stateData.status ? 1 : 0));
 
     // Save zone
-    await this.clickAndWaitForNavigation(page, this.saveStateButton);
+    await this.clickAndWaitForURL(page, this.saveStateButton);
 
     // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);

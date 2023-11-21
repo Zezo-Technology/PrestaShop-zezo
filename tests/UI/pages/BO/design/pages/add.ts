@@ -12,6 +12,8 @@ import type {Page} from 'playwright';
 class AddPage extends BOBasePage {
   public readonly pageTitleCreate: string;
 
+  public readonly editPageTitle: (pageTitle: string) => string;
+
   private readonly titleInput: string;
 
   private readonly metaTitleInput: string;
@@ -39,7 +41,8 @@ class AddPage extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Pages';
+    this.pageTitleCreate = `New page • ${global.INSTALL.SHOP_NAME}`;
+    this.editPageTitle = (pageTitle: string) => `Editing page ${pageTitle} • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.titleInput = '#cms_page_title_1';
@@ -75,7 +78,7 @@ class AddPage extends BOBasePage {
     await this.setChecked(page, this.displayedToggleInput(pageData.displayed ? 1 : 0));
 
     // Save form
-    await this.clickAndWaitForNavigation(page, this.savePageButton);
+    await this.clickAndWaitForURL(page, this.savePageButton);
 
     // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);
@@ -96,7 +99,8 @@ class AddPage extends BOBasePage {
    * @return {Promise<void>}
    */
   async cancelPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.cancelButton);
+    await this.clickAndWaitForURL(page, this.cancelButton);
   }
 }
+
 export default new AddPage();

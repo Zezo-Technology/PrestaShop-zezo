@@ -32,7 +32,7 @@ use Configuration;
 use PrestaShop\PrestaShop\Core\CommandBus\CommandBusInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AddProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
-use PrestaShop\PrestaShop\Core\Domain\Product\Shop\Command\CopyProductToShopCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Shop\Command\SetProductShopsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAvailableCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductId;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
@@ -149,6 +149,8 @@ class MultiShopProductControllerTest extends GridControllerTestCase
         parent::tearDownAfterClass();
         ProductResetter::resetProducts();
         ShopResetter::resetShops();
+        // Force cookie back to empty value for default all shops context to avoid messing with following tests
+        self::forceMultiShopCookie([]);
     }
 
     public function setUp(): void
@@ -172,15 +174,7 @@ class MultiShopProductControllerTest extends GridControllerTestCase
      */
     public function testMultiShopList(array $shopContext, array $listFilters, int $totalCount, array $productsValues): void
     {
-        if (!empty($shopContext['shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_SHOP, Shop::getIdByName($shopContext['shop_name']));
-        } elseif (!empty($shopContext['group_shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_GROUP, ShopGroup::getIdByName($shopContext['group_shop_name']));
-        } else {
-            Shop::setContext(Shop::CONTEXT_ALL);
-        }
-        Shop::resetStaticCache();
-
+        self::forceMultiShopCookie($shopContext);
         $products = $this->getFilteredEntitiesFromGrid($listFilters);
         $this->assertEquals($totalCount, $products->getTotalCount(), sprintf(
             'Expected %d product(s) with filters %s but got %d instead',
@@ -337,14 +331,7 @@ class MultiShopProductControllerTest extends GridControllerTestCase
      */
     public function testProductShopPreviews(array $shopContext, array $listFilters, array $shopPreviews): void
     {
-        if (!empty($shopContext['shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_SHOP, Shop::getIdByName($shopContext['shop_name']));
-        } elseif (!empty($shopContext['group_shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_GROUP, ShopGroup::getIdByName($shopContext['group_shop_name']));
-        } else {
-            Shop::setContext(Shop::CONTEXT_ALL);
-        }
-
+        self::forceMultiShopCookie($shopContext);
         $products = $this->getFilteredEntitiesFromGrid($listFilters);
         $this->assertEquals(1, $products->count(), 'Provided filters must match one product only');
         /** @var TestEntityDTO $filteredProduct */
@@ -507,7 +494,7 @@ class MultiShopProductControllerTest extends GridControllerTestCase
             ];
         }
 
-        return $this->router->generate('admin_products_v2_index', $routeParams);
+        return $this->router->generate('admin_products_index', $routeParams);
     }
 
     /**
@@ -516,6 +503,37 @@ class MultiShopProductControllerTest extends GridControllerTestCase
     protected function getGridSelector(): string
     {
         return '#product_grid_table';
+    }
+
+    /**
+     * This is not ideal but since we now have a request listener that forces a proper initialization of the context
+     * we cannot use Shop::setContext to force a specific shop context because it will be overridden by the listener at
+     * the beginning of the request (which ultimately proves that it is correctly in charge of this responsibility).
+     *
+     * So to vary the multi shop context for test purposes, we update the cookie value directly.
+     * At least this way the controller is really tested as it would be in a regular request based on the cookie setting.
+     *
+     * @param array $shopContext
+     */
+    protected static function forceMultiShopCookie(array $shopContext): void
+    {
+        if (!empty($shopContext['shop_name'])) {
+            $shopId = Shop::getIdByName($shopContext['shop_name']);
+            $shopCookie = 's-' . $shopId;
+        } elseif (!empty($shopContext['group_shop_name'])) {
+            $shopGroupId = ShopGroup::getIdByName($shopContext['group_shop_name']);
+            $shopCookie = 'g-' . $shopGroupId;
+        } else {
+            $shopCookie = '';
+        }
+
+        $cookie = self::getContext()->cookie;
+        $cookie->shopContext = $shopCookie;
+        // Use super admin employee to have authorization on all shops
+        $cookie->id_employee = 1;
+        $cookie->write();
+        Shop::resetStaticCache();
+        Shop::resetContext();
     }
 
     protected static function initFixtures(): void
@@ -557,23 +575,17 @@ class MultiShopProductControllerTest extends GridControllerTestCase
      */
     protected static function createProducts(): void
     {
-        $client = static::createClient();
-        $container = $client->getContainer();
-        $commandBus = $container->get('prestashop.core.command_bus');
-
+        $commandBus = self::bootKernel()->getContainer()->get('prestashop.core.command_bus');
         static::createProduct($commandBus, self::PARTIAL_SHOPS_PRODUCT_DATA);
         static::createProduct($commandBus, self::ALL_SHOPS_PRODUCT_DATA);
 
-        // Copy fixtures product
-        $fixturesProductsId = (int) Product::getIdByReference('demo_14');
-        foreach (array_keys(self::FIXTURE_PRODUCT_DATA) as $shopName) {
-            $shopId = (int) Shop::getIdByName($shopName);
+        $shopIds = array_map(static function (string $shopName): int {
+            return (int) Shop::getIdByName($shopName);
+        }, array_keys(self::FIXTURE_PRODUCT_DATA));
 
-            // Copy product to new shops
-            if ($shopId !== static::DEFAULT_SHOP_ID) {
-                $commandBus->handle(new CopyProductToShopCommand($fixturesProductsId, static::DEFAULT_SHOP_ID, $shopId));
-            }
-        }
+        // copy product to new shops
+        $commandBus->handle(new SetProductShopsCommand((int) Product::getIdByReference('demo_14'), static::DEFAULT_SHOP_ID, $shopIds));
+        self::ensureKernelShutdown();
     }
 
     protected static function createProduct(CommandBusInterface $commandBus, array $multiShopProductData): void
@@ -588,15 +600,11 @@ class MultiShopProductControllerTest extends GridControllerTestCase
         ));
         static::$testProductId = $productId->getValue();
 
-        // Copy product to new shops
-        foreach (array_keys($multiShopProductData) as $shopName) {
-            $shopId = (int) Shop::getIdByName($shopName);
+        $shopIds = array_map(static function (string $shopName): int {
+            return (int) Shop::getIdByName($shopName);
+        }, array_keys($multiShopProductData));
 
-            // Copy product to new shops
-            if ($shopId !== static::DEFAULT_SHOP_ID) {
-                $commandBus->handle(new CopyProductToShopCommand($productId->getValue(), static::DEFAULT_SHOP_ID, $shopId));
-            }
-        }
+        $commandBus->handle(new SetProductShopsCommand($productId->getValue(), static::DEFAULT_SHOP_ID, $shopIds));
 
         foreach ($multiShopProductData as $shopName => $shopProductData) {
             $shopConstraint = ShopConstraint::shop((int) Shop::getIdByName($shopName));

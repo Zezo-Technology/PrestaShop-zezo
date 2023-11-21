@@ -15,9 +15,11 @@ export default class FOBasePage extends CommonPage {
 
   private readonly desktopLogoLink: string;
 
+  private readonly breadCrumb: string;
+
   private readonly breadCrumbLink: (link: string) => string;
 
-  public readonly cartProductsCount: string;
+  private readonly cartProductsCount: string;
 
   private readonly cartLink: string;
 
@@ -51,7 +53,7 @@ export default class FOBasePage extends CommonPage {
 
   private readonly currencySelect: string;
 
-  public readonly searchInput: string;
+  private readonly searchInput: string;
 
   private readonly autocompleteSearchResult: string;
 
@@ -111,7 +113,7 @@ export default class FOBasePage extends CommonPage {
 
   private readonly wrapperDiv: (position: number) => string;
 
-  private readonly wrapperTitle: (position:number) => string;
+  private readonly wrapperTitle: (position: number) => string;
 
   private readonly wrapperSubmenu: (position: number) => string;
 
@@ -119,28 +121,47 @@ export default class FOBasePage extends CommonPage {
 
   private readonly copyrightLink: string;
 
-  public readonly alertSuccessBlock: string;
+  protected readonly alertSuccessBlock: string;
 
-  public readonly notificationsBlock: string;
+  protected readonly notificationsBlock: string;
+
+  protected readonly userMenuDropdown: string;
+
+  protected readonly currencySelector: string;
+
+  protected readonly languageSelector: string;
+
+  private readonly cartProductsCountHummingbird: string;
+
+  protected readonly navbarLink: string;
+
+  private readonly hCopyrightLink: string;
+
+  protected readonly hSearchInput: string;
+
+  protected theme: string;
 
   /**
    * @constructs
    * Setting up texts and selectors to use on all FO pages
    */
-  constructor() {
+  constructor(theme: string = 'classic') {
     super();
+
+    this.theme = theme;
 
     // Selectors for home page
     // Header links
     this.content = '#content';
     this.desktopLogo = '#_desktop_logo';
     this.desktopLogoLink = `${this.desktopLogo} a`;
-    this.breadCrumbLink = (link) => `#wrapper nav.breadcrumb a[href*=${link}]`;
+    this.breadCrumb = '#wrapper div nav.breadcrumb';
+    this.breadCrumbLink = (link) => `${this.breadCrumb} a[href*=${link}]`;
     this.cartProductsCount = '#_desktop_cart .cart-products-count';
     this.cartLink = '#_desktop_cart a';
     this.userInfoLink = '#_desktop_user_info';
-    this.accountLink = `${this.userInfoLink} .user-info a.account`;
-    this.logoutLink = `${this.userInfoLink} .user-info a.logout`;
+    this.accountLink = `${this.userInfoLink} .user-info a[href*="/my-account"]`;
+    this.logoutLink = `${this.userInfoLink} .user-info a[href*="/?mylogout="]`;
     this.contactLink = '#contact-link';
     this.categoryMenu = (id) => `#category-${id} a`;
     this.languageSelectorDiv = '#_desktop_language_selector';
@@ -203,6 +224,15 @@ export default class FOBasePage extends CommonPage {
     // Alert block selectors
     this.alertSuccessBlock = '.alert-success ul li';
     this.notificationsBlock = '#notifications';
+
+    // Hummingbird
+    this.userMenuDropdown = '#userMenuButton';
+    this.currencySelector = '#currency-selector';
+    this.languageSelector = '#language-selector';
+    this.cartProductsCountHummingbird = '#_desktop_cart .header-block__action-btn span.header-block__badge';
+    this.navbarLink = '.navbar-brand';
+    this.hCopyrightLink = '#footer div.footer__main p.copyright a[href*="www.prestashop-project.org"]';
+    this.hSearchInput = '#search_widget .js-search-input';
   }
 
   // Header methods
@@ -210,9 +240,10 @@ export default class FOBasePage extends CommonPage {
    * Go to header link
    * @param page {Page} Browser tab
    * @param link {string} Header selector that contain link to click on to
+   * @param hasPageChange {boolean}
    * @returns {Promise<void>}
    */
-  async clickOnHeaderLink(page: Page, link: string): Promise<void> {
+  async clickOnHeaderLink(page: Page, link: string, hasPageChange: boolean = true): Promise<void> {
     let selector;
 
     switch (link) {
@@ -229,14 +260,26 @@ export default class FOBasePage extends CommonPage {
         break;
 
       case 'Logo':
-        selector = this.desktopLogoLink;
+        selector = this.theme === 'hummingbird' ? this.navbarLink : this.desktopLogoLink;
         break;
 
       default:
         throw new Error(`The page ${link} was not found`);
     }
 
-    return this.clickAndWaitForNavigation(page, selector);
+    if (hasPageChange) {
+      return this.clickAndWaitForURL(page, selector);
+    }
+    return this.clickAndWaitForLoadState(page, selector);
+  }
+
+  /**
+   * Get breadcrumb text
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async getBreadcrumbText(page: Page): Promise<string> {
+    return this.getTextContent(page, this.breadCrumb);
   }
 
   /**
@@ -246,7 +289,10 @@ export default class FOBasePage extends CommonPage {
    * @returns {Promise<void>}
    */
   async clickOnBreadCrumbLink(page: Page, link: string): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.breadCrumbLink(link));
+    const currentUrl: string = page.url();
+
+    await page.locator(this.breadCrumbLink(link)).first().click();
+    await page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'});
   }
 
   /**
@@ -255,8 +301,14 @@ export default class FOBasePage extends CommonPage {
    * @returns {Promise<void>}
    */
   async goToHomePage(page: Page): Promise<void> {
+    if (this.theme === 'hummingbird') {
+      await this.waitForVisibleSelector(page, this.navbarLink);
+      await this.clickAndWaitForLoadState(page, this.navbarLink);
+      return;
+    }
+
     await this.waitForVisibleSelector(page, this.desktopLogo);
-    await this.clickAndWaitForNavigation(page, this.desktopLogoLink);
+    await this.clickAndWaitForLoadState(page, this.desktopLogoLink);
   }
 
   /**
@@ -265,7 +317,7 @@ export default class FOBasePage extends CommonPage {
    * @return {Promise<void>}
    */
   async goToLoginPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.userInfoLink);
+    await this.clickAndWaitForURL(page, this.userInfoLink);
   }
 
   /**
@@ -274,7 +326,14 @@ export default class FOBasePage extends CommonPage {
    * @return {Promise<void>}
    */
   async logout(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.logoutLink);
+    if (this.theme === 'hummingbird') {
+      await page.click(this.userMenuDropdown);
+      await this.clickAndWaitForLoadState(page, this.logoutLink);
+      await this.elementNotVisible(page, this.logoutLink, 2000);
+
+      return;
+    }
+    await this.clickAndWaitForLoadState(page, this.logoutLink);
   }
 
   /**
@@ -283,7 +342,7 @@ export default class FOBasePage extends CommonPage {
    * @return {Promise<boolean>}
    */
   async isCustomerConnected(page: Page): Promise<boolean> {
-    return this.elementVisible(page, this.logoutLink, 1000);
+    return this.elementVisible(page, this.theme === 'hummingbird' ? this.userMenuDropdown : this.logoutLink, 1000);
   }
 
   /**
@@ -292,7 +351,13 @@ export default class FOBasePage extends CommonPage {
    * @return {Promise<void>}
    */
   async goToMyAccountPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.accountLink);
+    if (this.theme === 'hummingbird') {
+      await page.click(this.userMenuDropdown);
+      await this.clickAndWaitForURL(page, this.accountLink);
+
+      return;
+    }
+    await this.clickAndWaitForURL(page, this.accountLink);
   }
 
   /**
@@ -300,16 +365,19 @@ export default class FOBasePage extends CommonPage {
    * @param page {Page} Browser tab
    * @returns {Promise<boolean>}
    */
-  isLanguageListVisible(page: Page): Promise<boolean> {
+  async isLanguageListVisible(page: Page): Promise<boolean> {
+    if (this.theme === 'hummingbird') {
+      return this.elementVisible(page, this.languageSelector, 1000);
+    }
     return this.elementVisible(page, this.languageSelectorExpandIcon, 1000);
   }
 
   /**
    * Get shop language
    * @param page {Page} Browser tab
-   * @returns {Promise<string|null>}
+   * @returns {Promise<string>}
    */
-  getShopLanguage(page: Page): Promise<string|null> {
+  async getShopLanguage(page: Page): Promise<string> {
     return this.getAttributeContent(page, 'html[lang]', 'lang');
   }
 
@@ -320,11 +388,24 @@ export default class FOBasePage extends CommonPage {
    * @return {Promise<void>}
    */
   async changeLanguage(page: Page, lang: string = 'en'): Promise<void> {
+    if (this.theme === 'hummingbird') {
+      const langOptions = await page.$$(`${this.languageSelector} option`);
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (const [keyOption, langOption] of Object.entries(langOptions)) {
+        if ((await langOption.getAttribute('data-iso-code')) === lang) {
+          await page.selectOption(this.languageSelector, {index: parseInt(keyOption, 10)});
+          return;
+        }
+      }
+
+      return;
+    }
     await Promise.all([
       page.click(this.languageSelectorExpandIcon),
       this.waitForVisibleSelector(page, this.languageSelectorList),
     ]);
-    await this.clickAndWaitForNavigation(page, this.languageSelectorMenuItemLink(lang));
+    await this.clickAndWaitForLoadState(page, this.languageSelectorMenuItemLink(lang));
   }
 
   /**
@@ -332,7 +413,12 @@ export default class FOBasePage extends CommonPage {
    * @param page {Page} Browser tab
    * @returns {Promise<string>}
    */
-  getDefaultShopLanguage(page: Page): Promise<string> {
+  async getDefaultShopLanguage(page: Page): Promise<string> {
+    if (this.theme === 'hummingbird') {
+      return page
+        .locator(this.languageSelector)
+        .evaluate((el: HTMLSelectElement): string => el.options[el.options.selectedIndex].textContent ?? '');
+    }
     return this.getTextContent(page, this.defaultLanguageSpan);
   }
 
@@ -355,14 +441,27 @@ export default class FOBasePage extends CommonPage {
    * @return {Promise<void>}
    */
   async changeCurrency(page: Page, isoCode: string = 'EUR', symbol: string = '€'): Promise<void> {
-    // If isoCode and symbol are the same, only isoCode id displayed in FO
     const currency = isoCode === symbol ? isoCode : `${isoCode} ${symbol}`;
+
+    if (this.theme === 'hummingbird') {
+      const langOptions = await page.$$(`${this.currencySelector} option`);
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (const [keyOption, langOption] of Object.entries(langOptions)) {
+        if ((await langOption.textContent()) === currency) {
+          await page.selectOption(this.currencySelector, {index: parseInt(keyOption, 10)});
+          return;
+        }
+      }
+
+      return;
+    }
+    // If isoCode and symbol are the same, only isoCode id displayed in FO
+    const currentUrl: string = page.url();
 
     await Promise.all([
       this.selectByVisibleText(page, this.currencySelect, currency, true),
-      page.waitForNavigation({
-        waitUntil: 'networkidle',
-      }),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
     ]);
   }
 
@@ -371,7 +470,7 @@ export default class FOBasePage extends CommonPage {
    * @param page {Page} Browser tab
    * @returns {Promise<boolean>}
    */
-  isCurrencyDropdownExist(page: Page): Promise<boolean> {
+  async isCurrencyDropdownExist(page: Page): Promise<boolean> {
     return this.elementVisible(page, this.currencySelectorExpandIcon, 1000);
   }
 
@@ -391,7 +490,12 @@ export default class FOBasePage extends CommonPage {
    * @param page {Page} Browser tab
    * @returns {Promise<string>}
    */
-  getDefaultCurrency(page: Page): Promise<string> {
+  async getDefaultCurrency(page: Page): Promise<string> {
+    if (this.theme === 'hummingbird') {
+      return page
+        .locator(this.currencySelector)
+        .evaluate((el: HTMLSelectElement): string => el.options[el.options.selectedIndex].textContent ?? '');
+    }
     return this.getTextContent(page, this.defaultCurrencySpan);
   }
 
@@ -402,7 +506,7 @@ export default class FOBasePage extends CommonPage {
    * @returns {Promise<void>}
    */
   async goToCategory(page: Page, categoryID: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.categoryMenu(categoryID));
+    await this.clickAndWaitForURL(page, this.categoryMenu(categoryID));
   }
 
   /**
@@ -414,7 +518,7 @@ export default class FOBasePage extends CommonPage {
    */
   async goToSubCategory(page: Page, categoryID: number, subCategoryID: number): Promise<void> {
     await page.hover(this.categoryMenu(categoryID));
-    await this.clickAndWaitForNavigation(page, this.categoryMenu(subCategoryID));
+    await this.clickAndWaitForURL(page, this.categoryMenu(subCategoryID));
   }
 
   /**
@@ -432,7 +536,11 @@ export default class FOBasePage extends CommonPage {
    * @returns {Promise<number>}
    */
   async getCartNotificationsNumber(page: Page): Promise<number> {
-    return this.getNumberFromText(page, this.cartProductsCount, 2000);
+    return this.getNumberFromText(
+      page,
+      this.theme === 'hummingbird' ? this.cartProductsCountHummingbird : this.cartProductsCount,
+      2000,
+    );
   }
 
   /**
@@ -441,7 +549,7 @@ export default class FOBasePage extends CommonPage {
    * @returns {Promise<void>}
    */
   async goToCartPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.cartLink);
+    await this.clickAndWaitForURL(page, this.cartLink);
   }
 
   /**
@@ -456,12 +564,21 @@ export default class FOBasePage extends CommonPage {
   /**
    * Check if there are autocomplete search result
    * @param page {Page} Browser tab
+   * @returns {Promise<boolean>}
+   */
+  async isAutocompleteSearchResultVisible(page: Page): Promise<boolean> {
+    return this.elementVisible(page, this.autocompleteSearchResult, 2000);
+  }
+
+  /**
+   * Check if there are autocomplete search result
+   * @param page {Page} Browser tab
    * @param productName {string} Product name to search
    * @returns {Promise<boolean>}
    */
-  async hasAutocompleteSearchResult(page: Page, productName:string): Promise<boolean> {
+  async hasAutocompleteSearchResult(page: Page, productName: string): Promise<boolean> {
     await this.setValue(page, this.searchInput, productName);
-    return this.elementVisible(page, this.autocompleteSearchResult, 2000);
+    return this.isAutocompleteSearchResultVisible(page);
   }
 
   /**
@@ -494,12 +611,12 @@ export default class FOBasePage extends CommonPage {
    * @param productName {string} Product name to search
    * @returns {Promise<void>}
    */
-  async searchProduct(page: Page, productName: string): Promise<void > {
-    await this.setValue(page, this.searchInput, productName);
+  async searchProduct(page: Page, productName: string): Promise<void> {
+    const currentUrl: string = page.url();
+
+    await this.setValue(page, this.theme === 'hummingbird' ? this.hSearchInput : this.searchInput, productName);
     await page.keyboard.press('Enter');
-    await page.waitForNavigation({
-      waitUntil: 'networkidle',
-    });
+    await page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'});
   }
 
   /**
@@ -512,7 +629,7 @@ export default class FOBasePage extends CommonPage {
   async clickAutocompleteSearchResult(page: Page, productName: string, nthResult: number): Promise<void> {
     await this.setValue(page, this.searchInput, productName);
     await this.waitForVisibleSelector(page, this.autocompleteSearchResultItem);
-    await this.clickAndWaitForNavigation(page, this.autocompleteSearchResultItemLink(nthResult));
+    await this.clickAndWaitForURL(page, this.autocompleteSearchResultItemLink(nthResult));
   }
 
   // Footer methods
@@ -641,7 +758,7 @@ export default class FOBasePage extends CommonPage {
         throw new Error(`The page ${textSelector} was not found`);
     }
 
-    return this.clickAndWaitForNavigation(page, selector);
+    return this.clickAndWaitForURL(page, selector);
   }
 
   /**
@@ -650,7 +767,7 @@ export default class FOBasePage extends CommonPage {
    * @returns {Promise<string>}
    */
   async getCopyright(page: Page): Promise<string> {
-    return this.getTextContent(page, this.copyrightLink);
+    return this.getTextContent(page, this.theme === 'hummingbird' ? this.hCopyrightLink : this.copyrightLink);
   }
 
   /**
@@ -671,6 +788,16 @@ export default class FOBasePage extends CommonPage {
    */
   async getInputValue(page: Page, input: string): Promise<string> {
     return page.inputValue(input);
+  }
+
+  /**
+   * Get the value of an input
+   *
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async getSearchValue(page: Page): Promise<string> {
+    return page.inputValue(this.searchInput);
   }
 }
 

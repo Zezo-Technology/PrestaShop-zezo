@@ -89,6 +89,10 @@ class QuantityType extends TranslatorAwareType
                     'label_tag_name' => 'h4',
                     'layout' => 'table',
                     'entry_type' => StockMovementType::class,
+                    'entry_options' => [
+                        'product_type' => $options['product_type'],
+                        'block_prefix' => 'entity_item',
+                    ],
                     // No search input
                     'allow_search' => false,
                     // No delete button
@@ -117,6 +121,10 @@ class QuantityType extends TranslatorAwareType
                 'attr' => [
                     'class' => 'small-input',
                 ],
+                'label_help_box' => $this->trans(
+                    'The minimum quantity required to buy this product (set to 1 to disable this feature). E.g.: if set to 3, customers will be able to purchase the product only if they take at least 3 in quantity.',
+                    'Admin.Catalog.Help'
+                ),
             ])
         ;
     }
@@ -135,8 +143,10 @@ class QuantityType extends TranslatorAwareType
             ])
             ->setRequired([
                 'product_id',
+                'product_type',
             ])
             ->setAllowedTypes('product_id', 'int')
+            ->setAllowedTypes('product_type', 'string')
         ;
     }
 }

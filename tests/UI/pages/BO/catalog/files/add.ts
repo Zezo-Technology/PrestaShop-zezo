@@ -33,8 +33,8 @@ class AddFile extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Add new file •';
-    this.pageTitleEdit = 'Edit:';
+    this.pageTitle = `New file • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing file';
 
     // Selectors
     this.nameLangButton = '#attachment_name_dropdown';
@@ -72,7 +72,7 @@ class AddFile extends BOBasePage {
     }
 
     // Save Supplier
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 

@@ -35,7 +35,6 @@ use Employee;
 use Mail;
 use Pack;
 use PrestaShop\PrestaShop\Adapter\LegacyContext as ContextAdapter;
-use PrestaShop\PrestaShop\Adapter\Product\ProductDataProvider;
 use PrestaShop\PrestaShop\Adapter\ServiceLocator;
 use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShopBundle\Entity\StockMvt;
@@ -144,7 +143,7 @@ class StockManager
      * If Product is contained in a Pack, Pack could be decreased or not (only if sub product stocks become not sufficient).
      *
      * @param Product $product The product to update its stockAvailable
-     * @param int $id_product_attribute The declinaison to update (null if not)
+     * @param int|null $id_product_attribute The declinaison to update (null if not)
      * @param int $delta_quantity The quantity change (positive or negative)
      * @param int|null $id_shop Optional
      * @param bool $add_movement Optional
@@ -382,7 +381,7 @@ class StockManager
      */
     private function prepareMovement($productId, $productAttributeId, $deltaQuantity, $params = [])
     {
-        $product = (new ProductDataProvider())->getProductInstance($productId);
+        $product = new Product($productId);
 
         if ($product->id) {
             $stockManager = ServiceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\StockManager');
@@ -399,10 +398,6 @@ class StockManager
 
                 if (!empty($params['id_stock_mvt_reason'])) {
                     $stockMvt->setIdStockMvtReason((int) $params['id_stock_mvt_reason']);
-                }
-
-                if (!empty($params['id_supply_order'])) {
-                    $stockMvt->setIdSupplyOrder((int) $params['id_supply_order']);
                 }
 
                 $stockMvt->setSign($deltaQuantity >= 1 ? 1 : -1);

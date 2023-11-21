@@ -244,7 +244,7 @@ class AdminAttributesGroupsControllerCore extends AdminController
         if (Shop::isFeatureActive()) {
             $this->fields_form['input'][] = [
                 'type' => 'shop',
-                'label' => $this->trans('Shop association', [], 'Admin.Global'),
+                'label' => $this->trans('Store association', [], 'Admin.Global'),
                 'name' => 'checkBoxShopAsso',
             ];
         }
@@ -308,7 +308,7 @@ class AdminAttributesGroupsControllerCore extends AdminController
 
             $this->fields_form['input'][] = [
                 'type' => 'shop',
-                'label' => $this->trans('Shop association', [], 'Admin.Global'),
+                'label' => $this->trans('Store association', [], 'Admin.Global'),
                 'name' => 'checkBoxShopAsso',
                 'values' => Shop::getTree(),
             ];
@@ -478,10 +478,6 @@ class AdminAttributesGroupsControllerCore extends AdminController
             $this->setTypeAttribute();
         }
 
-        if (Tools::isSubmit('updateattribute') || Tools::isSubmit('deleteattribute') || Tools::isSubmit('submitAddattribute') || Tools::isSubmit('submitBulkdeleteattribute')) {
-            Tools::clearColorListCache();
-        }
-
         return $object;
     }
 
@@ -517,7 +513,7 @@ class AdminAttributesGroupsControllerCore extends AdminController
         } else {
             $adminPerformanceUrl = $this->context->link->getAdminLink('AdminPerformance');
             $url = '<a href="' . $adminPerformanceUrl . '#featuresDetachables">' . $this->trans('Performance', [], 'Admin.Global') . '</a>';
-            $this->displayWarning($this->trans('This feature has been disabled. You can activate it here: %link%.', ['_raw' => true, '%link%' => $url], 'Admin.Catalog.Notification'));
+            $this->displayWarning($this->trans('This feature has been disabled. You can activate it here: %link%.', ['%link%' => $url], 'Admin.Catalog.Notification'));
         }
 
         $this->context->smarty->assign([

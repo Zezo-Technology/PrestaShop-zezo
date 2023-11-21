@@ -1,4 +1,4 @@
-import Employees from '@data/demo/employees';
+import path from 'path';
 import {config} from 'dotenv';
 
 config();
@@ -14,16 +14,21 @@ global.URLHasPort = (global.FO.URL).match(/:\d+.+/) !== null;
 
 global.BO = {
   URL: process.env.URL_BO || `${global.FO.URL}admin-dev/`,
-  EMAIL: process.env.LOGIN || Employees.DefaultEmployee.email,
-  PASSWD: process.env.PASSWD || Employees.DefaultEmployee.password,
-  FIRSTNAME: process.env.FIRSTNAME || Employees.DefaultEmployee.firstName,
-  LASTNAME: process.env.LASTNAME || Employees.DefaultEmployee.lastName,
+  EMAIL: process.env.LOGIN || 'demo@prestashop.com',
+  PASSWD: process.env.PASSWD || 'Correct Horse Battery Staple',
+  FIRSTNAME: process.env.FIRSTNAME || 'Marc',
+  LASTNAME: process.env.LASTNAME || 'Beier',
+};
+
+global.PSConfig = {
+  parametersFile: process.env.PS_PARAMETERS_FILE || path.resolve(__dirname, '../../../', 'app/config/parameters.php'),
 };
 
 global.INSTALL = {
   URL: process.env.URL_INSTALL || `${global.FO.URL}install-dev/`,
   LANGUAGE: process.env.INSTALL_LANGUAGE || 'en',
   COUNTRY: process.env.INSTALL_COUNTRY || 'France',
+  ENABLE_SSL: process.env.ENABLE_SSL === 'true',
   DB_SERVER: process.env.DB_SERVER || '127.0.0.1',
   DB_NAME: process.env.DB_NAME || 'prestashopdb',
   DB_USER: process.env.DB_USER || 'root',
@@ -58,4 +63,12 @@ global.maildevConfig = {
   smtpPort: parseInt(process.env.SMTP_PORT ?? '1025', 10),
   smtpServer: process.env.SMTP_SERVER || 'localhost',
   silent: true,
+};
+
+global.keycloakConfig = {
+  keycloakExternalUrl: process.env.KEYCLOAK_URL_EXTERNAL || 'http://127.0.0.1:8003',
+  keycloakInternalUrl: process.env.KEYCLOAK_URL_INTERNAL || 'http://keycloak:8080',
+  keycloakAdminUser: process.env.KEYCLOAK_ADMIN_USER || 'admin',
+  keycloakAdminPass: process.env.KEYCLOAK_ADMIN_PASS || 'admin',
+  keycloakClientId: process.env.KEYCLOAK_CLIENT_ID || 'KEYCLOAK_CLIENT_ID',
 };
