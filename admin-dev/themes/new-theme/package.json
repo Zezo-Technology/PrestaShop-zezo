@@ -45,7 +45,7 @@
     "typeahead.js": "^0.11.1",
     "url-polyfill": "^1.1.7",
     "vazirmatn": "32.102.0",
-    "vue": "^3.3.4",
+    "vue": "^3.4.18",
     "vue-i18n": "^9.6.2",
     "vue-resource": "^1.5.1",
     "vue-router": "^4.0.15",
