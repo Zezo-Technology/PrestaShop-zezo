@@ -48,7 +48,7 @@
     "vue": "^3.3.4",
     "vue-i18n": "^9.6.2",
     "vue-resource": "^1.5.1",
-    "vue-router": "^4.0.15",
+    "vue-router": "^4.3.0",
     "vuex": "^4.0.2",
     "zxcvbn": "^4.4.2"
   },
