@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type FeatureValueData from '@data/faker/featureValue';
-
 import type {Page} from 'playwright';
+import {
+  type FakerFeatureValue,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add feature page, contains functions that can be used on add feature page
@@ -33,45 +34,45 @@ class AddValue extends BOBasePage {
   constructor() {
     super();
 
-    this.createPageTitle = 'Features > Add New Feature •';
-    this.editPageTitle = 'Features > Edit New Feature •';
-
-    this.alertSuccessBlockParagraph = '.alert-success';
+    this.createPageTitle = `New Feature Value • ${global.INSTALL.SHOP_NAME}`;
+    this.editPageTitle = `Feature value • ${global.INSTALL.SHOP_NAME}`;
 
     // Form selectors
-    this.featureSelect = '#id_feature';
-    this.valueInput = '#value_1';
+    this.featureSelect = '#feature_value_feature_id';
+    this.valueInput = '#feature_value_value_1';
     this.urlInput = 'input[name=\'url_name_1\']';
     this.metaTitleInput = 'input[name=\'meta_title_1\']';
-    this.saveButton = '#feature_value_form_submit_btn';
-    this.saveAndStayButton = 'button[name=\'submitAddfeature_valueAndStay\']';
+    this.saveButton = '#save-button';
+    this.saveAndStayButton = 'button[name=\'save-and-add-new\']';
   }
 
   /**
    * Fill value form and save it
    * @param page {Page} Browser tab
-   * @param valueData {AttributeValueData} Values to set on add feature value form inputs
+   * @param valueData {FakerFeatureValue} Values to set on add feature value form inputs
    * @param saveAndStay {boolean} True if we need to save and stay
    * @return {Promise<string>}
    */
   // eslint-disable-next-line consistent-return
-  async addEditValue(page: Page, valueData: FeatureValueData, saveAndStay: boolean = false): Promise<string|void> {
+  async addEditValue(page: Page, valueData: FakerFeatureValue, saveAndStay: boolean = false): Promise<string | void> {
     // Set group and value
-    await this.selectByVisibleText(page, this.featureSelect, valueData.featureName);
+    if (!(await this.isDisabled(page, this.featureSelect))) {
+      await this.selectByVisibleText(page, this.featureSelect, valueData.featureName);
+    }
     await this.setValue(page, this.valueInput, valueData.value);
 
     // Set Url and meta title
-    await this.setValue(page, this.urlInput, valueData.url);
-    await this.setValue(page, this.metaTitleInput, valueData.metaTitle);
+    //await this.setValue(page, this.urlInput, valueData.url);
+    //await this.setValue(page, this.metaTitleInput, valueData.metaTitle);
 
     // Save value
     if (saveAndStay) {
-      await this.clickAndWaitForNavigation(page, this.saveAndStayButton);
+      await page.locator(this.saveAndStayButton).click();
     } else {
-      await this.clickAndWaitForNavigation(page, this.saveButton);
-      // Return successful message
-      return this.getAlertSuccessBlockParagraphContent(page);
+      await this.clickAndWaitForURL(page, this.saveButton);
     }
+    // Return successful message
+    return this.getAlertSuccessBlockParagraphContent(page);
   }
 }
 

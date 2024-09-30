@@ -55,22 +55,21 @@ class OrderReturnCore extends ObjectModel
         'fields' => [
             'id_customer' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true],
             'id_order' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId', 'required' => true],
-            'question' => ['type' => self::TYPE_HTML, 'validate' => 'isCleanHtml'],
+            'question' => ['type' => self::TYPE_HTML, 'validate' => 'isCleanHtml', 'size' => 4194303],
             'state' => ['type' => self::TYPE_STRING],
             'date_add' => ['type' => self::TYPE_DATE, 'validate' => 'isDate'],
             'date_upd' => ['type' => self::TYPE_DATE, 'validate' => 'isDate'],
         ],
     ];
 
-    public function addReturnDetail($order_detail_list, $product_qty_list, $customization_ids = null, $customization_qty_input = null)
+    /**
+     * @param int[] $order_detail_list
+     * @param int[] $product_qty_list
+     *
+     * @return void
+     */
+    public function addReturnDetail($order_detail_list, $product_qty_list)
     {
-        if ($customization_ids !== null || $customization_qty_input !== null) {
-            @trigger_error(
-                'Passing customization infos is deprecated since version 9.0.0. The customization is already included in the order details.',
-                E_USER_DEPRECATED
-            );
-        }
-
         /* Classic product return */
         if ($order_detail_list) {
             foreach ($order_detail_list as $key => $order_detail) {
@@ -83,18 +82,17 @@ class OrderReturnCore extends ObjectModel
         }
     }
 
-    public function checkEnoughProduct($order_detail_list, $product_qty_list, $customization_ids = null, $customization_qty_input = null)
+    /**
+     * @param int[] $order_detail_list
+     * @param int[] $product_qty_list
+     *
+     * @return bool|void
+     */
+    public function checkEnoughProduct($order_detail_list, $product_qty_list)
     {
-        if ($customization_ids !== null || $customization_qty_input !== null) {
-            @trigger_error(
-                'Passing customization infos is deprecated since version 9.0.0. The customization is already included in the order details.',
-                E_USER_DEPRECATED
-            );
-        }
-
         $order = new Order((int) $this->id_order);
         if (!Validate::isLoadedObject($order)) {
-            die(Tools::displayError());
+            die(Tools::displayError(sprintf('Order with ID "%s" could not be loaded.', $this->id_order)));
         }
         $products = $order->getProducts();
         /* Products already returned */
@@ -131,10 +129,10 @@ class OrderReturnCore extends ObjectModel
             return false;
         }
 
-        return (int) ($data['total']);
+        return (int) $data['total'];
     }
 
-    public static function getOrdersReturn($customer_id, $order_id = false, $no_denied = false, Context $context = null, int $idOrderReturn = null)
+    public static function getOrdersReturn($customer_id, $order_id = false, $no_denied = false, ?Context $context = null, ?int $idOrderReturn = null)
     {
         if (!$context) {
             $context = Context::getContext();
@@ -199,7 +197,7 @@ class OrderReturnCore extends ObjectModel
         $returns = Customization::getReturnedCustomizations($id_order);
         $order = new Order((int) $id_order);
         if (!Validate::isLoadedObject($order)) {
-            die(Tools::displayError());
+            die(Tools::displayError(sprintf('Order with ID "%s" could not be loaded.', $id_order)));
         }
         $products = $order->getProducts();
 
@@ -209,7 +207,7 @@ class OrderReturnCore extends ObjectModel
             $return['product_attribute_id'] = (int) $products[(int) $return['id_order_detail']]['product_attribute_id'];
             $return['name'] = $products[(int) $return['id_order_detail']]['product_name'];
             $return['reference'] = $products[(int) $return['id_order_detail']]['product_reference'];
-            $return['id_address_delivery'] = $products[(int) $return['id_order_detail']]['id_address_delivery'];
+            $return['id_address_delivery'] = (int) $order->id_address_delivery;
         }
 
         return $returns;

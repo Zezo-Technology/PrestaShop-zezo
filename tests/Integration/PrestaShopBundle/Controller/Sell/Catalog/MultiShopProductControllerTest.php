@@ -32,14 +32,12 @@ use Configuration;
 use PrestaShop\PrestaShop\Core\CommandBus\CommandBusInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\AddProductCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Command\UpdateProductCommand;
-use PrestaShop\PrestaShop\Core\Domain\Product\Shop\Command\CopyProductToShopCommand;
+use PrestaShop\PrestaShop\Core\Domain\Product\Shop\Command\SetProductShopsCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\Stock\Command\UpdateProductStockAvailableCommand;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductId;
 use PrestaShop\PrestaShop\Core\Domain\Product\ValueObject\ProductType;
 use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
-use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
 use PrestaShop\PrestaShop\Core\Multistore\MultistoreConfig;
-use PrestaShopBundle\Entity\Repository\FeatureFlagRepository;
 use Product;
 use Shop;
 use ShopGroup;
@@ -151,36 +149,12 @@ class MultiShopProductControllerTest extends GridControllerTestCase
         ShopResetter::resetShops();
     }
 
-    public function setUp(): void
-    {
-        parent::setUp();
-        $featureFlagRepository = $this->client->getContainer()->get(FeatureFlagRepository::class);
-        $featureFlagRepository->enable(FeatureFlagSettings::FEATURE_FLAG_PRODUCT_PAGE_V2);
-    }
-
-    public function tearDown(): void
-    {
-        $featureFlagRepository = $this->client->getContainer()->get(FeatureFlagRepository::class);
-        $featureFlagRepository->disable(FeatureFlagSettings::FEATURE_FLAG_PRODUCT_PAGE_V2);
-
-        // Call parent tear down later or the kernel will be shut down
-        parent::tearDown();
-    }
-
     /**
      * @dataProvider getMultiShopListParameters
      */
     public function testMultiShopList(array $shopContext, array $listFilters, int $totalCount, array $productsValues): void
     {
-        if (!empty($shopContext['shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_SHOP, Shop::getIdByName($shopContext['shop_name']));
-        } elseif (!empty($shopContext['group_shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_GROUP, ShopGroup::getIdByName($shopContext['group_shop_name']));
-        } else {
-            Shop::setContext(Shop::CONTEXT_ALL);
-        }
-        Shop::resetStaticCache();
-
+        $this->updateShopConstraintTokenAttribute($shopContext);
         $products = $this->getFilteredEntitiesFromGrid($listFilters);
         $this->assertEquals($totalCount, $products->getTotalCount(), sprintf(
             'Expected %d product(s) with filters %s but got %d instead',
@@ -337,14 +311,7 @@ class MultiShopProductControllerTest extends GridControllerTestCase
      */
     public function testProductShopPreviews(array $shopContext, array $listFilters, array $shopPreviews): void
     {
-        if (!empty($shopContext['shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_SHOP, Shop::getIdByName($shopContext['shop_name']));
-        } elseif (!empty($shopContext['group_shop_name'])) {
-            Shop::setContext(Shop::CONTEXT_GROUP, ShopGroup::getIdByName($shopContext['group_shop_name']));
-        } else {
-            Shop::setContext(Shop::CONTEXT_ALL);
-        }
-
+        $this->updateShopConstraintTokenAttribute($shopContext);
         $products = $this->getFilteredEntitiesFromGrid($listFilters);
         $this->assertEquals(1, $products->count(), 'Provided filters must match one product only');
         /** @var TestEntityDTO $filteredProduct */
@@ -507,7 +474,7 @@ class MultiShopProductControllerTest extends GridControllerTestCase
             ];
         }
 
-        return $this->router->generate('admin_products_v2_index', $routeParams);
+        return $this->router->generate('admin_products_index', $routeParams);
     }
 
     /**
@@ -516,6 +483,29 @@ class MultiShopProductControllerTest extends GridControllerTestCase
     protected function getGridSelector(): string
     {
         return '#product_grid_table';
+    }
+
+    /**
+     * The shop context is defined via a token attribute, to dynamically change the shop context we login the
+     * user by specifying the expected shop context identified by a ShopConstraint object.
+     *
+     * @param array $shopContext
+     */
+    protected function updateShopConstraintTokenAttribute(array $shopContext): void
+    {
+        if (!empty($shopContext['shop_name'])) {
+            $shopId = Shop::getIdByName($shopContext['shop_name']);
+            $shopConstraint = ShopConstraint::shop((int) $shopId);
+        } elseif (!empty($shopContext['group_shop_name'])) {
+            $shopGroupId = ShopGroup::getIdByName($shopContext['group_shop_name']);
+            $shopConstraint = ShopConstraint::shopGroup((int) $shopGroupId);
+        } else {
+            $shopConstraint = ShopConstraint::allShops();
+        }
+
+        $this->loginUser($this->client, $shopConstraint);
+        Shop::resetStaticCache();
+        Shop::resetContext();
     }
 
     protected static function initFixtures(): void
@@ -557,23 +547,17 @@ class MultiShopProductControllerTest extends GridControllerTestCase
      */
     protected static function createProducts(): void
     {
-        $client = static::createClient();
-        $container = $client->getContainer();
-        $commandBus = $container->get('prestashop.core.command_bus');
-
+        $commandBus = self::bootKernel()->getContainer()->get('prestashop.core.command_bus');
         static::createProduct($commandBus, self::PARTIAL_SHOPS_PRODUCT_DATA);
         static::createProduct($commandBus, self::ALL_SHOPS_PRODUCT_DATA);
 
-        // Copy fixtures product
-        $fixturesProductsId = (int) Product::getIdByReference('demo_14');
-        foreach (array_keys(self::FIXTURE_PRODUCT_DATA) as $shopName) {
-            $shopId = (int) Shop::getIdByName($shopName);
+        $shopIds = array_map(static function (string $shopName): int {
+            return (int) Shop::getIdByName($shopName);
+        }, array_keys(self::FIXTURE_PRODUCT_DATA));
 
-            // Copy product to new shops
-            if ($shopId !== static::DEFAULT_SHOP_ID) {
-                $commandBus->handle(new CopyProductToShopCommand($fixturesProductsId, static::DEFAULT_SHOP_ID, $shopId));
-            }
-        }
+        // copy product to new shops
+        $commandBus->handle(new SetProductShopsCommand((int) Product::getIdByReference('demo_14'), static::DEFAULT_SHOP_ID, $shopIds));
+        self::ensureKernelShutdown();
     }
 
     protected static function createProduct(CommandBusInterface $commandBus, array $multiShopProductData): void
@@ -588,15 +572,11 @@ class MultiShopProductControllerTest extends GridControllerTestCase
         ));
         static::$testProductId = $productId->getValue();
 
-        // Copy product to new shops
-        foreach (array_keys($multiShopProductData) as $shopName) {
-            $shopId = (int) Shop::getIdByName($shopName);
+        $shopIds = array_map(static function (string $shopName): int {
+            return (int) Shop::getIdByName($shopName);
+        }, array_keys($multiShopProductData));
 
-            // Copy product to new shops
-            if ($shopId !== static::DEFAULT_SHOP_ID) {
-                $commandBus->handle(new CopyProductToShopCommand($productId->getValue(), static::DEFAULT_SHOP_ID, $shopId));
-            }
-        }
+        $commandBus->handle(new SetProductShopsCommand($productId->getValue(), static::DEFAULT_SHOP_ID, $shopIds));
 
         foreach ($multiShopProductData as $shopName => $shopProductData) {
             $shopConstraint = ShopConstraint::shop((int) Shop::getIdByName($shopName));

@@ -141,7 +141,7 @@ class Zones extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToSubTabCountries(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.countriesSubTab);
+    await this.clickAndWaitForURL(page, this.countriesSubTab);
   }
 
   /**
@@ -150,7 +150,7 @@ class Zones extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToSubTabStates(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.statesSubTab);
+    await this.clickAndWaitForURL(page, this.statesSubTab);
   }
 
   /**
@@ -159,7 +159,7 @@ class Zones extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewZonePage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewZoneLink);
+    await this.clickAndWaitForURL(page, this.addNewZoneLink);
   }
 
   /* Filter Methods */
@@ -169,8 +169,9 @@ class Zones extends BOBasePage {
    * @return {Promise<void>}
    */
   async resetFilter(page: Page): Promise<void> {
-    if (!(await this.elementNotVisible(page, this.resetFilterButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.resetFilterButton);
+    if (await this.elementVisible(page, this.resetFilterButton, 2000)) {
+      await page.locator(this.resetFilterButton).click();
+      await this.elementNotVisible(page, this.resetFilterButton, 2000);
     }
     await this.waitForVisibleSelector(page, this.searchFilterButton, 2000);
   }
@@ -217,7 +218,7 @@ class Zones extends BOBasePage {
         throw new Error(`Filter ${filterBy} was not found`);
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.searchFilterButton);
+    await this.clickAndWaitForURL(page, this.searchFilterButton);
   }
 
   /* Column methods */
@@ -259,7 +260,7 @@ class Zones extends BOBasePage {
    */
   async setZoneStatus(page: Page, row: number, wantedStatus: boolean): Promise<boolean> {
     if (wantedStatus !== await this.getZoneStatus(page, row)) {
-      await this.clickAndWaitForNavigation(page, this.zonesGridStatusColumn(row));
+      await page.locator(this.zonesGridStatusColumn(row)).click();
       return true;
     }
 
@@ -273,7 +274,7 @@ class Zones extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToEditZonePage(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.zonesGridColumnEditLink(row));
+    await this.clickAndWaitForURL(page, this.zonesGridColumnEditLink(row));
   }
 
   /**
@@ -287,16 +288,17 @@ class Zones extends BOBasePage {
     await this.dialogListener(page, true);
     // Click on dropDown
     await Promise.all([
-      page.click(this.zonesGridColumnToggleDropdown(row)),
+      page.locator(this.zonesGridColumnToggleDropdown(row)).click(),
       this.waitForVisibleSelector(page, `${this.zonesGridColumnToggleDropdown(row)}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.zonesGridDeleteLink(row)),
+      page.locator(this.zonesGridDeleteLink(row)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton);
+    await page.locator(this.confirmDeleteButton).click();
+    await this.elementNotVisible(page, this.confirmDeleteModal, 2000);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -329,7 +331,7 @@ class Zones extends BOBasePage {
   async bulkSelectRows(page: Page): Promise<void> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllLabel, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllLabel).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
   }
@@ -344,15 +346,16 @@ class Zones extends BOBasePage {
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.deleteSelectionButton),
+      page.locator(this.deleteSelectionButton).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton);
+    await page.locator(this.confirmDeleteButton).click();
+    await this.elementNotVisible(page, this.confirmDeleteModal, 2000);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -368,11 +371,12 @@ class Zones extends BOBasePage {
     await this.bulkSelectRows(page);
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
     // Click to change status
-    await this.clickAndWaitForNavigation(page, wantedStatus ? this.enableSelectionButton : this.disableSelectionButton);
+    await page.locator(wantedStatus ? this.enableSelectionButton : this.disableSelectionButton).click();
+    await this.elementNotVisible(page, wantedStatus ? this.enableSelectionButton : this.disableSelectionButton, 2000);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -390,7 +394,7 @@ class Zones extends BOBasePage {
 
     let i = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -425,7 +429,7 @@ class Zones extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -436,7 +440,7 @@ class Zones extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }

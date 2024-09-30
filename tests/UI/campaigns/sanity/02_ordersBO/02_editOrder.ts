@@ -1,17 +1,16 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
-// Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import ordersPage from '@pages/BO/orders';
-import orderPageProductsBlock from '@pages/BO/orders/view/productsBlock';
-
-// Import data
-import OrderStatuses from '@data/demo/orderStatuses';
+import {
+  boDashboardPage,
+  boOrdersPage,
+  boOrdersViewBlockProductsPage,
+  dataOrderStatuses,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -29,12 +28,12 @@ describe('BO - Orders - Orders : Edit Order BO', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   // Steps
@@ -45,38 +44,38 @@ describe('BO - Orders - Orders : Edit Order BO', async () => {
   it('should go to the \'Orders > Orders\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToOrdersPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.ordersParentLink,
-      dashboardPage.ordersLink,
+      boDashboardPage.ordersParentLink,
+      boDashboardPage.ordersLink,
     );
-    await ordersPage.closeSfToolBar(page);
+    await boOrdersPage.closeSfToolBar(page);
 
-    const pageTitle = await ordersPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(ordersPage.pageTitle);
+    const pageTitle = await boOrdersPage.getPageTitle(page);
+    expect(pageTitle).to.contains(boOrdersPage.pageTitle);
   });
 
   it('should go to the first order page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToFirstOrder', baseContext);
 
-    await ordersPage.goToOrder(page, 1);
+    await boOrdersPage.goToOrder(page, 1);
 
-    const pageTitle = await orderPageProductsBlock.getPageTitle(page);
-    await expect(pageTitle).to.contains(orderPageProductsBlock.pageTitle);
+    const pageTitle = await boOrdersViewBlockProductsPage.getPageTitle(page);
+    expect(pageTitle).to.contains(boOrdersViewBlockProductsPage.pageTitle);
   });
 
   it('should modify the product quantity and check the validation', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'editOrderQuantity', baseContext);
 
-    const newQuantity = await orderPageProductsBlock.modifyProductQuantity(page, 1, 5);
-    await expect(newQuantity, 'Quantity was not updated').to.equal(5);
+    const newQuantity = await boOrdersViewBlockProductsPage.modifyProductQuantity(page, 1, 5);
+    expect(newQuantity, 'Quantity was not updated').to.equal(5);
   });
 
   it('should modify the order status and check the validation', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'editOrderStatus', baseContext);
 
-    const orderStatus = await orderPageProductsBlock.modifyOrderStatus(page, OrderStatuses.paymentAccepted.name);
-    await expect(orderStatus).to.equal(OrderStatuses.paymentAccepted.name);
+    const orderStatus = await boOrdersViewBlockProductsPage.modifyOrderStatus(page, dataOrderStatuses.paymentAccepted.name);
+    expect(orderStatus).to.equal(dataOrderStatuses.paymentAccepted.name);
   });
 
   // Logout from BO

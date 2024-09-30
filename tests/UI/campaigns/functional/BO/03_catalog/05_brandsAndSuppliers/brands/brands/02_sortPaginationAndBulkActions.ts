@@ -1,7 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import common tests
@@ -10,13 +7,18 @@ import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
 import brandsPage from '@pages/BO/catalog/brands';
-import dashboardPage from '@pages/BO/dashboard';
 
 // Import data
 import ImportBrands from '@data/import/brands';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  utilsCore,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_brandsAndSuppliers_brands_brands_sortPaginationAndBulkActions';
 
@@ -43,16 +45,16 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
     // Create csv file with all brands data
-    await files.createCSVFile('.', fileName, ImportBrands);
+    await utilsFile.createCSVFile('.', fileName, ImportBrands);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
     // Delete created csv file
-    await files.deleteFile(fileName);
+    await utilsFile.deleteFile(fileName);
   });
 
   // 1 : Pagination of brands table
@@ -64,22 +66,22 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
     it('should go to \'Catalog > Brands & Suppliers\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToBrandsPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.catalogParentLink,
-        dashboardPage.brandsAndSuppliersLink,
+        boDashboardPage.catalogParentLink,
+        boDashboardPage.brandsAndSuppliersLink,
       );
-      await dashboardPage.closeSfToolBar(page);
+      await boDashboardPage.closeSfToolBar(page);
 
       const pageTitle = await brandsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(brandsPage.pageTitle);
+      expect(pageTitle).to.contains(brandsPage.pageTitle);
     });
 
     it('should reset all filters and get number of brands in BO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterBrandsTable', baseContext);
 
       numberOfBrands = await brandsPage.resetAndGetNumberOfLines(page, tableName);
-      await expect(numberOfBrands).to.be.above(0);
+      expect(numberOfBrands).to.be.above(0);
     });
 
     it('should change the items number to 10 per page', async function () {
@@ -144,20 +146,20 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
             const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
             const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-            const expectedResult: number[] = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+            const expectedResult: number[] = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
             if (test.args.sortDirection === 'asc') {
-              await expect(sortedTableFloat).to.deep.equal(expectedResult);
+              expect(sortedTableFloat).to.deep.equal(expectedResult);
             } else {
-              await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+              expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
             }
           } else {
-            const expectedResult: string[] = await basicHelper.sortArray(nonSortedTable);
+            const expectedResult: string[] = await utilsCore.sortArray(nonSortedTable);
 
             if (test.args.sortDirection === 'asc') {
-              await expect(sortedTable).to.deep.equal(expectedResult);
+              expect(sortedTable).to.deep.equal(expectedResult);
             } else {
-              await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+              expect(sortedTable).to.deep.equal(expectedResult.reverse());
             }
           }
         },
@@ -173,7 +175,7 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
       await brandsPage.filterBrands(page, 'input', 'name', 'todelete');
 
       const textColumn = await brandsPage.getTextColumnFromTableBrands(page, 1, 'name');
-      await expect(textColumn).to.contains('todelete');
+      expect(textColumn).to.contains('todelete');
     });
 
     [
@@ -184,14 +186,14 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.action}Brand`, baseContext);
 
         const textResult = await brandsPage.bulkSetBrandsStatus(page, test.args.enabledValue);
-        await expect(textResult).to.be.equal(brandsPage.successfulUpdateStatusMessage);
+        expect(textResult).to.be.equal(brandsPage.successfulUpdateStatusMessage);
 
         const numberOfBrandsInGrid = await brandsPage.getNumberOfElementInGrid(page, tableName);
-        await expect(numberOfBrandsInGrid).to.be.equal(numberOfImportedBrands);
+        expect(numberOfBrandsInGrid).to.be.equal(numberOfImportedBrands);
 
         for (let i = 1; i <= numberOfBrandsInGrid; i++) {
           const brandStatus = await brandsPage.getBrandStatus(page, i);
-          await expect(brandStatus).to.equal(test.args.enabledValue);
+          expect(brandStatus).to.equal(test.args.enabledValue);
         }
       });
     });
@@ -200,7 +202,7 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterBulkEdit', baseContext);
 
       const numberOfBrandsAfterReset = await brandsPage.resetAndGetNumberOfLines(page, tableName);
-      await expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands);
+      expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands);
     });
   });
 
@@ -212,21 +214,21 @@ describe('BO - Catalog - Brands & Suppliers : Sort, pagination and bulk actions 
       await brandsPage.filterBrands(page, 'input', 'name', 'todelete');
 
       const textColumn = await brandsPage.getTextColumnFromTableBrands(page, 1, 'name');
-      await expect(textColumn).to.contains('todelete');
+      expect(textColumn).to.contains('todelete');
     });
 
     it('should delete with bulk actions and check result', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'deleteBrands', baseContext);
 
       const deleteTextResult = await brandsPage.deleteWithBulkActions(page, tableName);
-      await expect(deleteTextResult).to.be.equal(brandsPage.successfulDeleteMessage);
+      expect(deleteTextResult).to.be.equal(brandsPage.successfulDeleteMessage);
     });
 
     it('should reset filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterDeleteBrands', baseContext);
 
       const numberOfBrandsAfterReset = await brandsPage.resetAndGetNumberOfLines(page, tableName);
-      await expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands - numberOfImportedBrands);
+      expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands - numberOfImportedBrands);
     });
   });
 });

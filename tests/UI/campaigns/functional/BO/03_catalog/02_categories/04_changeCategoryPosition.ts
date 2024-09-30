@@ -1,17 +1,19 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import categoriesPage from '@pages/BO/catalog/categories';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_categories_changeCategoryPosition';
 
@@ -22,12 +24,12 @@ describe('BO - Catalog - Categories : Change category position', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -37,22 +39,22 @@ describe('BO - Catalog - Categories : Change category position', async () => {
   it('should go to \'Catalog > Categories\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToCategoriesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.categoriesLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.categoriesLink,
     );
     await categoriesPage.closeSfToolBar(page);
 
     const pageTitle = await categoriesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(categoriesPage.pageTitle);
+    expect(pageTitle).to.contains(categoriesPage.pageTitle);
   });
 
   it('should reset all filters and get number of categories in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFirst', baseContext);
 
     numberOfCategories = await categoriesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfCategories).to.be.above(0);
+    expect(numberOfCategories).to.be.above(0);
   });
 
   it('should sort categories by position', async function () {
@@ -64,11 +66,11 @@ describe('BO - Catalog - Categories : Change category position', async () => {
 
     const sortedTable = await categoriesPage.getAllRowsColumnContent(page, 'position');
 
-    const nonSortedTableFloat: number[] = await nonSortedTable.map((text: string): number => parseFloat(text));
-    const sortedTableFloat: number[] = await sortedTable.map((text: string): number => parseFloat(text));
+    const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
+    const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-    const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
-    await expect(sortedTableFloat).to.deep.equal(expectedResult);
+    const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
+    expect(sortedTableFloat).to.deep.equal(expectedResult);
   });
 
   describe('Change categories position', async () => {
@@ -82,21 +84,21 @@ describe('BO - Catalog - Categories : Change category position', async () => {
       );
 
       const resultText = await categoriesPage.changeCategoryPosition(page, 1, 2);
-      await expect(resultText).to.equal(categoriesPage.successfulUpdateMessage);
+      expect(resultText).to.equal(categoriesPage.successfulUpdateMessage);
 
       const firstCategoryNameAfterUpdate = await categoriesPage.getTextColumnFromTableCategories(
         page,
         1,
         'name',
       );
-      await expect(firstCategoryNameBeforeUpdate).to.not.equal(firstCategoryNameAfterUpdate);
+      expect(firstCategoryNameBeforeUpdate).to.not.equal(firstCategoryNameAfterUpdate);
 
       const secondCategoryNameAfterUpdate = await categoriesPage.getTextColumnFromTableCategories(
         page,
         2,
         'name',
       );
-      await expect(firstCategoryNameBeforeUpdate).to.equal(secondCategoryNameAfterUpdate);
+      expect(firstCategoryNameBeforeUpdate).to.equal(secondCategoryNameAfterUpdate);
     });
 
     it('should reset category position', async function () {
@@ -109,21 +111,21 @@ describe('BO - Catalog - Categories : Change category position', async () => {
       );
 
       const resultText = await categoriesPage.changeCategoryPosition(page, 2, 1);
-      await expect(resultText).to.equal(categoriesPage.successfulUpdateMessage);
+      expect(resultText).to.equal(categoriesPage.successfulUpdateMessage);
 
       const secondCategoryNameAfterUpdate = await categoriesPage.getTextColumnFromTableCategories(
         page,
         2,
         'name',
       );
-      await expect(secondCategoryNameBeforeUpdate).to.not.equal(secondCategoryNameAfterUpdate);
+      expect(secondCategoryNameBeforeUpdate).to.not.equal(secondCategoryNameAfterUpdate);
 
       const firstCategoryNameAfterUpdate = await categoriesPage.getTextColumnFromTableCategories(
         page,
         1,
         'name',
       );
-      await expect(secondCategoryNameBeforeUpdate).to.equal(firstCategoryNameAfterUpdate);
+      expect(secondCategoryNameBeforeUpdate).to.equal(firstCategoryNameAfterUpdate);
     });
   });
 });

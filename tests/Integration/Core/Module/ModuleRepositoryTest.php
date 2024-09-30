@@ -28,13 +28,14 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Core\Module;
 
+use Doctrine\Common\Cache\CacheProvider;
+use Doctrine\Common\Cache\Psr6\DoctrineProvider;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\PrestaShop\Adapter\HookManager;
 use PrestaShop\PrestaShop\Adapter\Module\AdminModuleDataProvider;
 use PrestaShop\PrestaShop\Adapter\Module\ModuleDataProvider;
 use PrestaShop\PrestaShop\Core\Module\ModuleRepository;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
-use Symfony\Component\Cache\DoctrineProvider;
 use Symfony\Component\Translation\Translator;
 
 class ModuleRepositoryTest extends TestCase
@@ -65,7 +66,7 @@ class ModuleRepositoryTest extends TestCase
             $check_exceptions,
             $use_push,
             $id_shop
-            ) {
+        ) {
             // This mock represents a module that :
             // - overrides `dummy_payment` module `fullDescription` attributes
             // - adds `testAttribute` attributes to `dummy_payment` module
@@ -89,12 +90,16 @@ class ModuleRepositoryTest extends TestCase
             $this->returnCallback($hookExecMethodMock)
         );
 
+        /** @var CacheProvider $cacheProvider */
+        $cacheProvider = DoctrineProvider::wrap(new ArrayAdapter());
+
         $this->moduleRepository = new ModuleRepository(
             $moduleDataProvider,
             $this->createMock(AdminModuleDataProvider::class),
-            new DoctrineProvider(new ArrayAdapter()),
+            $cacheProvider,
             $hookManager,
-            dirname(__DIR__, 3) . '/Resources/modules/'
+            dirname(__DIR__, 3) . '/Resources/modules/',
+            1
         );
     }
 

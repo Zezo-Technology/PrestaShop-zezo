@@ -1,8 +1,9 @@
 import EmployeeBasePage from '@pages/BO/advancedParameters/team/employeeBasePage';
 
-import type EmployeeData from '@data/faker/employee';
-
 import type {Page} from 'playwright';
+import {
+  type FakerEmployee,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add employee page, contains functions that can be used on the page
@@ -21,7 +22,7 @@ class AddEmployee extends EmployeeBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Add new •';
+    this.pageTitleCreate = `New employee • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.passwordInput = '#employee_password';
@@ -34,10 +35,10 @@ class AddEmployee extends EmployeeBasePage {
   /**
    * Fill form for add/edit page Employee
    * @param page {Page} Browser tab
-   * @param employeeData {EmployeeData} Data to set on add/edit employee form
+   * @param employeeData {FakerEmployee} Data to set on add/edit employee form
    * @returns {Promise<string>}
    */
-  async createEditEmployee(page: Page, employeeData: EmployeeData): Promise<string> {
+  async createEditEmployee(page: Page, employeeData: FakerEmployee): Promise<string> {
     await this.setValue(page, this.firstNameInput, employeeData.firstName);
     await this.setValue(page, this.lastNameInput, employeeData.lastName);
     await this.setValue(page, this.emailInput, employeeData.email);
@@ -49,7 +50,7 @@ class AddEmployee extends EmployeeBasePage {
     }
     // replace toggle by 1 in the selector if active = YES / 0 if active = NO
     await this.setChecked(page, this.statusToggleInput(employeeData.active ? 1 : 0));
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForLoadState(page, this.saveButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }

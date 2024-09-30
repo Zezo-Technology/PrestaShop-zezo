@@ -1,22 +1,22 @@
 // Import utils
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import localizationPage from '@pages/BO/international/localization';
 import languagesPage from '@pages/BO/international/languages';
 import addLanguagePage from '@pages/BO/international/languages/add';
 
-// Import data
-import LanguageData from '@data/faker/language';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  boLocalizationPage,
+  FakerLanguage,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_international_localization_languages_bulkActionsLanguages';
 
@@ -31,30 +31,30 @@ describe('BO - International - Languages : Bulk disable, enable and delete langu
   let page: Page;
   let numberOfLanguages: number = 0;
 
-  const firstLanguageData: LanguageData = new LanguageData({name: 'languageToDelete1', isoCode: 'fi'});
-  const secondLanguageData: LanguageData = new LanguageData({name: 'languageToDelete2', isoCode: 'ca'});
+  const firstLanguageData: FakerLanguage = new FakerLanguage({name: 'languageToDelete1', isoCode: 'fi'});
+  const secondLanguageData: FakerLanguage = new FakerLanguage({name: 'languageToDelete2', isoCode: 'ca'});
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
 
     // Create images
     await Promise.all([
-      files.generateImage(firstLanguageData.flag),
-      files.generateImage(firstLanguageData.noPicture),
-      files.generateImage(secondLanguageData.flag),
-      files.generateImage(secondLanguageData.noPicture),
+      utilsFile.generateImage(firstLanguageData.flag),
+      utilsFile.generateImage(firstLanguageData.noPicture),
+      utilsFile.generateImage(secondLanguageData.flag),
+      utilsFile.generateImage(secondLanguageData.noPicture),
     ]);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
     await Promise.all([
-      files.deleteFile(firstLanguageData.flag),
-      files.deleteFile(firstLanguageData.noPicture),
-      files.deleteFile(secondLanguageData.flag),
-      files.deleteFile(secondLanguageData.noPicture),
+      utilsFile.deleteFile(firstLanguageData.flag),
+      utilsFile.deleteFile(firstLanguageData.noPicture),
+      utilsFile.deleteFile(secondLanguageData.flag),
+      utilsFile.deleteFile(secondLanguageData.noPicture),
     ]);
   });
 
@@ -65,52 +65,52 @@ describe('BO - International - Languages : Bulk disable, enable and delete langu
   it('should go to \'International > Localization\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLocalizationPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.internationalParentLink,
-      dashboardPage.localizationLink,
+      boDashboardPage.internationalParentLink,
+      boDashboardPage.localizationLink,
     );
-    await localizationPage.closeSfToolBar(page);
+    await boLocalizationPage.closeSfToolBar(page);
 
-    const pageTitle = await localizationPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(localizationPage.pageTitle);
+    const pageTitle = await boLocalizationPage.getPageTitle(page);
+    expect(pageTitle).to.contains(boLocalizationPage.pageTitle);
   });
 
   it('should go to \'Languages\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLanguagesPage', baseContext);
 
-    await localizationPage.goToSubTabLanguages(page);
+    await boLocalizationPage.goToSubTabLanguages(page);
 
     const pageTitle = await languagesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(languagesPage.pageTitle);
+    expect(pageTitle).to.contains(languagesPage.pageTitle);
   });
 
   it('should reset all filters and get number of languages in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfLanguages = await languagesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfLanguages).to.be.above(0);
+    expect(numberOfLanguages).to.be.above(0);
   });
 
   describe('Create 2 Languages', async () => {
-    [firstLanguageData, secondLanguageData].forEach((languageToCreate: LanguageData, index: number) => {
+    [firstLanguageData, secondLanguageData].forEach((languageToCreate: FakerLanguage, index: number) => {
       it('should go to add new language page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToAddNewLanguage${index + 1}`, baseContext);
 
         await languagesPage.goToAddNewLanguage(page);
 
         const pageTitle = await addLanguagePage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addLanguagePage.pageTitle);
+        expect(pageTitle).to.contains(addLanguagePage.pageTitle);
       });
 
       it('should create new language', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createLanguage${index + 1}`, baseContext);
 
         const textResult = await addLanguagePage.createEditLanguage(page, languageToCreate);
-        await expect(textResult).to.to.contains(languagesPage.successfulCreationMessage);
+        expect(textResult).to.to.contains(languagesPage.successfulCreationMessage);
 
         const numberOfLanguagesAfterCreation = await languagesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfLanguagesAfterCreation).to.be.equal(numberOfLanguages + index + 1);
+        expect(numberOfLanguagesAfterCreation).to.be.equal(numberOfLanguages + index + 1);
       });
     });
   });
@@ -128,7 +128,7 @@ describe('BO - International - Languages : Bulk disable, enable and delete langu
       await languagesPage.filterTable(page, 'input', 'name', 'languageToDelete');
 
       const numberOfLanguagesAfterFilter = await languagesPage.getNumberOfElementInGrid(page);
-      await expect(numberOfLanguagesAfterFilter).to.be.at.least(2);
+      expect(numberOfLanguagesAfterFilter).to.be.at.least(2);
     });
 
     tests.forEach((test) => {
@@ -139,15 +139,15 @@ describe('BO - International - Languages : Bulk disable, enable and delete langu
           page,
           test.args.toEnable,
         );
-        await expect(disableTextResult).to.be.equal(languagesPage.successfulUpdateStatusMessage);
+        expect(disableTextResult).to.be.equal(languagesPage.successfulUpdateStatusMessage);
 
         // Check that element in grid are disabled
         const numberOfLanguagesInGrid = await languagesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfLanguagesInGrid).to.be.at.most(numberOfLanguages);
+        expect(numberOfLanguagesInGrid).to.be.at.most(numberOfLanguages);
 
         for (let i = 1; i <= numberOfLanguagesInGrid; i++) {
           const textColumn = await languagesPage.getStatus(page, i);
-          await expect(textColumn).to.equal(test.args.toEnable);
+          expect(textColumn).to.equal(test.args.toEnable);
         }
       });
     });
@@ -156,14 +156,14 @@ describe('BO - International - Languages : Bulk disable, enable and delete langu
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDelete', baseContext);
 
       const deleteTextResult = await languagesPage.deleteWithBulkActions(page);
-      await expect(deleteTextResult).to.be.equal(languagesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.equal(languagesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterDelete', baseContext);
 
       const numberOfLanguagesAfterDelete = await languagesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfLanguagesAfterDelete).to.be.equal(numberOfLanguages);
+      expect(numberOfLanguagesAfterDelete).to.be.equal(numberOfLanguages);
     });
   });
 });

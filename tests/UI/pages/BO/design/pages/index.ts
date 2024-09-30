@@ -93,7 +93,7 @@ class Pages extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Pages';
+    this.pageTitle = `Pages • ${global.INSTALL.SHOP_NAME}`;
     this.successfulUpdateStatusMessage = 'The status has been successfully updated.';
 
     // Header link
@@ -174,7 +174,8 @@ class Pages extends BOBasePage {
     const resetButton = this.filterResetButton(tableName);
 
     if (await this.elementVisible(page, resetButton, 2000)) {
-      await this.clickAndWaitForNavigation(page, resetButton);
+      await page.locator(resetButton).click();
+      await this.elementNotVisible(page, resetButton, 2000);
     }
     return this.getNumberFromText(page, this.gridHeaderTitle(tableName));
   }
@@ -200,7 +201,7 @@ class Pages extends BOBasePage {
       // Do nothing
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton(tableName));
+    await this.clickAndWaitForURL(page, this.filterSearchButton(tableName));
   }
 
   /**
@@ -213,12 +214,12 @@ class Pages extends BOBasePage {
   async deleteRowInTable(page: Page, tableName: string, row: number): Promise<string> {
     // Click on dropDown
     await Promise.all([
-      page.click(this.listTableToggleDropDown(tableName, row)),
+      page.locator(this.listTableToggleDropDown(tableName, row)).click(),
       this.waitForVisibleSelector(page, `${this.listTableToggleDropDown(tableName, row)}[aria-expanded='true']`),
     ]);
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.deleteRowLink(tableName, row)),
+      page.locator(this.deleteRowLink(tableName, row)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal(tableName)}.show`),
     ]);
     await this.confirmDeleteFromTable(page, tableName);
@@ -238,19 +239,19 @@ class Pages extends BOBasePage {
 
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel(tableName), (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel(tableName)).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton(tableName)}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton(tableName)),
+      page.locator(this.bulkActionsToggleButton(tableName)).click(),
       this.waitForVisibleSelector(page, this.bulkActionsDeleteButton(tableName)),
     ]);
 
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.bulkActionsDeleteButton(tableName)),
+      page.locator(this.bulkActionsDeleteButton(tableName)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal(tableName)}.show`),
     ]);
     await this.confirmDeleteFromTable(page, tableName);
@@ -265,7 +266,8 @@ class Pages extends BOBasePage {
    * @return {Promise<void>}
    */
   async confirmDeleteFromTable(page: Page, tableName: string): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton(tableName));
+    await page.locator(this.confirmDeleteButton(tableName)).click();
+    await this.elementNotVisible(page, this.confirmDeleteButton(tableName), 2000);
   }
 
   /**
@@ -297,7 +299,7 @@ class Pages extends BOBasePage {
    */
   async setStatus(page: Page, tableName: string, row: number, valueWanted: boolean = true): Promise<boolean> {
     if (await this.getStatus(page, tableName, row) !== valueWanted) {
-      await this.clickAndWaitForNavigation(page, this.listTableStatusColumn(tableName, row));
+      await page.locator(this.listTableStatusColumn(tableName, row)).click();
 
       return true;
     }
@@ -315,21 +317,18 @@ class Pages extends BOBasePage {
   async bulkSetStatus(page: Page, tableName: string, enable: boolean = true): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel(tableName), (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel(tableName)).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton(tableName)}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton(tableName)),
+      page.locator(this.bulkActionsToggleButton(tableName)).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton(tableName)}`),
     ]);
 
     // Click on enable/disable and wait for modal
-    await this.clickAndWaitForNavigation(
-      page,
-      enable ? this.bulkActionsEnableButton(tableName) : this.bulkActionsDisableButton(tableName),
-    );
+    await page.locator(enable ? this.bulkActionsEnableButton(tableName) : this.bulkActionsDisableButton(tableName)).click();
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -432,13 +431,13 @@ class Pages extends BOBasePage {
    * @param sortDirection {string} Sort direction asc or desc
    * @return {Promise<void>}
    */
-  async sortTable(page: Page, tableName: string, sortBy: string, sortDirection : string = 'asc'): Promise<void> {
+  async sortTable(page: Page, tableName: string, sortBy: string, sortDirection: string = 'asc'): Promise<void> {
     const sortColumnDiv = `${this.sortColumnDiv(tableName, sortBy)}[data-sort-direction='${sortDirection}']`;
     const sortColumnSpanButton = this.sortColumnSpanButton(tableName, sortBy);
 
     let i = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -478,14 +477,14 @@ class Pages extends BOBasePage {
   async goToEditCategoryPage(page: Page, row: number): Promise<void> {
     // Click on dropDown
     await Promise.all([
-      page.click(this.listTableToggleDropDown('cms_page_category', row)),
+      page.locator(this.listTableToggleDropDown('cms_page_category', row)).click(),
       this.waitForVisibleSelector(
         page,
         `${this.listTableToggleDropDown('cms_page_category', row)}[aria-expanded='true']`,
       ),
     ]);
     // Click on edit
-    await this.clickAndWaitForNavigation(page, this.listTableEditLink('cms_page_category', row));
+    await this.clickAndWaitForURL(page, this.listTableEditLink('cms_page_category', row));
   }
 
   /**
@@ -494,7 +493,7 @@ class Pages extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewPageCategory(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewPageCategoryLink);
+    await this.clickAndWaitForURL(page, this.addNewPageCategoryLink);
   }
 
   /**
@@ -503,7 +502,7 @@ class Pages extends BOBasePage {
    * @return {Promise<void>}
    */
   async backToList(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.backToListButton);
+    await this.clickAndWaitForURL(page, this.backToListButton);
   }
 
   /**
@@ -513,7 +512,7 @@ class Pages extends BOBasePage {
    * @return {Promise<void>}
    */
   async viewCategory(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.categoriesListTableViewLink(row));
+    await this.clickAndWaitForURL(page, this.categoriesListTableViewLink(row));
   }
 
   // Page methods
@@ -524,7 +523,7 @@ class Pages extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewPageLink);
+    await this.clickAndWaitForURL(page, this.addNewPageLink);
   }
 
   /**
@@ -534,7 +533,7 @@ class Pages extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToEditPage(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.listTableEditLink('cms_page', row));
+    await this.clickAndWaitForURL(page, this.listTableEditLink('cms_page', row));
   }
 
   /**
@@ -555,7 +554,7 @@ class Pages extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationCategoryNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.categoriesPaginationNextLink);
+    await this.clickAndWaitForURL(page, this.categoriesPaginationNextLink);
 
     return this.getTextContent(page, this.categoriesPaginationLabel);
   }
@@ -566,7 +565,7 @@ class Pages extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationCategoryPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.categoriesPaginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.categoriesPaginationPreviousLink);
 
     return this.getTextContent(page, this.categoriesPaginationLabel);
   }
@@ -589,7 +588,7 @@ class Pages extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPagesNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.pagesPaginationNextLink);
+    await this.clickAndWaitForURL(page, this.pagesPaginationNextLink);
 
     return this.getTextContent(page, this.pagesPaginationLabel);
   }
@@ -600,7 +599,7 @@ class Pages extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPagesPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.pagesPaginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.pagesPaginationPreviousLink);
 
     return this.getTextContent(page, this.pagesPaginationLabel);
   }

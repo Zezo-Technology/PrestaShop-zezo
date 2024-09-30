@@ -4,27 +4,31 @@ services:
 
   prestashop.adapter.module.command_handler.bulk_toggle_module_status_handler:
     class: PrestaShop\PrestaShop\Adapter\Module\CommandHandler\BulkToggleModuleStatusHandler
+    autoconfigure: true
     arguments:
-      - '@prestashop.module.manager'
+      - '@PrestaShop\PrestaShop\Core\Module\ModuleManager'
       - '@prestashop.adapter.legacy.logger'
       - '@prestashop.core.cache.clearer.cache_clearer_chain'
-    tags:
-      - name: 'tactician.handler'
-        command: 'PrestaShop\PrestaShop\Core\Domain\Module\Command\BulkToggleModuleStatusCommand'
+
+  PrestaShop\PrestaShop\Adapter\Module\QueryHandler\GetModuleInfosHandler:
+    autowire: true
+    autoconfigure: true
+    public: false
 
   prestashop.adapter.module.self_configurator:
     class: PrestaShop\PrestaShop\Adapter\Module\Configuration\ModuleSelfConfigurator
     arguments:
-      - "@prestashop.core.admin.module.repository"
+      - '@PrestaShop\PrestaShop\Core\Module\ModuleRepository'
       - "@prestashop.adapter.legacy.configuration"
       - "@doctrine.dbal.default_connection"
       - "@filesystem"
+    lazy: true
 
   # MODULE TAB MANAGEMENT
   prestashop.adapter.module.tab.register:
     class: PrestaShop\PrestaShop\Adapter\Module\Tab\ModuleTabRegister
     arguments:
-      - "@prestashop.core.admin.tab.repository"
+      - '@PrestaShopBundle\Entity\Repository\TabRepository'
       - "@prestashop.core.admin.lang.repository"
       - "@logger"
       - "@translator"
@@ -35,7 +39,7 @@ services:
   prestashop.adapter.module.tab.unregister:
     class: PrestaShop\PrestaShop\Adapter\Module\Tab\ModuleTabUnregister
     arguments:
-      - "@prestashop.core.admin.tab.repository"
+      - '@PrestaShopBundle\Entity\Repository\TabRepository'
       - "@prestashop.core.admin.lang.repository"
       - "@logger"
       - "@translator"
@@ -48,9 +52,16 @@ services:
     tags:
       - { name: kernel.event_subscriber }
 
-  prestashop.adapter.presenter.module:
-    class: PrestaShop\PrestaShop\Adapter\Presenter\Module\ModulePresenter
+  PrestaShop\PrestaShop\Adapter\Presenter\Module\ModulePresenter:
+    public: false
     arguments: [ "@=service('prestashop.adapter.legacy.context').getContext().currency", "@prestashop.adapter.formatter.price" ]
+
+  prestashop.adapter.presenter.module:
+    alias: PrestaShop\PrestaShop\Adapter\Presenter\Module\ModulePresenter
+    deprecated:
+      package: PrestaShop\PrestaShop
+      version: 9.0
+    public: true
 
   prestashop.adapter.presenter.module.payment:
     class: PrestaShop\PrestaShop\Adapter\Presenter\Module\PaymentModulesPresenter
@@ -61,7 +72,7 @@ services:
   prestashop.adapter.module.payment_module_provider:
     class: PrestaShop\PrestaShop\Adapter\Module\PaymentModuleListProvider
     arguments:
-      - '@prestashop.core.admin.module.repository'
+      - '@PrestaShop\PrestaShop\Core\Module\ModuleRepository'
       - '@prestashop.bundle.repository.module'
       - '@=service("prestashop.adapter.legacy.context").getContext().shop.id'
 

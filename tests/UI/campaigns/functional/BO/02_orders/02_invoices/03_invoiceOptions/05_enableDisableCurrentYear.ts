@@ -1,18 +1,19 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import ordersPage from '@pages/BO/orders';
 import invoicesPage from '@pages/BO/orders/invoices';
-import orderPageTabListBlock from '@pages/BO/orders/view/tabListBlock';
 
-// Import data
-import OrderStatuses from '@data/demo/orderStatuses';
+import {
+  boDashboardPage,
+  boOrdersPage,
+  boOrdersViewBlockTabListPage,
+  dataOrderStatuses,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {use, expect} from 'chai';
 import chaiString from 'chai-string';
@@ -42,12 +43,12 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -58,15 +59,15 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
     it('should go to \'Orders > Invoices\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToInvoicesPageToEnableCurrentYear', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.ordersParentLink,
-        dashboardPage.invoicesLink,
+        boDashboardPage.ordersParentLink,
+        boDashboardPage.invoicesLink,
       );
       await invoicesPage.closeSfToolBar(page);
 
       const pageTitle = await invoicesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(invoicesPage.pageTitle);
+      expect(pageTitle).to.contains(invoicesPage.pageTitle);
     });
 
     it('should enable add current year to invoice number', async function () {
@@ -75,7 +76,7 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
       await invoicesPage.enableAddCurrentYearToInvoice(page, true);
 
       const textMessage = await invoicesPage.saveInvoiceOptions(page);
-      await expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
+      expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
     });
 
     describe('Choose the position of the year at the end and check it', async () => {
@@ -86,7 +87,7 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
         await invoicesPage.chooseInvoiceOptionsYearPosition(page, 0);
 
         const textMessage = await invoicesPage.saveInvoiceOptions(page);
-        await expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
+        expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
       });
 
       it('should go to \'Orders > Orders\' page', async function () {
@@ -98,30 +99,30 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
           invoicesPage.ordersLink,
         );
 
-        const pageTitle = await ordersPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(ordersPage.pageTitle);
+        const pageTitle = await boOrdersPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boOrdersPage.pageTitle);
       });
 
       it('should go to the first order page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'goToFirstOrderPage1', baseContext);
 
-        await ordersPage.goToOrder(page, 1);
+        await boOrdersPage.goToOrder(page, 1);
 
-        const pageTitle = await orderPageTabListBlock.getPageTitle(page);
-        await expect(pageTitle).to.contains(orderPageTabListBlock.pageTitle);
+        const pageTitle = await boOrdersViewBlockTabListPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boOrdersViewBlockTabListPage.pageTitle);
       });
 
-      it(`should change the order status to '${OrderStatuses.shipped.name}' and check it`, async function () {
+      it(`should change the order status to '${dataOrderStatuses.shipped.name}' and check it`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'updateStatusEnabledCurrentYearInTheEnd', baseContext);
 
-        const result = await orderPageTabListBlock.modifyOrderStatus(page, OrderStatuses.shipped.name);
-        await expect(result).to.equal(OrderStatuses.shipped.name);
+        const result = await boOrdersViewBlockTabListPage.modifyOrderStatus(page, dataOrderStatuses.shipped.name);
+        expect(result).to.equal(dataOrderStatuses.shipped.name);
       });
 
       it('should check that the invoice file name contain current year at the end', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'checkEnabledCurrentYearAtTheEndOfFile', baseContext);
 
-        fileName = await orderPageTabListBlock.getFileName(page);
+        fileName = await boOrdersViewBlockTabListPage.getFileName(page);
         expect(fileName).to.endWith(currentYear);
       });
     });
@@ -130,14 +131,14 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
       it('should go to \'Orders > Invoices\' page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'goToInvoicesPage1', baseContext);
 
-        await orderPageTabListBlock.goToSubMenu(
+        await boOrdersViewBlockTabListPage.goToSubMenu(
           page,
-          orderPageTabListBlock.ordersParentLink,
-          orderPageTabListBlock.invoicesLink,
+          boOrdersViewBlockTabListPage.ordersParentLink,
+          boOrdersViewBlockTabListPage.invoicesLink,
         );
 
         const pageTitle = await invoicesPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(invoicesPage.pageTitle);
+        expect(pageTitle).to.contains(invoicesPage.pageTitle);
       });
 
       it('should choose \'Before the sequential number\'', async function () {
@@ -147,7 +148,7 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
         await invoicesPage.chooseInvoiceOptionsYearPosition(page, 1);
 
         const textMessage = await invoicesPage.saveInvoiceOptions(page);
-        await expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
+        expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
       });
 
       it('should go to \'Orders > Orders\' page', async function () {
@@ -159,23 +160,23 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
           invoicesPage.ordersLink,
         );
 
-        const pageTitle = await ordersPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(ordersPage.pageTitle);
+        const pageTitle = await boOrdersPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boOrdersPage.pageTitle);
       });
 
       it('should go to the first order page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'goToFirstOrderPage', baseContext);
 
-        await ordersPage.goToOrder(page, 1);
+        await boOrdersPage.goToOrder(page, 1);
 
-        const pageTitle = await orderPageTabListBlock.getPageTitle(page);
-        await expect(pageTitle).to.contains(orderPageTabListBlock.pageTitle);
+        const pageTitle = await boOrdersViewBlockTabListPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boOrdersViewBlockTabListPage.pageTitle);
       });
 
       it('should check that the invoice file name contain current year at the beginning', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'checkCurrentYearAtTheBeginningOfFile', baseContext);
 
-        fileName = await orderPageTabListBlock.getFileName(page);
+        fileName = await boOrdersViewBlockTabListPage.getFileName(page);
         expect(fileName).to.startWith(`IN${currentYear}`);
       });
     });
@@ -185,14 +186,14 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
     it('should go to \'Orders > Invoices\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToInvoicesPageToDisableCurrentYear', baseContext);
 
-      await orderPageTabListBlock.goToSubMenu(
+      await boOrdersViewBlockTabListPage.goToSubMenu(
         page,
-        orderPageTabListBlock.ordersParentLink,
-        orderPageTabListBlock.invoicesLink,
+        boOrdersViewBlockTabListPage.ordersParentLink,
+        boOrdersViewBlockTabListPage.invoicesLink,
       );
 
       const pageTitle = await invoicesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(invoicesPage.pageTitle);
+      expect(pageTitle).to.contains(invoicesPage.pageTitle);
     });
 
     it('should disable add current year to invoice number', async function () {
@@ -201,7 +202,7 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
       await invoicesPage.enableAddCurrentYearToInvoice(page, false);
 
       const textMessage = await invoicesPage.saveInvoiceOptions(page);
-      await expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
+      expect(textMessage).to.contains(invoicesPage.successfulUpdateMessage);
     });
 
     describe('Check the invoice file Name', async () => {
@@ -214,23 +215,23 @@ describe('BO - Orders - Invoices : Enable/Disable current year', async () => {
           invoicesPage.ordersLink,
         );
 
-        const pageTitle = await ordersPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(ordersPage.pageTitle);
+        const pageTitle = await boOrdersPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boOrdersPage.pageTitle);
       });
 
       it('should go to the first order page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'goToFirstOrderPage3', baseContext);
 
-        await ordersPage.goToOrder(page, 1);
+        await boOrdersPage.goToOrder(page, 1);
 
-        const pageTitle = await orderPageTabListBlock.getPageTitle(page);
-        await expect(pageTitle).to.contains(orderPageTabListBlock.pageTitle);
+        const pageTitle = await boOrdersViewBlockTabListPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boOrdersViewBlockTabListPage.pageTitle);
       });
 
       it('should check that the invoice file name does not contain the current year', async function () {
         await testContext.addContextItem(this, 'testIdentifier', 'checkDisabledCurrentYear', baseContext);
 
-        fileName = await orderPageTabListBlock.getFileName(page);
+        fileName = await boOrdersViewBlockTabListPage.getFileName(page);
         expect(fileName).to.not.contains(currentYear);
       });
     });

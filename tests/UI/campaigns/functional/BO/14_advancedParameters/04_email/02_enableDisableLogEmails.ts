@@ -1,16 +1,18 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import emailPage from '@pages/BO/advancedParameters/email';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_advancedParameters_email_enableDisableLogEmails';
 
@@ -24,12 +26,12 @@ describe('BO - Advanced Parameters - E-mail : Enable/Disable log emails', async 
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -39,14 +41,14 @@ describe('BO - Advanced Parameters - E-mail : Enable/Disable log emails', async 
   it('should go to \'Advanced Parameters > E-mail\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToEmailPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.advancedParametersLink,
-      dashboardPage.emailLink,
+      boDashboardPage.advancedParametersLink,
+      boDashboardPage.emailLink,
     );
 
     const pageTitle = await emailPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(emailPage.pageTitle);
+    expect(pageTitle).to.contains(emailPage.pageTitle);
   });
 
   const tests = [
@@ -59,14 +61,14 @@ describe('BO - Advanced Parameters - E-mail : Enable/Disable log emails', async 
       await testContext.addContextItem(this, 'testIdentifier', `${test.args.action}LogEmails`, baseContext);
 
       const result = await emailPage.setLogEmails(page, test.args.exist);
-      await expect(result).to.contains(emailPage.successfulUpdateMessage);
+      expect(result).to.contains(emailPage.successfulUpdateMessage);
     });
 
     it('should check the existence of E-mail table', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `checkEmailTable${index}`, baseContext);
 
       const isVisible = await emailPage.isLogEmailsTableVisible(page);
-      await expect(isVisible).to.equal(test.args.exist);
+      expect(isVisible).to.equal(test.args.exist);
     });
   });
 });

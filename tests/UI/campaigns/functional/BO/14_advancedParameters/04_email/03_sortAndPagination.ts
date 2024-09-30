@@ -1,6 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -8,20 +6,21 @@ import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
 import emailPage from '@pages/BO/advancedParameters/email';
 
-// Import FO pages
-import foLoginPage from '@pages/FO/login';
-import homePage from '@pages/FO/home';
-import productPage from '@pages/FO/product';
-import cartPage from '@pages/FO/cart';
-import checkoutPage from '@pages/FO/checkout';
-import orderConfirmationPage from '@pages/FO/checkout/orderConfirmation';
-
-// Import data
-import Customers from '@data/demo/customers';
-import PaymentMethods from '@data/demo/paymentMethods';
+import {
+  boDashboardPage,
+  dataCustomers,
+  dataPaymentMethods,
+  foClassicCartPage,
+  foClassicCheckoutPage,
+  foClassicCheckoutOrderConfirmationPage,
+  foClassicHomePage,
+  foClassicLoginPage,
+  foClassicProductPage,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -40,12 +39,12 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -57,26 +56,25 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
     it('should go to \'Advanced Parameters > E-mail\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToEmailPageToEraseEmails', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.advancedParametersLink,
-        dashboardPage.emailLink,
+        boDashboardPage.advancedParametersLink,
+        boDashboardPage.emailLink,
       );
-
-      await dashboardPage.closeSfToolBar(page);
+      await boDashboardPage.closeSfToolBar(page);
 
       const pageTitle = await emailPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(emailPage.pageTitle);
+      expect(pageTitle).to.contains(emailPage.pageTitle);
     });
 
     it('should erase all emails', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'eraseEmails', baseContext);
 
       const textResult = await emailPage.eraseAllEmails(page);
-      await expect(textResult).to.equal(emailPage.successfulDeleteMessage);
+      expect(textResult).to.equal(emailPage.successfulDeleteMessage);
 
       const numberOfLines = await emailPage.getNumberOfElementInGrid(page);
-      await expect(numberOfLines).to.be.equal(0);
+      expect(numberOfLines).to.be.equal(0);
     });
   });
 
@@ -86,31 +84,31 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
       await testContext.addContextItem(this, 'testIdentifier', 'goToFO', baseContext);
 
       // Click on view my shop
-      page = await dashboardPage.viewMyShop(page);
+      page = await boDashboardPage.viewMyShop(page);
 
       // Change language on FO
-      await homePage.changeLanguage(page, 'en');
+      await foClassicHomePage.changeLanguage(page, 'en');
 
-      const isHomePage = await homePage.isHomePage(page);
-      await expect(isHomePage, 'Fail to open FO home page').to.be.true;
+      const isHomePage = await foClassicHomePage.isHomePage(page);
+      expect(isHomePage, 'Fail to open FO home page').to.eq(true);
     });
 
     it('should go to login page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToLoginFO', baseContext);
 
-      await homePage.goToLoginPage(page);
+      await foClassicHomePage.goToLoginPage(page);
 
-      const pageTitle = await foLoginPage.getPageTitle(page);
-      await expect(pageTitle, 'Fail to open FO login page').to.contains(foLoginPage.pageTitle);
+      const pageTitle = await foClassicLoginPage.getPageTitle(page);
+      expect(pageTitle, 'Fail to open FO login page').to.contains(foClassicLoginPage.pageTitle);
     });
 
     it('should sign in with default customer', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'signInFO', baseContext);
 
-      await foLoginPage.customerLogin(page, Customers.johnDoe);
+      await foClassicLoginPage.customerLogin(page, dataCustomers.johnDoe);
 
-      const isCustomerConnected = await foLoginPage.isCustomerConnected(page);
-      await expect(isCustomerConnected, 'Customer is not connected').to.be.true;
+      const isCustomerConnected = await foClassicLoginPage.isCustomerConnected(page);
+      expect(isCustomerConnected, 'Customer is not connected').to.eq(true);
     });
 
     const tests: number[] = new Array(6).fill(0, 0, 6);
@@ -120,50 +118,50 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
         await testContext.addContextItem(this, 'testIdentifier', `createOrder${index}`, baseContext);
 
         // Go to home page
-        await foLoginPage.goToHomePage(page);
+        await foClassicLoginPage.goToHomePage(page);
 
         // Go to the first product page
-        await homePage.goToProductPage(page, 1);
+        await foClassicHomePage.goToProductPage(page, 1);
 
         // Add the created product to the cart
-        await productPage.addProductToTheCart(page);
+        await foClassicProductPage.addProductToTheCart(page);
 
         // Proceed to checkout the shopping cart
-        await cartPage.clickOnProceedToCheckout(page);
+        await foClassicCartPage.clickOnProceedToCheckout(page);
 
         // Address step - Go to delivery step
-        const isStepAddressComplete = await checkoutPage.goToDeliveryStep(page);
-        await expect(isStepAddressComplete, 'Step Address is not complete').to.be.true;
+        const isStepAddressComplete = await foClassicCheckoutPage.goToDeliveryStep(page);
+        expect(isStepAddressComplete, 'Step Address is not complete').to.eq(true);
 
         // Delivery step - Go to payment step
-        const isStepDeliveryComplete = await checkoutPage.goToPaymentStep(page);
-        await expect(isStepDeliveryComplete, 'Step Address is not complete').to.be.true;
+        const isStepDeliveryComplete = await foClassicCheckoutPage.goToPaymentStep(page);
+        expect(isStepDeliveryComplete, 'Step Address is not complete').to.eq(true);
 
         // Payment step - Choose payment step
-        await checkoutPage.choosePaymentAndOrder(page, PaymentMethods.wirePayment.moduleName);
+        await foClassicCheckoutPage.choosePaymentAndOrder(page, dataPaymentMethods.wirePayment.moduleName);
 
         // Check the confirmation message
-        const cardTitle = await orderConfirmationPage.getOrderConfirmationCardTitle(page);
-        await expect(cardTitle).to.contains(orderConfirmationPage.orderConfirmationCardTitle);
+        const cardTitle = await foClassicCheckoutOrderConfirmationPage.getOrderConfirmationCardTitle(page);
+        expect(cardTitle).to.contains(foClassicCheckoutOrderConfirmationPage.orderConfirmationCardTitle);
       });
     });
 
     it('should sign out from FO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'signOutFO', baseContext);
 
-      await orderConfirmationPage.logout(page);
-      const isCustomerConnected = await orderConfirmationPage.isCustomerConnected(page);
-      await expect(isCustomerConnected, 'Customer is connected').to.be.false;
+      await foClassicCheckoutOrderConfirmationPage.logout(page);
+      const isCustomerConnected = await foClassicCheckoutOrderConfirmationPage.isCustomerConnected(page);
+      expect(isCustomerConnected, 'Customer is connected').to.eq(false);
     });
 
     it('should go back to BO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goBackToBO', baseContext);
 
       // Go Back to BO
-      page = await orderConfirmationPage.closePage(browserContext, page, 0);
+      page = await foClassicCheckoutOrderConfirmationPage.closePage(browserContext, page, 0);
 
       const pageTitle = await emailPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(emailPage.pageTitle);
+      expect(pageTitle).to.contains(emailPage.pageTitle);
     });
   });
 
@@ -172,16 +170,10 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
     it('should go to \'Advanced parameters > E-mail\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToEmailPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
-        page,
-        dashboardPage.advancedParametersLink,
-        dashboardPage.emailLink,
-      );
-
-      await dashboardPage.closeSfToolBar(page);
+      await emailPage.reloadPage(page);
 
       const pageTitle = await emailPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(emailPage.pageTitle);
+      expect(pageTitle).to.contains(emailPage.pageTitle);
     });
 
     it('should change the items number to 10 per page', async function () {
@@ -260,13 +252,13 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
     {
       args:
         {
-          testIdentifier: 'sortByDateAddDesc', sortBy: 'date_add', sortDirection: 'desc',
+          testIdentifier: 'sortByDateAddDesc', sortBy: 'date_add', sortDirection: 'desc', isDate: true,
         },
     },
     {
       args:
         {
-          testIdentifier: 'sortByDateAddAsc', sortBy: 'date_add', sortDirection: 'asc',
+          testIdentifier: 'sortByDateAddAsc', sortBy: 'date_add', sortDirection: 'asc', isDate: true,
         },
     },
     {
@@ -303,20 +295,28 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
           const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+          }
+        } else if (test.args.isDate) {
+          const expectedResult = await utilsCore.sortArrayDate(nonSortedTable);
+
+          if (test.args.sortDirection === 'asc') {
+            expect(sortedTable).to.deep.equal(expectedResult);
+          } else {
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -329,7 +329,7 @@ describe('BO - Advanced Parameters - E-mail : Sort and pagination emails', async
       await testContext.addContextItem(this, 'testIdentifier', 'BulkDelete', baseContext);
 
       const deleteTextResult = await emailPage.deleteEmailLogsBulkActions(page);
-      await expect(deleteTextResult).to.be.equal(emailPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.equal(emailPage.successfulMultiDeleteMessage);
     });
   });
 });

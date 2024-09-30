@@ -252,11 +252,8 @@ class MetaCore extends ObjectModel
      *
      * @return bool
      */
-    public function deleteSelection($selection)
+    public function deleteSelection(array $selection)
     {
-        if (!is_array($selection)) {
-            die(Tools::displayError());
-        }
         $result = true;
         foreach ($selection as $id) {
             $this->id = (int) $id;
@@ -509,7 +506,7 @@ class MetaCore extends ObjectModel
     /**
      * @since 1.5.0
      */
-    public static function completeMetaTags($metaTags, $defaultValue, Context $context = null)
+    public static function completeMetaTags($metaTags, $defaultValue, ?Context $context = null)
     {
         if (!$context) {
             $context = Context::getContext();

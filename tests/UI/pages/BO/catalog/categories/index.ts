@@ -10,6 +10,8 @@ import type {Page} from 'playwright';
 class Categories extends BOBasePage {
   public readonly pageTitle: string;
 
+  public readonly pageCategoryTitle: (categoryName: string) => string;
+
   public readonly pageRootTitle: string;
 
   public readonly successfulUpdateStatusMessage: string;
@@ -91,8 +93,9 @@ class Categories extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Categories';
-    this.pageRootTitle = 'Root • PrestaShop';
+    this.pageTitle = `Categories • ${global.INSTALL.SHOP_NAME}`;
+    this.pageCategoryTitle = (categoryName: string) => `Category ${categoryName} • ${global.INSTALL.SHOP_NAME}`;
+    this.pageRootTitle = `Category Root • ${global.INSTALL.SHOP_NAME}`;
     this.successfulUpdateStatusMessage = 'The status has been successfully updated.';
 
     // Selectors
@@ -164,7 +167,7 @@ class Categories extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewCategoryPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewCategoryLink);
+    await this.clickAndWaitForURL(page, this.addNewCategoryLink);
   }
 
   /**
@@ -173,8 +176,9 @@ class Categories extends BOBasePage {
    * @returns {Promise<void>}
    */
   async resetFilter(page: Page): Promise<void> {
-    if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+    if (await this.elementVisible(page, this.filterResetButton, 2000)) {
+      await page.locator(this.filterResetButton).click();
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
   }
 
@@ -217,7 +221,7 @@ class Categories extends BOBasePage {
         throw new Error(`Filter ${filterBy} was not found`);
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 
   /**
@@ -247,7 +251,7 @@ class Categories extends BOBasePage {
    */
   async setStatus(page: Page, row: number, valueWanted: boolean = true): Promise<boolean> {
     if (await this.getStatus(page, row) !== valueWanted) {
-      await page.click(this.categoriesListColumnStatus(row));
+      await page.locator(this.categoriesListColumnStatus(row)).click();
 
       await this.waitForVisibleSelector(
         page,
@@ -277,7 +281,13 @@ class Categories extends BOBasePage {
    * @param row {number} Row on table
    * @returns {Promise<{name: string, description: string, id: string, position: number, status: boolean}>}
    */
-  async getCategoryFromTable(page: Page, row: number) {
+  async getCategoryFromTable(page: Page, row: number): Promise<{
+    name: string,
+    description: string,
+    id: string,
+    position: number,
+    status: boolean,
+  }> {
     return {
       id: await this.getTextColumnFromTableCategories(page, row, 'id_category'),
       name: await this.getTextColumnFromTableCategories(page, row, 'name'),
@@ -314,11 +324,11 @@ class Categories extends BOBasePage {
   async goToEditCategoryPage(page: Page, row: number): Promise<void> {
     // Click on dropDown
     await Promise.all([
-      page.click(this.categoriesListTableToggleDropDown(row, 'actions')),
+      page.locator(this.categoriesListTableToggleDropDown(row, 'actions')).click(),
       this.waitForVisibleSelector(page, this.categoriesListTableEditLink(row, 'actions')),
     ]);
     // Click on edit
-    await this.clickAndWaitForNavigation(page, this.categoriesListTableEditLink(row, 'actions'));
+    await this.clickAndWaitForURL(page, this.categoriesListTableEditLink(row, 'actions'));
   }
 
   /**
@@ -331,9 +341,9 @@ class Categories extends BOBasePage {
     if (
       await this.elementVisible(page, this.categoriesListTableViewLink(row, 'actions'), 100)
     ) {
-      await this.clickAndWaitForNavigation(page, this.categoriesListTableViewLink(row, 'actions'));
+      await this.clickAndWaitForURL(page, this.categoriesListTableViewLink(row, 'actions'));
     } else {
-      await this.clickAndWaitForNavigation(page, `${this.categoriesListTableColumn(row, 'name')} a`);
+      await this.clickAndWaitForURL(page, `${this.categoriesListTableColumn(row, 'name')} a`);
     }
   }
 
@@ -347,7 +357,7 @@ class Categories extends BOBasePage {
   async deleteCategory(page: Page, row: number, modeID: number = 0): Promise<string> {
     // Click on dropDown
     await Promise.all([
-      page.click(this.categoriesListTableToggleDropDown(row, 'actions')),
+      page.locator(this.categoriesListTableToggleDropDown(row, 'actions')).click(),
       this.waitForVisibleSelector(
         page,
         `${this.categoriesListTableToggleDropDown(row, 'actions')}[aria-expanded='true']`,
@@ -355,7 +365,7 @@ class Categories extends BOBasePage {
     ]);
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.categoriesListTableDeleteLink(row, 'actions')),
+      page.locator(this.categoriesListTableDeleteLink(row, 'actions')).click(),
       this.waitForVisibleSelector(page, this.deleteCategoryModal),
     ]);
     await this.chooseOptionAndDelete(page, modeID);
@@ -371,7 +381,7 @@ class Categories extends BOBasePage {
    */
   async chooseOptionAndDelete(page: Page, modeID: number): Promise<void> {
     await this.setChecked(page, this.deleteCategoryModalModeInput(modeID));
-    await this.clickAndWaitForNavigation(page, this.deleteCategoryModalDeleteButton);
+    await this.clickAndWaitForURL(page, this.deleteCategoryModalDeleteButton);
     await this.waitForVisibleSelector(page, this.alertSuccessBlockParagraph);
   }
 
@@ -384,18 +394,18 @@ class Categories extends BOBasePage {
   async bulkSetStatus(page: Page, enable: boolean = true): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsDiv, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsDiv).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
-    await this.clickAndWaitForNavigation(page, enable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton);
+    await page.locator(enable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton).click();
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 
@@ -408,19 +418,19 @@ class Categories extends BOBasePage {
   async deleteCategoriesBulkActions(page: Page, modeID: number = 0): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsDiv, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsDiv).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.bulkActionsDeleteButton),
+      page.locator(this.bulkActionsDeleteButton).click(),
       this.waitForVisibleSelector(page, this.deleteCategoryModal),
     ]);
     await this.chooseOptionAndDelete(page, modeID);
@@ -459,8 +469,8 @@ class Categories extends BOBasePage {
 
     let i: number = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await page.hover(this.sortColumnDiv(sortBy));
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await page.locator(this.sortColumnDiv(sortBy)).hover();
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -475,7 +485,7 @@ class Categories extends BOBasePage {
    */
   async exportDataToCsv(page: Page): Promise<string|null> {
     await Promise.all([
-      page.click(this.categoryGridActionsButton),
+      page.locator(this.categoryGridActionsButton).click(),
       this.waitForVisibleSelector(page, `${this.gridActionDropDownMenu}.show`),
     ]);
 
@@ -509,7 +519,7 @@ class Categories extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToEditHomeCategoryPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.editHomeCategoryButton);
+    await this.clickAndWaitForURL(page, this.editHomeCategoryButton);
   }
 
   /* Pagination methods */
@@ -518,7 +528,7 @@ class Categories extends BOBasePage {
    * @param page {Page} Browser tab
    * @return {Promise<string>}
    */
-  getPaginationLabel(page: Page): Promise<string> {
+  async getPaginationLabel(page: Page): Promise<string> {
     return this.getTextContent(page, this.paginationLabel);
   }
 
@@ -529,9 +539,11 @@ class Categories extends BOBasePage {
    * @returns {Promise<string>}
    */
   async selectPaginationLimit(page: Page, number: number): Promise<string> {
+    const currentUrl: string = page.url();
+
     await Promise.all([
       this.selectByVisibleText(page, this.paginationLimitSelect, number),
-      page.waitForNavigation({waitUntil: 'networkidle'}),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
     ]);
 
     return this.getPaginationLabel(page);
@@ -543,7 +555,7 @@ class Categories extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
     return this.getPaginationLabel(page);
   }
 
@@ -553,7 +565,7 @@ class Categories extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
     return this.getPaginationLabel(page);
   }
 }

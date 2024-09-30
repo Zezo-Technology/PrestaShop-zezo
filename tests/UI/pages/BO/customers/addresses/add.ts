@@ -1,8 +1,10 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type AddressData from '@data/faker/address';
+import {
+  type FakerAddress,
+} from '@prestashop-core/ui-testing';
 
-import type {Page} from 'playwright';
+import type {Frame, Page} from 'playwright';
 
 /**
  * Add address page, contains functions that can be used on the page
@@ -50,7 +52,7 @@ class AddAddress extends BOBasePage {
 
   private readonly customerAddressOtherInput: string;
 
-  public readonly saveAddressButton: string;
+  private readonly saveAddressButton: string;
 
   /**
    * @constructs
@@ -59,8 +61,8 @@ class AddAddress extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Addresses •';
-    this.pageTitleEdit = 'Edit •';
+    this.pageTitleCreate = `New address • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing address';
 
     // Selectors
     this.customerEmailInput = '#customer_address_customer_email';
@@ -90,20 +92,28 @@ class AddAddress extends BOBasePage {
 
   /**
    * Fill form for add/edit address
-   * @param page {Page} Browser tab
-   * @param addressData {AddressData} Data to set on new address form
+   * @param page {Frame|Page} Browser tab
+   * @param addressData {FakerAddress} Data to set on new address form
    * @param save {boolean} True if we need to save the new address, false if not
    * @param waitForNavigation {boolean} True if we need to wait for navigation after save, false if not
    * @returns {Promise<?string>}
    */
   async createEditAddress(
-    page: Page,
-    addressData: AddressData,
+    page: Frame|Page,
+    addressData: FakerAddress,
     save: boolean = true,
     waitForNavigation: boolean = true,
   ): Promise<string|null> {
     if (await this.elementVisible(page, this.customerEmailInput, 2000)) {
       await this.setValue(page, this.customerEmailInput, addressData.email);
+      if ('keyboard' in page) {
+        await page.keyboard.press('Tab');
+      }
+      if ('waitForResponse' in page) {
+        await page.waitForResponse('**/sell/customers/customer-information**', {
+          timeout: 2000,
+        });
+      }
     }
     await this.setValue(page, this.customerAddressdniInput, addressData.dni);
     await this.setValue(page, this.customerAddressAliasInput, addressData.alias);
@@ -120,31 +130,30 @@ class AddAddress extends BOBasePage {
     await this.setValue(page, this.customerAddressOtherInput, addressData.other);
 
     if (await this.elementVisible(page, this.customerAddressStateSelect, 1000)) {
-      await page.click(this.customerAddressStateSelect);
+      await page.locator(this.customerAddressStateSelect).click();
       await this.setValue(page, this.searchStateInput, addressData.state);
       await this.waitForSelectorAndClick(page, this.searchResultState);
     }
 
-    if (waitForNavigation) {
-      // Save and return successful message
-      if (save) {
+    // Save and return successful message
+    if (save) {
+      if (waitForNavigation) {
         return this.saveAddress(page);
       }
-    }
 
-    // save
-    await this.waitForSelectorAndClick(page, this.saveAddressButton);
+      await page.locator(this.saveAddressButton).click();
+    }
 
     return null;
   }
 
   /**
    * Save address
-   * @param page {Page} Browser tab
+   * @param page {Frame|Page} Browser tab
    * @returns {Promise<string>}
    */
-  async saveAddress(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.saveAddressButton);
+  async saveAddress(page: Frame|Page): Promise<string> {
+    await this.clickAndWaitForURL(page, this.saveAddressButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 

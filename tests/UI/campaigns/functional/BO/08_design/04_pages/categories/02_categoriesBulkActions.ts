@@ -1,20 +1,20 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import pagesPage from '@pages/BO/design/pages';
 import addPageCategoryPage from '@pages/BO/design/pages/pageCategory/add';
 
-// Import data
-import CMSCategoryData from '@data/faker/CMScategory';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerCMSCategory,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_design_pages_categories_categoriesBulkActions';
 
@@ -26,18 +26,18 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
   let page: Page;
   let numberOfCategories: number = 0;
 
-  const firstCategoryData: CMSCategoryData = new CMSCategoryData({name: 'todelete'});
-  const secondCategoryData: CMSCategoryData = new CMSCategoryData({name: 'todelete'});
+  const firstCategoryData: FakerCMSCategory = new FakerCMSCategory({name: 'todelete'});
+  const secondCategoryData: FakerCMSCategory = new FakerCMSCategory({name: 'todelete'});
   const categoriesTableName: string = 'cms_page_category';
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -47,15 +47,15 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
   it('should go to \'Design > Pages\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToCmsPagesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.designParentLink,
-      dashboardPage.pagesLink,
+      boDashboardPage.designParentLink,
+      boDashboardPage.pagesLink,
     );
     await pagesPage.closeSfToolBar(page);
 
     const pageTitle = await pagesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(pagesPage.pageTitle);
+    expect(pageTitle).to.contains(pagesPage.pageTitle);
   });
 
   it('should reset filter and get number of categories in BO', async function () {
@@ -64,27 +64,27 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
     numberOfCategories = await pagesPage.resetAndGetNumberOfLines(page, categoriesTableName);
 
     if (numberOfCategories !== 0) {
-      await expect(numberOfCategories).to.be.above(0);
+      expect(numberOfCategories).to.be.above(0);
     }
   });
 
   // 1 : Create 2 categories In BO
   describe('Create 2 categories', async () => {
-    [firstCategoryData, secondCategoryData].forEach((categoryToCreate: CMSCategoryData, index: number) => {
+    [firstCategoryData, secondCategoryData].forEach((categoryToCreate: FakerCMSCategory, index: number) => {
       it('should go to add new page category', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToAddCategory${index + 1}`, baseContext);
 
         await pagesPage.goToAddNewPageCategory(page);
 
         const pageTitle = await addPageCategoryPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addPageCategoryPage.pageTitleCreate);
+        expect(pageTitle).to.contains(addPageCategoryPage.pageTitleCreate);
       });
 
       it(`should create category n° ${index + 1}`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createCategory${index + 1}`, baseContext);
 
         const textResult = await addPageCategoryPage.createEditPageCategory(page, categoryToCreate);
-        await expect(textResult).to.equal(pagesPage.successfulCreationMessage);
+        expect(textResult).to.equal(pagesPage.successfulCreationMessage);
       });
 
       it('should go back to categories list', async function () {
@@ -93,7 +93,7 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
         await pagesPage.backToList(page);
 
         const pageTitle = await pagesPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(pagesPage.pageTitle);
+        expect(pageTitle).to.contains(pagesPage.pageTitle);
       });
     });
   });
@@ -106,7 +106,7 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
       await pagesPage.filterTable(page, categoriesTableName, 'input', 'name', 'todelete');
 
       const textResult = await pagesPage.getTextColumnFromTableCmsPageCategory(page, 1, 'name');
-      await expect(textResult).to.contains('todelete');
+      expect(textResult).to.contains('todelete');
     });
 
     [
@@ -117,7 +117,7 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
         await testContext.addContextItem(this, 'testIdentifier', `${categoryStatus.args.status}Category`, baseContext);
 
         const textResult = await pagesPage.bulkSetStatus(page, categoriesTableName, categoryStatus.args.enable);
-        await expect(textResult).to.be.equal(pagesPage.successfulUpdateStatusMessage);
+        expect(textResult).to.be.equal(pagesPage.successfulUpdateStatusMessage);
 
         const numberOfCategoriesInGrid = await pagesPage.getNumberOfElementInGrid(page, categoriesTableName);
 
@@ -127,7 +127,7 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
             categoriesTableName,
             i,
           );
-          await expect(textColumn).to.equal(categoryStatus.args.enable);
+          expect(textColumn).to.equal(categoryStatus.args.enable);
         }
       });
     });
@@ -141,14 +141,14 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
       await pagesPage.filterTable(page, categoriesTableName, 'input', 'name', 'todelete');
 
       const textResult = await pagesPage.getTextColumnFromTableCmsPageCategory(page, 1, 'name');
-      await expect(textResult).to.contains('todelete');
+      expect(textResult).to.contains('todelete');
     });
 
     it('should delete categories', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteCategories', baseContext);
 
       const deleteTextResult = await pagesPage.deleteWithBulkActions(page, categoriesTableName);
-      await expect(deleteTextResult).to.be.equal(pagesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.equal(pagesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
@@ -158,7 +158,7 @@ describe('BO - Design - Pages : Enable/Disable/Delete categories with Bulk Actio
         page,
         categoriesTableName,
       );
-      await expect(numberOfCategoriesAfterFilter).to.be.equal(numberOfCategories);
+      expect(numberOfCategoriesAfterFilter).to.be.equal(numberOfCategories);
     });
   });
 });

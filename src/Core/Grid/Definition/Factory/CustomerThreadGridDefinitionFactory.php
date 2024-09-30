@@ -77,7 +77,7 @@ class CustomerThreadGridDefinitionFactory extends AbstractGridDefinitionFactory
     private $customerThreadStatusesChoiceProvider;
 
     public function __construct(
-        HookDispatcherInterface $hookDispatcher = null,
+        HookDispatcherInterface $hookDispatcher,
         FormChoiceProviderInterface $contactTypeProvider,
         FormChoiceProviderInterface $shopNameByIdChoiceProvider,
         ConfigurableFormChoiceProviderInterface $customerThreadStatusesChoiceProvider
@@ -101,7 +101,7 @@ class CustomerThreadGridDefinitionFactory extends AbstractGridDefinitionFactory
      */
     protected function getName(): string
     {
-        return $this->trans('Customer thread', [], 'Admin.Global');
+        return $this->trans('Customer threads', [], 'Admin.Global');
     }
 
     /**
@@ -195,7 +195,7 @@ class CustomerThreadGridDefinitionFactory extends AbstractGridDefinitionFactory
             )
             ->add(
                 (new DataColumn('shopName'))
-                    ->setName($this->trans('Shop', [], 'Admin.Global'))
+                    ->setName($this->trans('Store', [], 'Admin.Global'))
                     ->setOptions([
                         'field' => 'shopName',
                     ])
@@ -346,12 +346,12 @@ class CustomerThreadGridDefinitionFactory extends AbstractGridDefinitionFactory
                     ])
             )
             ->add(
-            $this->buildDeleteAction(
-                'admin_customer_threads_delete',
-                'customerThreadId',
-                'id_customer_thread'
-            )
-        );
+                $this->buildDeleteAction(
+                    'admin_customer_threads_delete',
+                    'customerThreadId',
+                    'id_customer_thread'
+                )
+            );
 
         return $rowActionCollection;
     }

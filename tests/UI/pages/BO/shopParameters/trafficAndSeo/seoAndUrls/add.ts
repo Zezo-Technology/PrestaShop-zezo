@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import SeoPageData from '@data/faker/seoPage';
-
 import type {Page} from 'playwright';
+import {
+  type FakerSeoPage,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add seo and url page, contains selectors and functions for the page
@@ -11,6 +12,8 @@ import type {Page} from 'playwright';
  */
 class AddSeoUrl extends BOBasePage {
   public readonly pageTitle: string;
+
+  public readonly editPageTitle: string;
 
   private readonly pageTitleLangButton: string;
 
@@ -39,7 +42,8 @@ class AddSeoUrl extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'SEO & URLs • ';
+    this.pageTitle = `New page configuration • ${global.INSTALL.SHOP_NAME}`;
+    this.editPageTitle = 'Editing configuration for';
 
     // Selectors
     this.pageTitleLangButton = '#meta_page_title_dropdown';
@@ -67,11 +71,11 @@ class AddSeoUrl extends BOBasePage {
    */
   async changeLanguageForSelectors(page: Page, lang: string = 'en'): Promise<void> {
     await Promise.all([
-      page.click(this.pageTitleLangButton),
+      page.locator(this.pageTitleLangButton).click(),
       this.waitForVisibleSelector(page, `${this.pageTitleLangButton}[aria-expanded='true']`),
     ]);
     await Promise.all([
-      page.click(this.pageTitleLangSpan(lang)),
+      page.locator(this.pageTitleLangSpan(lang)).click(),
       this.waitForVisibleSelector(page, `${this.pageTitleLangButton}[aria-expanded='false']`),
     ]);
   }
@@ -83,10 +87,10 @@ class AddSeoUrl extends BOBasePage {
    * @return {Promise<void>}
    */
   async deleteKeywords(page: Page, lang: string = 'en'): Promise<void> {
-    const closeButtons = await page.$$(this.deleteKeywordLink(lang));
+    const closeButtonsLocator = page.locator(this.deleteKeywordLink(lang));
 
-    for (let i = 0; i < closeButtons.length; i++) {
-      await closeButtons[i].click();
+    for (let i = (await closeButtonsLocator.count()) - 1; i > 0; i--) {
+      await closeButtonsLocator.nth(i).click();
     }
   }
 
@@ -99,7 +103,7 @@ class AddSeoUrl extends BOBasePage {
    */
   async addKeywords(page: Page, keywords: string[], idLang: number = 1): Promise<void> {
     for (let i = 0; i < keywords.length; i++) {
-      await page.type(this.metaKeywordsInput(idLang), keywords[i]);
+      await page.locator(this.metaKeywordsInput(idLang)).fill(keywords[i]);
       await page.keyboard.press('Enter');
     }
   }
@@ -107,11 +111,11 @@ class AddSeoUrl extends BOBasePage {
   /**
    * Create/Edit seo page
    * @param page {Page} Browser tab
-   * @param seoPageData {SeoPageData} Data to set on seo form
+   * @param seoPageData {FakerSeoPage} Data to set on seo form
    * @return {Promise<void>}
    */
-  async createEditSeoPage(page: Page, seoPageData: SeoPageData): Promise<string> {
-    await page.selectOption(this.pageNameSelect, seoPageData.page);
+  async createEditSeoPage(page: Page, seoPageData: FakerSeoPage): Promise<string> {
+    await this.selectByVisibleText(page, this.pageNameSelect, seoPageData.page);
     // Fill form in english
     await this.changeLanguageForSelectors(page, 'en');
     await this.setValue(page, this.pageTitleInput(1), seoPageData.title);
@@ -119,7 +123,7 @@ class AddSeoUrl extends BOBasePage {
     await this.deleteKeywords(page, 'en');
     await this.addKeywords(page, seoPageData.metaKeywords, 1);
     await this.setValue(page, this.friendlyUrlInput(1), seoPageData.friendlyUrl);
-    // Fill form in french
+    // Fill form in French
     await this.changeLanguageForSelectors(page, 'fr');
     await this.setValue(page, this.pageTitleInput(2), seoPageData.frTitle);
     await this.setValue(page, this.metaDescriptionInput(2), seoPageData.frMetaDescription);
@@ -128,7 +132,7 @@ class AddSeoUrl extends BOBasePage {
     await this.setValue(page, this.friendlyUrlInput(2), seoPageData.frFriendlyUrl);
 
     // Save seo page
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 }

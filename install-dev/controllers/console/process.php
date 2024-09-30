@@ -26,6 +26,7 @@
 
 use PrestaShopBundle\Install\Database;
 use PrestaShopBundle\Install\Install;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Filesystem\Filesystem;
 
 class InstallControllerConsoleProcess extends InstallControllerConsole implements HttpConfigureInterface
@@ -45,10 +46,13 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
 
     public function init()
     {
-        $this->model_install = new Install();
+        $output = new ConsoleOutput();
+        $logger = new SymfonyConsoleLogger($output, PrestaShopLoggerInterface::DEBUG);
+
+        $this->model_install = new Install(null, null, $logger);
         $this->model_install->setTranslator($this->translator);
 
-        $this->model_database = new Database();
+        $this->model_database = new Database($logger);
         $this->model_database->setTranslator($this->translator);
     }
 
@@ -115,7 +119,7 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
         $this->clearConfigXML() && $this->clearConfigThemes();
         $steps = explode(',', $this->datas->step);
         if (in_array('all', $steps)) {
-            $steps = ['database', 'modules', 'theme', 'fixtures', 'postInstall'];
+            $steps = ['database', 'modules', 'theme', 'fixtures', 'postInstall', 'finalize'];
         }
         if (!file_exists(PS_INSTALLATION_LOCK_FILE)) {
             // Set the install lock file
@@ -181,6 +185,12 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
 
         if (in_array('postInstall', $steps)) {
             if (!$this->processPostInstall()) {
+                $this->printErrors();
+            }
+        }
+
+        if (in_array('finalize', $steps)) {
+            if (!$this->processFinalize()) {
                 $this->printErrors();
             }
         }
@@ -262,7 +272,6 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
 
         return $this->model_install->configureShop([
             'shop_name' => $this->datas->shop_name,
-            'shop_activity' => $this->datas->shop_activity,
             'shop_country' => $this->datas->shop_country,
             'shop_timezone' => $this->datas->timezone,
             'use_smtp' => false,
@@ -305,7 +314,7 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
         }
 
         $this->model_install->xml_loader_ids = $this->datas->xml_loader_ids;
-        $result = $this->model_install->installFixtures(null, ['shop_activity' => $this->datas->shop_activity, 'shop_country' => $this->datas->shop_country]);
+        $result = $this->model_install->installFixtures(null, ['shop_country' => $this->datas->shop_country]);
         $this->datas->xml_loader_ids = $this->model_install->xml_loader_ids;
 
         return $result;
@@ -317,6 +326,24 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
     public function processPostInstall(): bool
     {
         return $this->model_install->postInstall();
+    }
+
+    public function processFinalize(): bool
+    {
+        $this->initializeContext();
+
+        // if admin folder doesn't exist, then there's nothing to do here
+        if (!file_exists(_PS_ROOT_DIR_ . '/admin/')) {
+            return true;
+        }
+
+        $result = $this->model_install->finalize();
+
+        if (!$result) {
+            $this->printErrors();
+        }
+
+        return $result;
     }
 
     /**
@@ -364,7 +391,7 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
         require_once _PS_CORE_DIR_ . '/config/bootstrap.php';
 
         global $kernel;
-        $kernel = new AppKernel(_PS_ENV_, _PS_MODE_DEV_);
+        $kernel = new AdminKernel(_PS_ENV_, _PS_MODE_DEV_);
         $kernel->boot();
     }
 
@@ -377,7 +404,7 @@ class InstallControllerConsoleProcess extends InstallControllerConsole implement
     private function rebootWithoutTranslationsCache()
     {
         global $kernel;
-        (new Filesystem())->remove($kernel->getCacheDir() . 'translations');
+        (new Filesystem())->remove($kernel->getCacheDir() . DIRECTORY_SEPARATOR . 'translations');
         $kernel->reboot($kernel->getCacheDir());
     }
 }

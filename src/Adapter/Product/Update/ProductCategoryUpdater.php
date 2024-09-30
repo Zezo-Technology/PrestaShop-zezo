@@ -31,7 +31,7 @@ namespace PrestaShop\PrestaShop\Adapter\Product\Update;
 use Cache;
 use Category;
 use PrestaShop\PrestaShop\Adapter\Category\Repository\CategoryRepository;
-use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductMultiShopRepository;
+use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductRepository;
 use PrestaShop\PrestaShop\Core\Domain\Category\Exception\CategoryNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Category\ValueObject\CategoryId;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\CannotUpdateProductException;
@@ -48,7 +48,7 @@ use SpecificPriceRule;
 class ProductCategoryUpdater
 {
     /**
-     * @var ProductMultiShopRepository
+     * @var ProductRepository
      */
     private $productRepository;
 
@@ -58,10 +58,10 @@ class ProductCategoryUpdater
     private $categoryRepository;
 
     /**
-     * @param ProductMultiShopRepository $productRepository
+     * @param ProductRepository $productRepository
      */
     public function __construct(
-        ProductMultiShopRepository $productRepository,
+        ProductRepository $productRepository,
         CategoryRepository $categoryRepository
     ) {
         $this->productRepository = $productRepository;
@@ -91,7 +91,7 @@ class ProductCategoryUpdater
      * @param ProductId $productId
      * @param CategoryId[] $newCategoryIds
      * @param CategoryId $defaultCategoryId
-     * @param shopConstraint $shopConstraint
+     * @param ShopConstraint $shopConstraint
      *
      * Warning: $categoryIds will replace current categories, erasing previous data, it will only impact the categories
      * matching the shop constraint though

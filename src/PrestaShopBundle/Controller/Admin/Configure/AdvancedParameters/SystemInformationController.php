@@ -27,10 +27,10 @@
 namespace PrestaShopBundle\Controller\Admin\Configure\AdvancedParameters;
 
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Responsible of "Configure > Advanced Parameters > Information" page display.
@@ -38,20 +38,18 @@ use Symfony\Component\HttpFoundation\Request;
 class SystemInformationController extends FrameworkBundleAdminController
 {
     /**
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message="Access denied.")
-     * @Template("@PrestaShop/Admin/Configure/AdvancedParameters/system_information.html.twig")
-     *
      * @param Request $request
      *
-     * @return array<string, array|bool|string|null>
+     * @return Response
      */
-    public function indexAction(Request $request)
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message: 'Access denied.')]
+    public function indexAction(Request $request): Response
     {
         $legacyController = $request->get('_legacy_controller');
         $requirementsSummary = $this->getRequirementsChecker()->getSummary();
         $systemInformationSummary = $this->getSystemInformation()->getSummary();
 
-        return [
+        return $this->render('@PrestaShop/Admin/Configure/AdvancedParameters/system_information.html.twig', [
             'layoutHeaderToolbarBtn' => [],
             'layoutTitle' => $this->trans('Information', 'Admin.Navigation.Menu'),
             'requireBulkActions' => false,
@@ -63,14 +61,13 @@ class SystemInformationController extends FrameworkBundleAdminController
             'system' => $systemInformationSummary,
             'requirements' => $requirementsSummary,
             'userAgent' => $request->headers->get('User-Agent'),
-        ];
+        ]);
     }
 
     /**
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message="Access denied.")
-     *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message: 'Access denied.')]
     public function displayCheckFilesAction()
     {
         return new JsonResponse($this->getRequiredFilesChecker()->getListOfUpdatedFiles());

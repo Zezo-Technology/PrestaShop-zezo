@@ -1,7 +1,8 @@
-import ImportData from '@data/faker/import';
-import type {ImportBrand} from '@data/types/import';
-
 import {faker} from '@faker-js/faker';
+import {
+  FakerImport,
+  type ImportBrand,
+} from '@prestashop-core/ui-testing';
 
 const records: ImportBrand[] = [];
 
@@ -10,7 +11,7 @@ function createRecord(): ImportBrand[] {
     const name = `todelete ${faker.company.name()}`;
     records.push({
       id: i + 2,
-      active: faker.datatype.number({min: 0, max: 1}),
+      active: faker.number.int({min: 0, max: 1}),
       name,
       description: faker.lorem.sentence(),
       shortDescription: faker.lorem.sentence(),
@@ -24,7 +25,7 @@ function createRecord(): ImportBrand[] {
   return records;
 }
 
-export default new ImportData({
+export default new FakerImport({
   entity: 'Brands',
   header: [
     {id: 'id', title: 'ID'},

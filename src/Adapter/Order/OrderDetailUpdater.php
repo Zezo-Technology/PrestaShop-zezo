@@ -88,7 +88,7 @@ class OrderDetailUpdater
         DecimalNumber $priceTaxExcluded,
         DecimalNumber $priceTaxIncluded
     ): void {
-        list($roundType, $computingPrecision, $taxAddress) = $this->prepareOrderContext($order);
+        [$roundType, $computingPrecision, $taxAddress] = $this->prepareOrderContext($order);
 
         try {
             $ecotax = new DecimalNumber((string) $orderDetail->ecotax);
@@ -134,9 +134,10 @@ class OrderDetailUpdater
         int $productId,
         int $combinationId,
         DecimalNumber $priceTaxExcluded,
-        DecimalNumber $priceTaxIncluded
+        DecimalNumber $priceTaxIncluded,
+        int $customizationId = 0
     ): void {
-        list($roundType, $computingPrecision, $taxAddress) = $this->prepareOrderContext($order);
+        [$roundType, $computingPrecision, $taxAddress] = $this->prepareOrderContext($order);
 
         try {
             $this->applyUpdatesForProduct(
@@ -147,7 +148,8 @@ class OrderDetailUpdater
                 $priceTaxIncluded,
                 $roundType,
                 $computingPrecision,
-                $taxAddress
+                $taxAddress,
+                $customizationId
             );
         } finally {
             $this->contextStateManager->restorePreviousContext();
@@ -159,7 +161,7 @@ class OrderDetailUpdater
      */
     public function updateOrderDetailsTaxes(Order $order): void
     {
-        list($roundType, $computingPrecision, $taxAddress) = $this->prepareOrderContext($order);
+        [$roundType, $computingPrecision, $taxAddress] = $this->prepareOrderContext($order);
 
         try {
             $orderDetailsData = $order->getProducts();
@@ -314,9 +316,10 @@ class OrderDetailUpdater
         DecimalNumber $priceTaxIncluded,
         int $roundType,
         int $computingPrecision,
-        Address $taxAddress
+        Address $taxAddress,
+        int $customizationId = 0
     ): void {
-        $identicalOrderDetails = $this->getOrderDetailsForProduct($order, $productId, $combinationId);
+        $identicalOrderDetails = $this->getOrderDetailsForProduct($order, $productId, $combinationId, $customizationId);
         if (empty($identicalOrderDetails)) {
             return;
         }
@@ -361,13 +364,15 @@ class OrderDetailUpdater
     private function getOrderDetailsForProduct(
         Order $order,
         int $productId,
-        int $combinationId
+        int $combinationId,
+        int $customizationId = 0
     ): array {
         $identicalOrderDetails = [];
         $orderDetails = $order->getOrderDetailList();
         foreach ($orderDetails as $orderDetail) {
             if ((int) $orderDetail['product_id'] === $productId
-                && (int) $orderDetail['product_attribute_id'] === $combinationId) {
+                && (int) $orderDetail['product_attribute_id'] === $combinationId
+                && (int) $orderDetail['id_customization'] === $customizationId) {
                 $identicalOrderDetails[] = new OrderDetail($orderDetail['id_order_detail']);
             }
         }

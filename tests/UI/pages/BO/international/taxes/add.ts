@@ -1,6 +1,8 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import TaxData from '@data/faker/tax';
+import {
+  FakerTax,
+} from '@prestashop-core/ui-testing';
 
 import {Page} from 'playwright';
 
@@ -37,8 +39,8 @@ class AddTax extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Taxes •';
-    this.pageTitleEdit = 'Edit: ';
+    this.pageTitleCreate = `New tax • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing tax';
     this.successfulUpdateStatusMessage = 'The status has been successfully updated.';
 
     // Selectors
@@ -63,11 +65,11 @@ class AddTax extends BOBasePage {
    */
   async changeInputLanguage(page: Page, lang: string): Promise<void> {
     await Promise.all([
-      page.click(this.inputLangDropdownButton),
+      page.locator(this.inputLangDropdownButton).click(),
       this.waitForVisibleSelector(page, `${this.inputLangDropdownButton}[aria-expanded='true']`),
     ]);
     await Promise.all([
-      page.click(this.inputLangChoiceSpan(lang)),
+      page.locator(this.inputLangChoiceSpan(lang)).click(),
       this.waitForVisibleSelector(page, `${this.inputLangDropdownButton}[aria-expanded='false']`),
     ]);
   }
@@ -75,10 +77,10 @@ class AddTax extends BOBasePage {
   /**
    * Fill form for add/edit tax
    * @param page {Page} Browser tab
-   * @param taxData {TaxData} Data to set on new/edit tax page
+   * @param taxData {FakerTax} Data to set on new/edit tax page
    * @returns {Promise<string>}
    */
-  async createEditTax(page: Page, taxData: TaxData): Promise<string> {
+  async createEditTax(page: Page, taxData: FakerTax): Promise<string> {
     await this.changeInputLanguage(page, 'en');
     await this.setValue(page, this.nameEnInput, taxData.name);
     await this.changeInputLanguage(page, 'fr');
@@ -86,7 +88,7 @@ class AddTax extends BOBasePage {
     await this.setValue(page, this.rateInput, taxData.rate);
     await this.setChecked(page, this.statusToggleInput(taxData.enabled ? 1 : 0));
     // Save Tax
-    await this.clickAndWaitForNavigation(page, this.saveTaxButton);
+    await this.clickAndWaitForURL(page, this.saveTaxButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }

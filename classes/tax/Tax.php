@@ -81,18 +81,7 @@ class TaxCore extends ObjectModel
      */
     public function historize()
     {
-        $this->deleted = true;
-
-        return parent::update();
-    }
-
-    public function toggleStatus()
-    {
-        if (parent::toggleStatus()) {
-            return $this->_onStatusChange();
-        }
-
-        return false;
+        return $this->softDelete();
     }
 
     public function update($null_values = false)
@@ -110,19 +99,10 @@ class TaxCore extends ObjectModel
 
             return $res;
         } elseif (parent::update($null_values)) {
-            return $this->_onStatusChange();
+            return true;
         }
 
         return false;
-    }
-
-    protected function _onStatusChange()
-    {
-        if (!$this->active) {
-            return TaxRule::deleteTaxRuleByIdTax($this->id);
-        }
-
-        return true;
     }
 
     /**
@@ -168,6 +148,13 @@ class TaxCore extends ObjectModel
         return Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql);
     }
 
+    /**
+     * Returns true if taxes are disabled in Prestashop.
+     *
+     * @return bool
+     *
+     * @deprecated since 9.0, please use Configuration::get('PS_TAX') directly
+     */
     public static function excludeTaxeOption()
     {
         return !Configuration::get('PS_TAX');
@@ -236,7 +223,7 @@ class TaxCore extends ObjectModel
      *
      * @return float
      */
-    public static function getProductTaxRate($id_product, $id_address = null, Context $context = null)
+    public static function getProductTaxRate($id_product, $id_address = null, ?Context $context = null)
     {
         if ($context == null) {
             $context = Context::getContext();

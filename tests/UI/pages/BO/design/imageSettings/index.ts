@@ -1,6 +1,10 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
 import type {Page} from 'playwright';
+import {
+  type ImageTypeRegeneration,
+  type ImageTypeRegenerationSpecific,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Image settings page, contains functions that can be used on the page
@@ -10,17 +14,21 @@ import type {Page} from 'playwright';
 class ImageSettings extends BOBasePage {
   public readonly pageTitle: string;
 
+  public readonly messageThumbnailsRegenerated: string;
+
+  public readonly messageSettingsUpdated: string;
+
   private readonly newImageTypeLink: string;
+
+  private readonly gridPanel: string;
 
   private readonly gridForm: string;
 
   private readonly gridTableHeaderTitle: string;
 
-  private readonly gridTableNumberOfTitlesSpan: string;
-
-  private readonly gridTable: string;
-
   private readonly filterRow: string;
+
+  private readonly selectAllRowsDiv: string;
 
   private readonly filterColumn: (filterBy: string) => string;
 
@@ -42,9 +50,9 @@ class ImageSettings extends BOBasePage {
 
   private readonly tableHead: string;
 
-  private readonly sortColumnDiv: (column: number) => string;
+  private readonly sortColumnDiv: (column: string) => string;
 
-  private readonly sortColumnSpanButton: (column: number) => string;
+  private readonly sortColumnSpanButton: (column: string) => string;
 
   private readonly tableColumnActions: (row: number) => string;
 
@@ -56,29 +64,51 @@ class ImageSettings extends BOBasePage {
 
   private readonly tableColumnActionsDeleteLink: (row: number) => string;
 
+  private readonly deleteModal: string;
+
   private readonly deleteModalButtonYes: string;
 
-  private readonly bulkActionBlock: string;
+  private readonly deleteModalCheckboxDeleteLinkedImages: (toggle: number) => string;
 
-  private readonly bulkActionMenuButton: string;
+  private readonly bulkActionsToggleButton: string;
 
-  private readonly bulkActionDropdownMenu: string;
+  private readonly bulkActionsDeleteButton: string;
 
-  private readonly selectAllLink: string;
+  private readonly bulkDeleteModal: string;
 
-  private readonly bulkDeleteLink: string;
+  private readonly bulkDeleteModalButton: string;
 
-  private readonly paginationActiveLabel: string;
+  private readonly paginationLimitSelect: string;
 
-  private readonly paginationDiv: string;
-
-  private readonly paginationDropdownButton: string;
-
-  private readonly paginationItems: (number: number) => string;
+  private readonly paginationLabel: string;
 
   private readonly paginationPreviousLink: string;
 
   private readonly paginationNextLink: string;
+
+  private readonly formImageGenerationOptions: string;
+
+  private readonly checkboxImageFormat: (imageFormat: string) => string;
+
+  private readonly checkboxBaseFormat: (baseFormat: string) => string;
+
+  private readonly submitImageGenerationOptions: string;
+
+  private readonly formRegenerateThumbnails: string;
+
+  private readonly selectRegenerateThumbnailsImage: string;
+
+  private readonly selectRegenerateThumbnailsFormat: string;
+
+  private readonly optionSelectRegenerateThumbnailsFormat: string;
+
+  private readonly checkboxRegenerateThumbnailsErasePreviousImages: (toggle: number) => string;
+
+  private readonly submitRegenerateThumbnails: string;
+
+  private readonly modalRegenerateThumbnails: string;
+
+  private readonly modalSubmitRegenerateThumbnails: string;
 
   /**
    * @constructs
@@ -87,29 +117,29 @@ class ImageSettings extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Image Settings • ';
+    this.successfulUpdateMessage = 'Update successful';
 
-    this.alertSuccessBlockParagraph = '.alert-success';
+    this.pageTitle = 'Image Settings • ';
+    this.messageThumbnailsRegenerated = 'The thumbnails were successfully regenerated.';
+    this.messageSettingsUpdated = 'The settings have been successfully updated.';
 
     // Header selectors
-    this.newImageTypeLink = 'a[data-role=page-header-desc-image_type-link]';
+    this.newImageTypeLink = 'a#page-header-desc-configuration-add';
 
     // Form selectors
-    this.gridForm = '#form-image_type';
-    this.gridTableHeaderTitle = `${this.gridForm} .panel-heading`;
-    this.gridTableNumberOfTitlesSpan = `${this.gridTableHeaderTitle} span.badge`;
-
-    // Table selectors
-    this.gridTable = '#table-image_type';
+    this.gridPanel = '#image_type_grid_panel';
+    this.gridForm = '#image_type_grid';
+    this.gridTableHeaderTitle = `${this.gridPanel} h3.card-header-title`;
 
     // Filter selectors
-    this.filterRow = `${this.gridTable} tr.filter`;
-    this.filterColumn = (filterBy: string) => `${this.filterRow} [name='image_typeFilter_${filterBy}']`;
-    this.filterSearchButton = '#submitFilterButtonimage_type';
-    this.filterResetButton = 'button[name=\'submitResetimage_type\']';
+    this.filterRow = `${this.gridPanel} tr.column-filters`;
+    this.selectAllRowsDiv = `${this.filterRow} .grid_bulk_action_select_all`;
+    this.filterColumn = (filterBy: string) => `${this.filterRow} [name='image_type[${filterBy}]']`;
+    this.filterSearchButton = `${this.gridForm} .grid-search-button`;
+    this.filterResetButton = `${this.gridForm} .grid-reset-button`;
 
     // Table body selectors
-    this.tableBody = `${this.gridTable} tbody`;
+    this.tableBody = `${this.gridPanel} tbody`;
     this.tableBodyRows = `${this.tableBody} tr`;
     this.tableBodyRow = (row: number) => `${this.tableBodyRows}:nth-child(${row})`;
     this.tableBodyColumn = (row: number) => `${this.tableBodyRow(row)} td`;
@@ -120,34 +150,54 @@ class ImageSettings extends BOBasePage {
       this.tableBodySpecificColumn(row, columnName)} span.action-${status}`;
 
     // Sort Selectors
-    this.tableHead = `${this.gridTable} thead`;
-    this.sortColumnDiv = (column: number) => `${this.tableHead} th:nth-child(${column})`;
-    this.sortColumnSpanButton = (column: number) => `${this.sortColumnDiv(column)} span.ps-sort`;
+    this.tableHead = `${this.gridPanel} thead`;
+    this.sortColumnDiv = (column: string) => `${this.tableHead} div.ps-sortable-column[data-sort-col-name='${column}']`;
+    this.sortColumnSpanButton = (column: string) => `${this.sortColumnDiv(column)} span.ps-sort`;
 
     // Row actions selectors
     this.tableColumnActions = (row: number) => `${this.tableBodyColumn(row)} .btn-group-action`;
-    this.tableColumnActionsEditLink = (row: number) => `${this.tableColumnActions(row)} a.edit`;
-    this.tableColumnActionsToggleButton = (row: number) => `${this.tableColumnActions(row)} button.dropdown-toggle`;
+    this.tableColumnActionsEditLink = (row: number) => `${this.tableColumnActions(row)} a.grid-edit-row-link`;
+    this.tableColumnActionsToggleButton = (row: number) => `${this.tableColumnActions(row)} a.dropdown-toggle`;
     this.tableColumnActionsDropdownMenu = (row: number) => `${this.tableColumnActions(row)} .dropdown-menu`;
-    this.tableColumnActionsDeleteLink = (row: number) => `${this.tableColumnActionsDropdownMenu(row)} a.delete`;
+    this.tableColumnActionsDeleteLink = (row: number) => `${this.tableColumnActionsDropdownMenu(row)} a.grid-delete-row-link`;
 
     // Confirmation modal
-    this.deleteModalButtonYes = '.btn-confirm-delete-images-type';
+    this.deleteModal = '#image_type_grid_delete_image_type_modal';
+    this.deleteModalButtonYes = `${this.deleteModal} button.js-submit-delete-image-type`;
+    this.deleteModalCheckboxDeleteLinkedImages = (toggle: number) => `${this.deleteModal} `
+      + `#delete_image_type_delete_images_files_too_${toggle}`;
+    this.deleteModalButtonYes = `${this.deleteModal} button.js-submit-delete-image-type`;
 
     // Bulk actions selectors
-    this.bulkActionBlock = 'div.bulk-actions';
-    this.bulkActionMenuButton = '#bulk_action_menu_image_type';
-    this.bulkActionDropdownMenu = `${this.bulkActionBlock} ul.dropdown-menu`;
-    this.selectAllLink = `${this.bulkActionDropdownMenu} li:nth-child(1)`;
-    this.bulkDeleteLink = `${this.bulkActionDropdownMenu} li:nth-child(4)`;
+    this.bulkActionsToggleButton = `${this.gridForm} button.dropdown-toggle.js-bulk-actions-btn`;
+    this.bulkActionsDeleteButton = `${this.gridForm} #image_type_grid_bulk_action_delete_selection`;
+    this.bulkDeleteModal = '#image_type-grid-confirm-modal';
+    this.bulkDeleteModalButton = `${this.bulkDeleteModal} button.btn-confirm-submit`;
 
     // Pagination selectors
-    this.paginationActiveLabel = `${this.gridForm} ul.pagination.pull-right li.active a`;
-    this.paginationDiv = `${this.gridForm} .pagination`;
-    this.paginationDropdownButton = `${this.paginationDiv} .dropdown-toggle`;
-    this.paginationItems = (number: number) => `${this.gridForm} .dropdown-menu a[data-items='${number}']`;
-    this.paginationPreviousLink = `${this.gridForm} .icon-angle-left`;
-    this.paginationNextLink = `${this.gridForm} .icon-angle-right`;
+    this.paginationLimitSelect = '#paginator_select_page_limit';
+    this.paginationLabel = `${this.gridPanel} .col-form-label`;
+    this.paginationNextLink = `${this.gridPanel} [data-role=next-page-link]`;
+    this.paginationPreviousLink = `${this.gridPanel} [data-role='previous-page-link']`;
+
+    // Images generation options
+    this.formImageGenerationOptions = 'form[name="image_settings"]';
+    this.checkboxImageFormat = (imageFormat: string) => `${this.formImageGenerationOptions} `
+      + `input[name="image_settings[formats][]"][value="${imageFormat}"]`;
+    this.checkboxBaseFormat = (baseFormat: string) => `${this.formImageGenerationOptions} `
+      + `input[name="image_settings[base-format]"][value="${baseFormat}"]`;
+    this.submitImageGenerationOptions = `${this.formImageGenerationOptions} button#save-button`;
+
+    // Regenerate thumbnails
+    this.formRegenerateThumbnails = 'form[name="regenerate_thumbnails"]';
+    this.selectRegenerateThumbnailsImage = `${this.formRegenerateThumbnails} select#regenerate_thumbnails_image`;
+    this.selectRegenerateThumbnailsFormat = `${this.formRegenerateThumbnails} select#regenerate_thumbnails_image-type`;
+    this.optionSelectRegenerateThumbnailsFormat = `${this.selectRegenerateThumbnailsFormat} option[style=""]`;
+    this.checkboxRegenerateThumbnailsErasePreviousImages = (toggle: number) => `${this.formRegenerateThumbnails} `
+      + `input#regenerate_thumbnails_erase-previous-images_${toggle}`;
+    this.submitRegenerateThumbnails = `${this.formRegenerateThumbnails} button#regenerate-thumbnails-button`;
+    this.modalRegenerateThumbnails = '#regeneration-confirm-modal';
+    this.modalSubmitRegenerateThumbnails = `${this.modalRegenerateThumbnails} .btn-confirm-submit`;
   }
 
   /* Header methods */
@@ -157,7 +207,7 @@ class ImageSettings extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToNewImageTypePage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.newImageTypeLink);
+    await this.clickAndWaitForURL(page, this.newImageTypeLink);
   }
 
   /* Filter methods */
@@ -167,8 +217,8 @@ class ImageSettings extends BOBasePage {
    * @param page {Page} Browser tab
    * @return {Promise<number>}
    */
-  getNumberOfElementInGrid(page: Page): Promise<number> {
-    return this.getNumberFromText(page, this.gridTableNumberOfTitlesSpan);
+  async getNumberOfElementInGrid(page: Page): Promise<number> {
+    return this.getNumberFromText(page, this.gridTableHeaderTitle);
   }
 
   /**
@@ -177,10 +227,10 @@ class ImageSettings extends BOBasePage {
    * @return {Promise<void>}
    */
   async resetFilter(page: Page): Promise<void> {
-    if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+    if (await this.elementVisible(page, this.filterResetButton, 2000)) {
+      await this.clickAndWaitForLoadState(page, this.filterResetButton);
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
-    await this.waitForVisibleSelector(page, this.filterSearchButton, 2000);
   }
 
   /**
@@ -205,20 +255,19 @@ class ImageSettings extends BOBasePage {
   async filterTable(page: Page, filterType: string, filterBy: string, value: string): Promise<void> {
     switch (filterType) {
       case 'input':
-        await this.setValue(page, this.filterColumn(filterBy), value.toString());
-        await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+        await this.setValue(page, this.filterColumn(filterBy), value);
         break;
 
       case 'select':
-        await Promise.all([
-          page.waitForNavigation({waitUntil: 'networkidle'}),
-          this.selectByVisibleText(page, this.filterColumn(filterBy), value === '1' ? 'Yes' : 'No'),
-        ]);
+        await this.selectByVisibleText(page, this.filterColumn(filterBy), value);
         break;
 
       default:
         throw new Error(`Filter ${filterBy} was not found`);
     }
+    // click on search
+    await page.locator(this.filterSearchButton).click();
+    await this.elementVisible(page, this.filterResetButton, 2000);
   }
 
   /* Column methods */
@@ -270,28 +319,37 @@ class ImageSettings extends BOBasePage {
    * @return {Promise<void>}
    */
   async gotoEditImageTypePage(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.tableColumnActionsEditLink(row));
+    await this.clickAndWaitForURL(page, this.tableColumnActionsEditLink(row));
   }
 
   /**
    * Delete image type from row
    * @param page {Page} Browser tab
    * @param row {number} Row on table
+   * @param deleteLinkedImages {boolean} Delete the images linked to this image setting
    * @return {Promise<string>}
    */
-  async deleteImageType(page: Page, row: number): Promise<string> {
+  async deleteImageType(page: Page, row: number, deleteLinkedImages: boolean = false): Promise<string> {
     await Promise.all([
-      page.click(this.tableColumnActionsToggleButton(row)),
-      this.waitForVisibleSelector(page, this.tableColumnActionsDeleteLink(row)),
+      page.locator(this.tableColumnActionsToggleButton(row)).click(),
+      this.waitForVisibleSelector(
+        page,
+        `${this.tableColumnActionsToggleButton(row)}[aria-expanded='true']`,
+      ),
+    ]);
+    // Click on delete and wait for modal
+    await Promise.all([
+      page.locator(this.tableColumnActionsDeleteLink(row)).click(),
+      this.waitForVisibleSelector(page, `${this.deleteModal}.show`),
     ]);
 
-    await page.click(this.tableColumnActionsDeleteLink(row));
+    await this.setChecked(page, this.deleteModalCheckboxDeleteLinkedImages(deleteLinkedImages ? 1 : 0));
+    await page.locator(this.deleteModalButtonYes).click();
 
-    // Confirm delete action
-    await this.clickAndWaitForNavigation(page, this.deleteModalButtonYes);
-
-    // Get successful message
-    return this.getAlertSuccessBlockParagraphContent(page);
+    if (await this.elementVisible(page, this.alertSuccessBlockParagraph, 2000)) {
+      return this.getAlertSuccessBlockParagraphContent(page);
+    }
+    return this.getAlertDangerBlockParagraphContent(page);
   }
 
   /* Bulk actions methods */
@@ -301,29 +359,24 @@ class ImageSettings extends BOBasePage {
    * @return {Promise<string>}
    */
   async bulkDeleteImageTypes(page: Page): Promise<string> {
-    // To confirm bulk delete action with dialog
-    await this.dialogListener(page, true);
-
-    // Select all rows
+    // Click on Select All
     await Promise.all([
-      page.click(this.bulkActionMenuButton),
-      this.waitForVisibleSelector(page, this.selectAllLink),
+      page.locator(this.selectAllRowsDiv).evaluate((el: HTMLElement) => el.click()),
+      this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
-
+    // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.selectAllLink),
-      this.waitForHiddenSelector(page, this.selectAllLink),
+      page.locator(this.bulkActionsToggleButton).click(),
+      this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
-
-    // Perform delete
+    // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.bulkActionMenuButton),
-      this.waitForVisibleSelector(page, this.bulkDeleteLink),
+      page.locator(this.bulkActionsDeleteButton).click(),
+      this.waitForVisibleSelector(page, `${this.bulkDeleteModal}.show`),
     ]);
+    await this.clickAndWaitForLoadState(page, this.bulkDeleteModalButton);
+    await this.elementNotVisible(page, this.bulkDeleteModal);
 
-    await this.clickAndWaitForNavigation(page, this.bulkDeleteLink);
-
-    // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 
@@ -336,31 +389,17 @@ class ImageSettings extends BOBasePage {
    * @return {Promise<void>}
    */
   async sortTable(page: Page, sortBy: string, sortDirection: string): Promise<void> {
-    let columnSelector: string;
+    const sortColumnDiv = `${this.sortColumnDiv(sortBy)}[data-sort-direction='${sortDirection}']`;
+    const sortColumnSpanButton = this.sortColumnSpanButton(sortBy);
 
-    switch (sortBy) {
-      case 'id_image_type':
-        columnSelector = this.sortColumnDiv(2);
-        break;
-
-      case 'name':
-        columnSelector = this.sortColumnDiv(3);
-        break;
-
-      case 'width':
-        columnSelector = this.sortColumnDiv(4);
-        break;
-
-      case 'height':
-        columnSelector = this.sortColumnDiv(5);
-        break;
-
-      default:
-        throw new Error(`Column ${sortBy} was not found`);
+    let i: number = 0;
+    while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
+      await page.locator(this.sortColumnDiv(sortBy)).hover();
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
+      i += 1;
     }
 
-    const sortColumnButton = `${columnSelector} i.icon-caret-${sortDirection}`;
-    await this.clickAndWaitForNavigation(page, sortColumnButton);
+    await this.waitForVisibleSelector(page, sortColumnDiv, 20000);
   }
 
   /* Pagination methods */
@@ -369,8 +408,8 @@ class ImageSettings extends BOBasePage {
    * @param page {Page} Browser tab
    * @return {Promise<string>}
    */
-  getPaginationLabel(page: Page): Promise<string> {
-    return this.getTextContent(page, this.paginationActiveLabel);
+  async getPaginationLabel(page: Page): Promise<string> {
+    return this.getTextContent(page, this.paginationLabel);
   }
 
   /**
@@ -380,8 +419,12 @@ class ImageSettings extends BOBasePage {
    * @returns {Promise<string>}
    */
   async selectPaginationLimit(page: Page, number: number): Promise<string> {
-    await this.waitForSelectorAndClick(page, this.paginationDropdownButton);
-    await this.clickAndWaitForNavigation(page, this.paginationItems(number));
+    const currentUrl: string = page.url();
+
+    await Promise.all([
+      this.selectByVisibleText(page, this.paginationLimitSelect, number),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
+    ]);
 
     return this.getPaginationLabel(page);
   }
@@ -392,7 +435,7 @@ class ImageSettings extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -403,9 +446,131 @@ class ImageSettings extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
+  }
+
+  /**
+   * Regenerate Thumbnails
+   * @param page {Page} Browser tab
+   * @param image {ImageTypeRegeneration} Image
+   * @param format {string} Format
+   * @param erasePreviousImages {boolean} Erase previous images
+   * @returns {Promise<string>}
+   */
+  async regenerateThumbnails(
+    page: Page,
+    image: ImageTypeRegeneration = 'all',
+    format: string = 'All',
+    erasePreviousImages: boolean = false,
+  ): Promise<string> {
+    // Choose the type of image to regenerate thumbnails
+    await this.selectByValue(page, this.selectRegenerateThumbnailsImage, image);
+    if (image !== 'all') {
+      // Choose the format of image to regenerate thumbnails
+      await this.selectByVisibleText(page, this.selectRegenerateThumbnailsFormat, format);
+    }
+    // Erase previous images
+    await this.setChecked(page, this.checkboxRegenerateThumbnailsErasePreviousImages(erasePreviousImages ? 1 : 0));
+    // Click on Submit
+    await page.locator(this.submitRegenerateThumbnails).click();
+
+    // Modal & Submit
+    await this.waitForVisibleSelector(page, this.modalSubmitRegenerateThumbnails);
+    await page.locator(this.modalSubmitRegenerateThumbnails).click();
+
+    // Return successful message
+    return this.getAlertSuccessBlockParagraphContent(page);
+  }
+
+  /**
+   * Returns if the image format is checked in Image Generation Options
+   * @param page {Page} Browser tab
+   * @param imageFormat {string} Image Format
+   * @returns {Promise<boolean>}
+   */
+  async isImageFormatToGenerateChecked(page: Page, imageFormat: string): Promise<boolean> {
+    return this.isChecked(page, this.checkboxImageFormat(imageFormat));
+  }
+
+  /**
+   Returns if the image format is disabled in Image Generation Options
+   * @param page {Page} Browser tab
+   * @param imageFormat {string} Image Format
+   * @returns {Promise<boolean>}
+   */
+  async isImageFormatToGenerateDisabled(page: Page, imageFormat: string): Promise<boolean> {
+    return this.isDisabled(page, this.checkboxImageFormat(imageFormat));
+  }
+
+  /**
+   * Enable/Disable the image format in Image Generation Options
+   * @param page {Page} Browser tab
+   * @param imageFormat {string} Image Format
+   * @param valueWanted {boolean} Checked or not
+   * @returns {Promise<string>}
+   */
+  async setImageFormatToGenerateChecked(page: Page, imageFormat: string, valueWanted: boolean): Promise<string> {
+    await this.setCheckedWithIcon(page, this.checkboxImageFormat(imageFormat), valueWanted);
+    await page.locator(this.submitImageGenerationOptions).click();
+
+    // Return successful message
+    return this.getAlertSuccessBlockParagraphContent(page);
+  }
+
+  /**
+   * Returns if the base format is checked in Image Generation Options
+   * @param page {Page} Browser tab
+   * @param baseFormat {string} base format
+   * @returns {Promise<boolean>}
+   */
+  async isBaseFormatToGenerateChecked(page: Page, baseFormat: string): Promise<boolean> {
+    return this.isChecked(page, this.checkboxBaseFormat(baseFormat));
+  }
+
+  /**
+   * Enable/Disable the base format in Image Generation Options
+   * @param page {Page} Browser tab
+   * @param baseFormat {string} Image Format
+   * @param valueWanted {boolean} Checked or not
+   * @returns {Promise<string>}
+   */
+  async setBaseFormatChecked(page: Page, baseFormat: string, valueWanted: boolean): Promise<string> {
+    await this.setChecked(page, this.checkboxBaseFormat(baseFormat), valueWanted);
+    await page.locator(this.submitImageGenerationOptions).click();
+
+    // Return successful message
+    return this.getAlertSuccessBlockParagraphContent(page);
+  }
+
+  /**
+   * Returns the selected value of the select "Image" in "Regenerate thumbnails" form
+   * @param page {Page} Browser tab
+   * @returns {Promise<string>}
+   */
+  async getRegenerateThumbnailsImage(page: Page): Promise<string> {
+    return page.locator(this.selectRegenerateThumbnailsImage).evaluate((el: HTMLSelectElement) => el.value);
+  }
+
+  /**
+   * Returns values of the select "Format" in "Regenerate thumbnails" form
+   * @param page {Page} Browser tab
+   * @param image {ImageTypeRegeneration|ImageTypeRegenerationSpecific} Image
+   * @returns {Promise<string[]>}
+   */
+  async getRegenerateThumbnailsFormats(
+    page: Page,
+    image: ImageTypeRegeneration|ImageTypeRegenerationSpecific,
+  ): Promise<string[]> {
+    await this.selectByValue(page, this.selectRegenerateThumbnailsImage, image);
+
+    await this.waitForVisibleSelector(page, this.selectRegenerateThumbnailsFormat);
+
+    return (await page
+      .locator(this.optionSelectRegenerateThumbnailsFormat)
+      .allTextContents())
+      .filter((el: string|null): el is string => (el !== null && el !== 'All'));
   }
 }
 

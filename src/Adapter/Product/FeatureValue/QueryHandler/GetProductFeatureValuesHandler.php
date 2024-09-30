@@ -29,6 +29,7 @@ declare(strict_types=1);
 namespace PrestaShop\PrestaShop\Adapter\Product\FeatureValue\QueryHandler;
 
 use PrestaShop\PrestaShop\Adapter\Feature\Repository\FeatureValueRepository;
+use PrestaShop\PrestaShop\Core\CommandBus\Attributes\AsQueryHandler;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\Query\GetProductFeatureValues;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\QueryHandler\GetProductFeatureValuesHandlerInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\QueryResult\ProductFeatureValue;
@@ -36,6 +37,7 @@ use PrestaShop\PrestaShop\Core\Domain\Product\FeatureValue\QueryResult\ProductFe
 /**
  * Defines contract to handle @var GetProductFeatureValues query
  */
+#[AsQueryHandler]
 class GetProductFeatureValuesHandler implements GetProductFeatureValuesHandlerInterface
 {
     /**
@@ -53,7 +55,7 @@ class GetProductFeatureValuesHandler implements GetProductFeatureValuesHandlerIn
      */
     public function handle(GetProductFeatureValues $query): array
     {
-        $featureValuesData = $this->featureValueRepository->getProductFeatureValues($query->getProductId());
+        $featureValuesData = $this->featureValueRepository->getAllProductFeatureValues($query->getProductId());
         $productFeatureValues = [];
         foreach ($featureValuesData as $featureValuesDatum) {
             $productFeatureValues[] = new ProductFeatureValue(

@@ -1,8 +1,10 @@
-import 'module-alias/register';
-import helper from '@utils/helpers';
-import files from '@utils/files';
+import {
+  utilsCore,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
-let screenshotNumber = 1;
+let screenshotNumber: number = 1;
 
 /**
  * @module MochaHelper
@@ -14,7 +16,7 @@ let screenshotNumber = 1;
  * @description Create unique browser for all mocha run
  */
 before(async function () {
-  this.browser = await helper.createBrowser();
+  this.browser = await utilsPlaywright.createBrowser();
 
   // Create object for browser errors
   if (global.BROWSER.interceptErrors) {
@@ -31,7 +33,7 @@ before(async function () {
  * @description Close browser after finish the run
  */
 after(async function () {
-  await helper.closeBrowser(this.browser);
+  await utilsPlaywright.closeBrowser(this.browser);
 
   if (global.BROWSER.interceptErrors) {
     // Delete duplicated errors and create json report
@@ -41,10 +43,24 @@ after(async function () {
       console: [...new Set(global.browserErrors.console)],
     };
 
-    const reportName = await files.generateReportFilename();
-    await files.createFile('.', `${reportName}.json`, JSON.stringify(browserErrors));
+    const reportName = await utilsFile.generateReportFilename();
+    await utilsFile.createFile('.', `${reportName}.json`, JSON.stringify(browserErrors));
   }
 });
+
+const takeScreenShotAfterStep = async (browser: any, screenshotPath: string) => {
+  const currentTab = await utilsPlaywright.getLastOpenedTab(browser);
+
+  // Take a screenshot
+  if (currentTab !== null) {
+    await currentTab.screenshot(
+      {
+        path: screenshotPath,
+        fullPage: true,
+      },
+    );
+  }
+};
 
 /**
  * @function afterEach
@@ -53,16 +69,23 @@ after(async function () {
 afterEach(async function () {
   // Take screenshot if demanded after failed step
   if (global.SCREENSHOT.AFTER_FAIL && this.currentTest?.state === 'failed') {
-    const currentTab = await helper.getLastOpenedTab(this.browser);
+    await takeScreenShotAfterStep(this.browser, `${global.SCREENSHOT.FOLDER}/fail_test_${screenshotNumber}.png`);
+    screenshotNumber += 1;
+  }
+  if (global.SCREENSHOT.EACH_STEP) {
+    const testPath = this.currentTest?.file;
+    // eslint-disable-next-line no-unsafe-optional-chaining
+    const folderPath = testPath?.slice(testPath?.indexOf('tests/UI') + 8).slice(0, -3);
+    let stepId: string = `screenshot-${screenshotNumber}`;
 
-    // Take a screenshot
-    await currentTab.screenshot(
-      {
-        path: `${global.SCREENSHOT.FOLDER}/fail_test_${screenshotNumber}.png`,
-        fullPage: true,
-      },
-    );
+    if (this.currentTest?.title) {
+      stepId = `${screenshotNumber}-${this.currentTest?.title}`;
+    }
 
+    const screenshotPath = `${global.SCREENSHOT.FOLDER}${folderPath}/${utilsCore.slugify(stepId)}.png`;
+    await takeScreenShotAfterStep(this.browser, screenshotPath).catch((err) => {
+      console.log(`screenshot for ${this.currentTest?.title} failed`, err);
+    });
     screenshotNumber += 1;
   }
 });

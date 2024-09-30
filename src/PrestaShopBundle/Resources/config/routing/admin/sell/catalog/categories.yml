@@ -127,19 +127,6 @@ admin_categories_delete_cover_image:
   requirements:
     categoryId: \d+
 
-admin_categories_delete_menu_thumbnail:
-  path: /{categoryId}/menu-thumbnails/{menuThumbnailId}/delete
-  methods: [ POST ]
-  defaults:
-    _controller: PrestaShopBundle\Controller\Admin\Sell\Catalog\CategoryController::deleteMenuThumbnailAction
-    _legacy_controller: AdminCategories
-    _legacy_link: AdminCategories:forceDeleteThumb
-    _legacy_parameters:
-      id_category: categoryId
-  requirements:
-    categoryId: \d+
-    menuThumbnailId: 0|1|2
-
 admin_categories_update_position:
   path: /update-positions
   methods: [ POST ]
@@ -156,3 +143,14 @@ admin_categories_get_categories_tree:
     _legacy_controller: AdminCategories
   options:
     expose: true
+
+admin_categories_get_ajax_categories:
+  path: /list/{limit}
+  methods: [ GET ]
+  defaults:
+    _controller: PrestaShopBundle\Controller\Admin\Sell\Catalog\CategoryController::getAjaxCategoriesAction
+    _legacy_controller: AdminCategories
+    _format: json
+    limit: 20
+  requirements:
+    limit: \d+

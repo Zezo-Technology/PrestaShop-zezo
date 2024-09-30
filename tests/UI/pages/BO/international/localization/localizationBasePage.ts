@@ -6,6 +6,7 @@ import type {Page} from 'playwright';
  * Localization base page, contains functions that can be used on the page
  * @class
  * @extends BOBasePage
+ * MOVED in the LIBRARY
  */
 export default class LocalizationBasePage extends BOBasePage {
   private readonly localizationNavItemLink: string;
@@ -13,6 +14,8 @@ export default class LocalizationBasePage extends BOBasePage {
   private readonly languagesNavItemLink: string;
 
   private readonly currenciesNavItemLink: string;
+
+  private readonly geolocationNavItemLink: string;
 
   /**
    * @constructs
@@ -24,24 +27,43 @@ export default class LocalizationBasePage extends BOBasePage {
     this.localizationNavItemLink = '#subtab-AdminLocalization';
     this.languagesNavItemLink = '#subtab-AdminLanguages';
     this.currenciesNavItemLink = '#subtab-AdminCurrencies';
+    this.geolocationNavItemLink = '#subtab-AdminGeolocation';
   }
 
   /* Header Methods */
   /**
-   * Go to languages page
+   * Go to Localization tab
+   * @param page {Page} Browser tab
+   * @return {Promise<void>}
+   */
+  async goToSubTabLocalizations(page: Page): Promise<void> {
+    await this.clickAndWaitForURL(page, this.localizationNavItemLink);
+  }
+
+  /**
+   * Go to Languages tab
    * @param page {Page} Browser tab
    * @return {Promise<void>}
    */
   async goToSubTabLanguages(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.languagesNavItemLink);
+    await this.clickAndWaitForURL(page, this.languagesNavItemLink);
   }
 
   /**
-   * Go to currencies page
+   * Go to Currencies tab
    * @param page {Page} Browser tab
    * @return {Promise<void>}
    */
   async goToSubTabCurrencies(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.currenciesNavItemLink);
+    await this.clickAndWaitForURL(page, this.currenciesNavItemLink);
   }
-};
+
+  /**
+   * Go to Geolocation tab
+   * @param page {Page} Browser tab
+   * @return {Promise<void>}
+   */
+  async goToSubTabGeolocation(page: Page): Promise<void> {
+    await this.clickAndWaitForURL(page, this.geolocationNavItemLink);
+  }
+}

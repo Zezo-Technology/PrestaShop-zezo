@@ -29,6 +29,7 @@ declare(strict_types=1);
 namespace PrestaShop\PrestaShop\Adapter\Product\Validate;
 
 use PrestaShop\PrestaShop\Adapter\AbstractObjectModelValidator;
+use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductConstraintException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\ProductException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Pack\Exception\ProductPackConstraintException;
@@ -42,16 +43,13 @@ use Product;
 class ProductValidator extends AbstractObjectModelValidator
 {
     /**
-     * @var int
+     * @var ShopConfigurationInterface
      */
-    private $defaultLanguageId;
+    private $configuration;
 
-    /**
-     * @param int $defaultLanguageId
-     */
-    public function __construct(int $defaultLanguageId)
+    public function __construct(ShopConfigurationInterface $configuration)
     {
-        $this->defaultLanguageId = $defaultLanguageId;
+        $this->configuration = $configuration;
     }
 
     /**
@@ -155,7 +153,7 @@ class ProductValidator extends AbstractObjectModelValidator
      */
     private function validateDetails(Product $product): void
     {
-        $this->validateProductProperty($product, 'ean13', ProductConstraintException::INVALID_EAN_13);
+        $this->validateProductProperty($product, 'ean13', ProductConstraintException::INVALID_GTIN);
         $this->validateProductProperty($product, 'isbn', ProductConstraintException::INVALID_ISBN);
         $this->validateProductProperty($product, 'mpn', ProductConstraintException::INVALID_MPN);
         $this->validateProductProperty($product, 'reference', ProductConstraintException::INVALID_REFERENCE);
@@ -273,7 +271,7 @@ class ProductValidator extends AbstractObjectModelValidator
             return;
         }
 
-        if (empty($product->name) || empty($product->name[$this->defaultLanguageId])) {
+        if (empty($product->name) || empty($product->name[$this->configuration->get('PS_LANG_DEFAULT')])) {
             throw new ProductConstraintException('Missing name to be online.', ProductConstraintException::INVALID_ONLINE_DATA);
         }
     }

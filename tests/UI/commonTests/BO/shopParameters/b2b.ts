@@ -1,17 +1,16 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
-// Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import customerSettingsPage from '@pages/BO/shopParameters/customerSettings';
-import CustomerSettingsOptions from '@pages/BO/shopParameters/customerSettings/options';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boCustomerSettingsPage,
+  boDashboardPage,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 let browserContext: BrowserContext;
 let page: Page;
@@ -24,12 +23,12 @@ function enableB2BTest(baseContext: string = 'commonTests-enableB2BTest'): void 
   describe('PRE-TEST: Enable B2B', async () => {
     // before and after functions
     before(async function () {
-      browserContext = await helper.createBrowserContext(this.browser);
-      page = await helper.newTab(browserContext);
+      browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+      page = await utilsPlaywright.newTab(browserContext);
     });
 
     after(async () => {
-      await helper.closeBrowserContext(browserContext);
+      await utilsPlaywright.closeBrowserContext(browserContext);
     });
 
     it('should login in BO', async function () {
@@ -39,26 +38,26 @@ function enableB2BTest(baseContext: string = 'commonTests-enableB2BTest'): void 
     it('should go to \'Shop parameters > Customer Settings\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToCustomerSettingsPage1', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.shopParametersParentLink,
-        dashboardPage.customerSettingsLink,
+        boDashboardPage.shopParametersParentLink,
+        boDashboardPage.customerSettingsLink,
       );
-      await customerSettingsPage.closeSfToolBar(page);
+      await boCustomerSettingsPage.closeSfToolBar(page);
 
-      const pageTitle = await customerSettingsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(customerSettingsPage.pageTitle);
+      const pageTitle = await boCustomerSettingsPage.getPageTitle(page);
+      expect(pageTitle).to.contains(boCustomerSettingsPage.pageTitle);
     });
 
     it('should enable B2B mode', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'enableB2BMode', baseContext);
 
-      const result = await customerSettingsPage.setOptionStatus(
+      const result = await boCustomerSettingsPage.setOptionStatus(
         page,
-        CustomerSettingsOptions.OPTION_B2B,
+        boCustomerSettingsPage.OPTION_B2B,
         true,
       );
-      await expect(result).to.contains(customerSettingsPage.successfulUpdateMessage);
+      expect(result).to.contains(boCustomerSettingsPage.successfulUpdateMessage);
     });
   });
 }
@@ -71,12 +70,12 @@ function disableB2BTest(baseContext: string = 'commonTests-disableB2BTest'): voi
   describe('POST-TEST: Disable B2B', async () => {
     // before and after functions
     before(async function () {
-      browserContext = await helper.createBrowserContext(this.browser);
-      page = await helper.newTab(browserContext);
+      browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+      page = await utilsPlaywright.newTab(browserContext);
     });
 
     after(async () => {
-      await helper.closeBrowserContext(browserContext);
+      await utilsPlaywright.closeBrowserContext(browserContext);
     });
 
     it('should login in BO', async function () {
@@ -86,26 +85,26 @@ function disableB2BTest(baseContext: string = 'commonTests-disableB2BTest'): voi
     it('should go to \'Shop parameters > Customer Settings\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToCustomerSettingsPage2', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.shopParametersParentLink,
-        dashboardPage.customerSettingsLink,
+        boDashboardPage.shopParametersParentLink,
+        boDashboardPage.customerSettingsLink,
       );
-      await customerSettingsPage.closeSfToolBar(page);
+      await boCustomerSettingsPage.closeSfToolBar(page);
 
-      const pageTitle = await customerSettingsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(customerSettingsPage.pageTitle);
+      const pageTitle = await boCustomerSettingsPage.getPageTitle(page);
+      expect(pageTitle).to.contains(boCustomerSettingsPage.pageTitle);
     });
 
     it('should disable B2B mode', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'disableB2BMode', baseContext);
 
-      const result = await customerSettingsPage.setOptionStatus(
+      const result = await boCustomerSettingsPage.setOptionStatus(
         page,
-        CustomerSettingsOptions.OPTION_B2B,
+        boCustomerSettingsPage.OPTION_B2B,
         false,
       );
-      await expect(result).to.contains(customerSettingsPage.successfulUpdateMessage);
+      expect(result).to.contains(boCustomerSettingsPage.successfulUpdateMessage);
     });
   });
 }

@@ -59,7 +59,7 @@ class MessageCore extends ObjectModel
         'table' => 'message',
         'primary' => 'id_message',
         'fields' => [
-            'message' => ['type' => self::TYPE_STRING, 'validate' => 'isCleanHtml', 'required' => true, 'size' => 1600],
+            'message' => ['type' => self::TYPE_STRING, 'validate' => 'isCleanHtml', 'required' => true, 'size' => 4194303],
             'id_cart' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId'],
             'id_order' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId'],
             'id_customer' => ['type' => self::TYPE_INT, 'validate' => 'isUnsignedId'],
@@ -111,12 +111,8 @@ class MessageCore extends ObjectModel
      *
      * @return array Messages
      */
-    public static function getMessagesByOrderId($idOrder, $private = false, Context $context = null)
+    public static function getMessagesByOrderId($idOrder, bool $private = false, ?Context $context = null)
     {
-        if (!Validate::isBool($private)) {
-            die(Tools::displayError());
-        }
-
         if (!$context) {
             $context = Context::getContext();
         }
@@ -146,12 +142,8 @@ class MessageCore extends ObjectModel
      *
      * @return array Messages
      */
-    public static function getMessagesByCartId($idCart, $private = false, Context $context = null)
+    public static function getMessagesByCartId($idCart, bool $private = false, ?Context $context = null)
     {
-        if (!Validate::isBool($private)) {
-            die(Tools::displayError());
-        }
-
         if (!$context) {
             $context = Context::getContext();
         }
@@ -180,8 +172,11 @@ class MessageCore extends ObjectModel
      */
     public static function markAsReaded($idMessage, $idEmployee)
     {
-        if (!Validate::isUnsignedId($idMessage) || !Validate::isUnsignedId($idEmployee)) {
-            die(Tools::displayError());
+        if (!Validate::isUnsignedId($idMessage)) {
+            die(Tools::displayError('Message ID is invalid.'));
+        }
+        if (!Validate::isUnsignedId($idEmployee)) {
+            die(Tools::displayError('Employee ID is invalid.'));
         }
 
         $result = Db::getInstance()->execute('

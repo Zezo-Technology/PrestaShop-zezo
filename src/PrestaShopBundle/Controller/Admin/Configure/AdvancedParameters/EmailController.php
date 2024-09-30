@@ -32,8 +32,8 @@ use PrestaShop\PrestaShop\Core\Search\Filters\EmailLogsFilter;
 use PrestaShop\PrestaShop\Core\Security\Permission;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
 use PrestaShopBundle\Form\Admin\Configure\AdvancedParameters\Email\TestEmailSendingType;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
-use PrestaShopBundle\Security\Annotation\DemoRestricted;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
+use PrestaShopBundle\Security\Attribute\DemoRestricted;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -46,13 +46,12 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Show email configuration page.
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message="Access denied.")
-     *
      * @param Request $request
      * @param EmailLogsFilter $filters
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message: 'Access denied.')]
     public function indexAction(Request $request, EmailLogsFilter $filters)
     {
         $configuration = $this->getConfiguration();
@@ -79,50 +78,20 @@ class EmailController extends FrameworkBundleAdminController
             'emailLogsGrid' => $presentedEmailLogsGrid ?? null,
             'isEmailLogsEnabled' => $isEmailLogsEnabled,
             'enableSidebar' => true,
+            'layoutTitle' => $this->trans('E-mail', 'Admin.Navigation.Menu'),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
         ]);
     }
 
     /**
-     * @deprecated since 8.0 and will be removed in next major. Use CommonController:searchGridAction instead
-     *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))", message="Access denied.")
-     *
-     * @param Request $request
-     *
-     * @return RedirectResponse
-     */
-    public function searchAction(Request $request)
-    {
-        $definitionFactory = $this->get('prestashop.core.grid.definition.factory.email_logs');
-        $emailLogsDefinition = $definitionFactory->getDefinition();
-
-        $gridFilterFormFactory = $this->get('prestashop.core.grid.filter.form_factory');
-        $filtersForm = $gridFilterFormFactory->create($emailLogsDefinition);
-        $filtersForm->handleRequest($request);
-
-        $filters = [];
-
-        if ($filtersForm->isSubmitted()) {
-            $filters = $filtersForm->getData();
-        }
-
-        return $this->redirectToRoute('admin_emails_index', ['filters' => $filters]);
-    }
-
-    /**
      * Process email configuration saving.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))",
-     *     message="Access denied."
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))", message: 'Access denied.')]
     public function saveOptionsAction(Request $request)
     {
         $formHandler = $this->getEmailConfigurationFormHandler();
@@ -148,16 +117,15 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Delete selected email logs.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
-     * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message="Access denied.")
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message: 'Access denied.')]
     public function deleteBulkAction(Request $request)
     {
-        $mailLogsToDelete = $request->request->get('email_logs_delete_email_logs');
+        $mailLogsToDelete = $request->request->all('email_logs_delete_email_logs');
 
         $mailLogsEraser = $this->get('prestashop.adapter.email.email_log_eraser');
         $errors = $mailLogsEraser->erase($mailLogsToDelete);
@@ -167,7 +135,7 @@ class EmailController extends FrameworkBundleAdminController
         } else {
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         }
 
@@ -177,11 +145,10 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Delete all email logs.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
-     * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message="Access denied.")
-     *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message: 'Access denied.')]
     public function deleteAllAction()
     {
         $mailLogsEraser = $this->get('prestashop.adapter.email.email_log_eraser');
@@ -196,13 +163,12 @@ class EmailController extends FrameworkBundleAdminController
     /**
      * Delete single email log.
      *
-     * @DemoRestricted(redirectRoute="admin_emails_index")
-     * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message="Access denied.")
-     *
      * @param int $mailId
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_emails_index')]
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", message: 'Access denied.')]
     public function deleteAction($mailId)
     {
         $mailLogsEraser = $this->get('prestashop.adapter.email.email_log_eraser');
@@ -213,7 +179,7 @@ class EmailController extends FrameworkBundleAdminController
         } else {
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         }
 

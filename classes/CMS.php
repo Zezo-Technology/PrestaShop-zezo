@@ -63,7 +63,7 @@ class CMSCore extends ObjectModel
             'meta_title' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 255],
             'head_seo_title' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 255],
             'link_rewrite' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isLinkRewrite', 'required' => true, 'size' => 128],
-            'content' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 3999999999999],
+            'content' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 1073741823],
         ],
     ];
 
@@ -135,7 +135,7 @@ class CMSCore extends ObjectModel
      *
      * @return array
      */
-    public static function getLinks($idLang, $selection = null, $active = true, Link $link = null)
+    public static function getLinks($idLang, $selection = null, $active = true, ?Link $link = null)
     {
         if (!$link) {
             $link = Context::getContext()->link;
@@ -306,22 +306,6 @@ class CMSCore extends ObjectModel
         }
 
         $sql->orderBy('position');
-
-        return Db::getInstance()->executeS($sql);
-    }
-
-    /**
-     * @param int $idCms
-     *
-     * @return array|false|mysqli_result|PDOStatement|resource|null
-     */
-    public static function getUrlRewriteInformations($idCms)
-    {
-        $sql = 'SELECT l.`id_lang`, c.`link_rewrite`
-				FROM `' . _DB_PREFIX_ . 'cms_lang` AS c
-				LEFT JOIN  `' . _DB_PREFIX_ . 'lang` AS l ON c.`id_lang` = l.`id_lang`
-				WHERE c.`id_cms` = ' . (int) $idCms . '
-				AND l.`active` = 1';
 
         return Db::getInstance()->executeS($sql);
     }

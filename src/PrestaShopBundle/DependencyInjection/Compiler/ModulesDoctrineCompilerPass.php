@@ -47,14 +47,8 @@ class ModulesDoctrineCompilerPass implements CompilerPassInterface
      */
     public function process(ContainerBuilder $container)
     {
-        //We need the list of active modules to load their config, during install the parameter might no be available
-        //if the parameters file has not been generated yet, so we skip this part of the build
-        if (!$container->hasParameter('kernel.active_modules')) {
-            return;
-        }
-
-        $activeModules = $container->getParameter('kernel.active_modules');
-        $compilerPassList = $this->getCompilerPassList($activeModules);
+        $installedModules = $container->getParameter('prestashop.installed_modules');
+        $compilerPassList = $this->getCompilerPassList($installedModules);
         /** @var CompilerPassInterface $compilerPass */
         foreach ($compilerPassList as $compilerResourcePath => $compilerPass) {
             $compilerPass->process($container);
@@ -116,7 +110,7 @@ class ModulesDoctrineCompilerPass implements CompilerPassInterface
             $driverDefinition->addMethodCall('addExcludePaths', [[$indexFile]]);
         }
 
-        return new DoctrineOrmMappingsPass($driverDefinition, [$moduleNamespace], [], false, [$modulePrefix => $moduleNamespace]);
+        return new DoctrineOrmMappingsPass($driverDefinition, [$moduleNamespace], [], false, []);
     }
 
     /**

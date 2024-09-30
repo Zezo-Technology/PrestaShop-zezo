@@ -1,6 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
 import type {Page} from 'playwright';
+import {
+  FakerBrand,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Brands page, contains selectors and functions for the page
@@ -99,7 +102,7 @@ class Brands extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Brands •';
+    this.pageTitle = `Brands • ${global.INSTALL.SHOP_NAME}`;
     this.successfulUpdateStatusMessage = 'The status has been successfully updated.';
 
     // Header Selectors
@@ -182,7 +185,7 @@ class Brands extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToSubTabSuppliers(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.suppliersNavItemLink);
+    await this.clickAndWaitForURL(page, this.suppliersNavItemLink);
   }
 
   /**
@@ -193,7 +196,8 @@ class Brands extends BOBasePage {
    */
   async resetFilter(page: Page, tableName: string): Promise<void> {
     if (await this.elementVisible(page, this.filterResetButton(tableName), 2000)) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton(tableName));
+      await this.clickAndWaitForLoadState(page, this.filterResetButton(tableName));
+      await this.elementNotVisible(page, this.filterResetButton(tableName), 2000);
     }
   }
 
@@ -239,7 +243,7 @@ class Brands extends BOBasePage {
         throw new Error(`Filter ${filterBy} was not found`);
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton(tableName));
+    await this.clickAndWaitForLoadState(page, this.filterSearchButton(tableName));
   }
 
   /**
@@ -303,7 +307,7 @@ class Brands extends BOBasePage {
    */
   async setBrandStatus(page: Page, row: number, valueWanted: boolean = true): Promise<boolean> {
     if (await this.getBrandStatus(page, row) !== valueWanted) {
-      await this.clickAndWaitForNavigation(page, this.brandsTableColumnStatus(row));
+      await this.clickAndWaitForLoadState(page, this.brandsTableColumnStatus(row));
       return true;
     }
 
@@ -316,7 +320,7 @@ class Brands extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewBrandPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.newBrandLink);
+    await this.clickAndWaitForURL(page, this.newBrandLink);
   }
 
   /**
@@ -325,7 +329,7 @@ class Brands extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewBrandAddressPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.newBrandAddressLink);
+    await this.clickAndWaitForURL(page, this.newBrandAddressLink);
   }
 
   /**
@@ -335,7 +339,7 @@ class Brands extends BOBasePage {
    * @return {Promise<void>}
    */
   async viewBrand(page: Page, row: number = 1): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.viewBrandLink(row));
+    await this.clickAndWaitForURL(page, this.viewBrandLink(row));
   }
 
   /**
@@ -346,10 +350,10 @@ class Brands extends BOBasePage {
    */
   async goToEditBrandPage(page: Page, row: number = 1): Promise<void> {
     await Promise.all([
-      page.click(this.dropdownToggleButton('manufacturer', row)),
+      page.locator(this.dropdownToggleButton('manufacturer', row)).click(),
       this.waitForVisibleSelector(page, `${this.dropdownToggleButton('manufacturer', row)}[aria-expanded='true']`),
     ]);
-    await this.clickAndWaitForNavigation(page, this.editBrandLink(row));
+    await this.clickAndWaitForURL(page, this.editBrandLink(row));
   }
 
   /**
@@ -359,7 +363,7 @@ class Brands extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToEditBrandAddressPage(page: Page, row: number = 1): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.editBrandAddressLink(row));
+    await this.clickAndWaitForURL(page, this.editBrandAddressLink(row));
   }
 
   /**
@@ -371,12 +375,12 @@ class Brands extends BOBasePage {
    */
   async deleteRowInTable(page: Page, tableName: string, row: number = 1): Promise<string> {
     await Promise.all([
-      page.click(this.dropdownToggleButton(tableName, row)),
+      page.locator(this.dropdownToggleButton(tableName, row)).click(),
       this.waitForVisibleSelector(page, `${this.dropdownToggleButton(tableName, row)}[aria-expanded='true']`),
     ]);
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.deleteRowLink(tableName, row)),
+      page.locator(this.deleteRowLink(tableName, row)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal(tableName)}.show`),
     ]);
     await this.confirmDelete(page, tableName);
@@ -391,7 +395,7 @@ class Brands extends BOBasePage {
    * @return {Promise<void>}
    */
   async confirmDelete(page: Page, tableName: string): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton(tableName));
+    await this.clickAndWaitForURL(page, this.confirmDeleteButton(tableName));
   }
 
   /**
@@ -423,18 +427,18 @@ class Brands extends BOBasePage {
   async bulkSetBrandsStatus(page: Page, enable: boolean = true): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel('manufacturer'), (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel('manufacturer')).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton('manufacturer')}:not([disabled])`, 40000),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton('manufacturer')),
+      page.locator(this.bulkActionsToggleButton('manufacturer')).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton('manufacturer')}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
-    await this.clickAndWaitForNavigation(page, enable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton);
+    await page.locator(enable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton).click();
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 
@@ -447,22 +451,22 @@ class Brands extends BOBasePage {
   async deleteWithBulkActions(page: Page, tableName: string): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel(tableName), (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel(tableName)).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton(tableName)}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton(tableName)),
+      page.locator(this.bulkActionsToggleButton(tableName)).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton(tableName)}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
     if (tableName === 'manufacturer') {
-      await page.click(this.deleteBrandsButton);
+      await page.locator(this.deleteBrandsButton).click();
       await this.waitForVisibleSelector(page, `${this.confirmDeleteModal(tableName)}.show`);
     } else if (tableName === 'manufacturer_address') {
-      await page.click(this.deleteAddressesButton);
+      await page.locator(this.deleteAddressesButton).click();
       await this.waitForVisibleSelector(page, `${this.confirmDeleteModal('manufacturer_address')}.show`);
     }
     await this.confirmDelete(page, tableName);
@@ -496,9 +500,9 @@ class Brands extends BOBasePage {
    * Get logo link from brands table row
    * @param page {Page} Browser tab
    * @param row {number} Row in table to get logo link
-   * @return {Promise<string|null>}
+   * @return {Promise<string>}
    */
-  async getLogoLinkFromBrandsTable(page: Page, row: number): Promise<string|null> {
+  async getLogoLinkFromBrandsTable(page: Page, row: number): Promise<string> {
     return this.getAttributeContent(page, this.brandsTableColumnLogoImg(row), 'src');
   }
 
@@ -506,17 +510,19 @@ class Brands extends BOBasePage {
    * Get all information from brands table
    * @param page {Page} Browser tab
    * @param row {number} Row in table to get text column
-   * @return {Promise<object>}
+   * @return {Promise<BrandData>}
    */
-  async getBrandFromTable(page: Page, row: number): Promise<object> {
-    return {
-      id: await this.getTextColumnFromTableBrands(page, row, 'id_manufacturer'),
+  async getBrandFromTable(page: Page, row: number): Promise<FakerBrand> {
+    const adressesCount = await this.getTextColumnFromTableBrands(page, row, 'addresses_count');
+
+    return new FakerBrand({
+      id: parseInt(await this.getTextColumnFromTableBrands(page, row, 'id_manufacturer'), 10),
       logo: await this.getLogoLinkFromBrandsTable(page, row),
       name: await this.getTextColumnFromTableBrands(page, row, 'name'),
-      addresses: await this.getTextColumnFromTableBrands(page, row, 'addresses_count'),
-      products: await this.getTextColumnFromTableBrands(page, row, 'products_count'),
-      status: await this.getBrandStatus(page, row),
-    };
+      addresses: parseInt(adressesCount === '--' ? '0' : adressesCount, 10),
+      products: parseInt(await this.getTextColumnFromTableBrands(page, row, 'products_count'), 10),
+      enabled: await this.getBrandStatus(page, row),
+    });
   }
 
   /**
@@ -597,7 +603,7 @@ class Brands extends BOBasePage {
 
     let i: number = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -633,9 +639,9 @@ class Brands extends BOBasePage {
    * @param table {string} Which table to export
    * @return {Promise<string|null>}
    */
-  async exportDataToCsv(page: Page, table: string): Promise<string|null> {
+  async exportDataToCsv(page: Page, table: string): Promise<string | null> {
     await Promise.all([
-      page.click(this.gridActionButton(table)),
+      page.locator(this.gridActionButton(table)).click(),
       this.waitForVisibleSelector(page, `${this.gridActionDropDownMenu(table)}.show`),
     ]);
 
@@ -647,7 +653,7 @@ class Brands extends BOBasePage {
    * @param page {Page} Browser tab
    * @return {Promise<string|null>}
    */
-  async exportBrandsDataToCsv(page: Page): Promise<string|null> {
+  async exportBrandsDataToCsv(page: Page): Promise<string | null> {
     return this.exportDataToCsv(page, 'manufacturer');
   }
 
@@ -663,9 +669,9 @@ class Brands extends BOBasePage {
     return `${brand.id};`
       + `${brand.logo};`
       + `"${brand.name}";`
-      + `${brand.addresses};`
+      + `${brand.addresses > 0 ? brand.addresses : '--'};`
       + `${brand.products};`
-      + `${brand.status ? 1 : 0}`;
+      + `${brand.enabled ? 1 : 0}`;
   }
 
   /* Pagination methods */
@@ -699,7 +705,7 @@ class Brands extends BOBasePage {
    * @return {Promise<string>}
    */
   async paginationNext(page: Page, tableName: string): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink(tableName));
+    await this.clickAndWaitForURL(page, this.paginationNextLink(tableName));
 
     return this.getPaginationLabel(page, tableName);
   }
@@ -711,7 +717,7 @@ class Brands extends BOBasePage {
    * @return {Promise<string>}
    */
   async paginationPrevious(page: Page, tableName: string): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink(tableName));
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink(tableName));
 
     return this.getPaginationLabel(page, tableName);
   }

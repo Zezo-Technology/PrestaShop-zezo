@@ -1,6 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -9,13 +7,15 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import cartRulesPage from '@pages/BO/catalog/discounts';
 import addCartRulePage from '@pages/BO/catalog/discounts/add';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import CartRuleData from '@data/faker/cartRule';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerCartRule,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_discounts_cartRules_sortAndPaginationCartRule';
 
@@ -32,12 +32,12 @@ describe('BO - Catalog - Discounts : Sort and pagination cart rules', async () =
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -47,28 +47,28 @@ describe('BO - Catalog - Discounts : Sort and pagination cart rules', async () =
   it('should go to \'Catalog > Discounts\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToDiscountsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.discountsLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.discountsLink,
     );
 
     const pageTitle = await cartRulesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(cartRulesPage.pageTitle);
+    expect(pageTitle).to.contains(cartRulesPage.pageTitle);
   });
 
   it('should reset filter and get number of cart rules', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFirst', baseContext);
 
     numberOfCartRules = await cartRulesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfCartRules).to.be.at.least(0);
+    expect(numberOfCartRules).to.be.at.least(0);
   });
 
   // 1 - create 21 cart rules
   describe('Create 21 cart rules', async () => {
     const creationTests: number[] = new Array(21).fill(0, 0, 21);
     creationTests.forEach((test: number, index: number) => {
-      const cartRuleData: CartRuleData = new CartRuleData({
+      const cartRuleData: FakerCartRule = new FakerCartRule({
         name: `todelete${index}`,
         discountType: 'Percent',
         discountPercent: 20,
@@ -80,17 +80,17 @@ describe('BO - Catalog - Discounts : Sort and pagination cart rules', async () =
         await cartRulesPage.goToAddNewCartRulesPage(page);
 
         const pageTitle = await addCartRulePage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addCartRulePage.pageTitle);
+        expect(pageTitle).to.contains(addCartRulePage.pageTitle);
       });
 
       it(`should create cart rule n°${index + 1}`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createCartRule${index}`, baseContext);
 
         const validationMessage = await addCartRulePage.createEditCartRules(page, cartRuleData);
-        await expect(validationMessage).to.contains(addCartRulePage.successfulCreationMessage);
+        expect(validationMessage).to.contains(addCartRulePage.successfulCreationMessage);
 
         const numberOfCartRulesAfterCreation = await cartRulesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfCartRulesAfterCreation).to.be.equal(numberOfCartRules + 1 + index);
+        expect(numberOfCartRulesAfterCreation).to.be.equal(numberOfCartRules + 1 + index);
       });
     });
   });
@@ -204,28 +204,28 @@ describe('BO - Catalog - Discounts : Sort and pagination cart rules', async () =
           const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult: number[] = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult: number[] = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else if (test.args.isDate) {
-          const expectedResult: string[] = await basicHelper.sortArrayDate(nonSortedTable);
+          const expectedResult: string[] = await utilsCore.sortArrayDate(nonSortedTable);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult: string[] = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult: string[] = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -243,7 +243,7 @@ describe('BO - Catalog - Discounts : Sort and pagination cart rules', async () =
 
       for (let i = 1; i <= numberOfCartRulesAfterFilter; i++) {
         const textColumn = await cartRulesPage.getTextColumn(page, i, 'name');
-        await expect(textColumn).to.contains('todelete');
+        expect(textColumn).to.contains('todelete');
       }
     });
 
@@ -251,14 +251,14 @@ describe('BO - Catalog - Discounts : Sort and pagination cart rules', async () =
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteCartRules', baseContext);
 
       const deleteTextResult = await cartRulesPage.bulkDeleteCartRules(page);
-      await expect(deleteTextResult).to.be.contains(cartRulesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.contains(cartRulesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterBulkDelete', baseContext);
 
       const numberOfCartRulesAfterDelete = await cartRulesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfCartRulesAfterDelete).to.equal(numberOfCartRules);
+      expect(numberOfCartRulesAfterDelete).to.equal(numberOfCartRules);
     });
   });
 });

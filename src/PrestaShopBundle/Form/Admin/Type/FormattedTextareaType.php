@@ -39,9 +39,20 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 class FormattedTextareaType extends TranslatorAwareType
 {
     /**
-     * Max size of UTF-8 content in MySQL text column
+     * Max size of UTF-8 content in MySQL text columns
      */
+    public const LIMIT_TINYTEXT_UTF8 = 84;
     public const LIMIT_TEXT_UTF8 = 21844;
+    public const LIMIT_MEDIUMTEXT_UTF8 = 5592414;
+    public const LIMIT_LONGTEXT_UTF8 = 1431655764;
+
+    /**
+     * Max size of UTF-8 MB4 content in MySQL text columns
+     */
+    public const LIMIT_TINYTEXT_UTF8_MB4 = 63;
+    public const LIMIT_TEXT_UTF8_MB4 = 16383;
+    public const LIMIT_MEDIUMTEXT_UTF8_MB4 = 4194303;
+    public const LIMIT_LONGTEXT_UTF8_MB4 = 1073741823;
 
     /**
      * {@inheritdoc}

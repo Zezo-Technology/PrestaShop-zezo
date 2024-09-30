@@ -2,6 +2,7 @@
 
 type GlobalInstall = {
   URL: string
+  ENABLE_SSL: boolean
   LANGUAGE: string
   COUNTRY: string
   DB_SERVER: string
@@ -24,10 +25,15 @@ type GlobalBO = {
   LASTNAME: string
 }
 
+type GlobalAPI = {
+  URL: string
+}
+
 type GlobalBrowserConfig = {
   headless: any
   timeout: number
   slowMo: number
+  channel?: string
   args?: Array<string>
 }
 
@@ -42,6 +48,10 @@ type GlobalBrowser = {
   interceptErrors: any
 }
 
+type GlobalPSConfig = {
+  parametersFile: string
+}
+
 type GlobalBrowserErrors = {
   responses: Array<any>
   js: Array<any>
@@ -50,7 +60,8 @@ type GlobalBrowserErrors = {
 
 type GlobalScreenshot = {
   FOLDER: string
-  AFTER_FAIL: any
+  AFTER_FAIL: boolean
+  EACH_STEP: boolean
 }
 
 type GlobalMaildevConfig = {
@@ -59,15 +70,28 @@ type GlobalMaildevConfig = {
   silent: boolean
 }
 
+type GlobalKeycloakConfig = {
+  keycloakExternalUrl: string
+  keycloakInternalUrl: string
+  keycloakAdminUser: string
+  keycloakAdminPass: string
+  keycloakClientId: string
+  keycloakClientSecret: string
+}
+
 declare global {
   var INSTALL: GlobalInstall;
   var URLHasPort: boolean;
   var FO: GlobalFO;
   var BO: GlobalBO;
+
+  var API: GlobalAPI;
+  var PSConfig: GlobalPSConfig;
   var BROWSER: GlobalBrowser;
   var GENERATE_FAILED_STEPS: any;
   var SCREENSHOT: GlobalScreenshot;
   var maildevConfig: GlobalMaildevConfig;
+  var keycloakConfig: GlobalKeycloakConfig;
   var browserErrors: GlobalBrowserErrors;
 }
 

@@ -1,6 +1,4 @@
 // Import utils
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -11,14 +9,16 @@ import attributesPage from '@pages/BO/catalog/attributes';
 import addAttributePage from '@pages/BO/catalog/attributes/addAttribute';
 import addValuePage from '@pages/BO/catalog/attributes/addValue';
 import viewAttributePage from '@pages/BO/catalog/attributes/view';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import AttributeData from '@data/faker/attribute';
-import AttributeValueData from '@data/faker/attributeValue';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerAttribute,
+  FakerAttributeValue,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_attributesAndFeatures_attributes_CRUDAttributesAndValues';
 
@@ -37,35 +37,36 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
   let browserContext: BrowserContext;
   let page: Page;
   let numberOfAttributes: number = 0;
+  let attributeId: number = 0;
 
-  const createAttributeData: AttributeData = new AttributeData();
-  const updateAttributeData: AttributeData = new AttributeData();
-  const valuesToCreate: AttributeValueData[] = [
-    new AttributeValueData({attributeName: createAttributeData.name}),
-    new AttributeValueData({attributeName: createAttributeData.name}),
+  const createAttributeData: FakerAttribute = new FakerAttribute();
+  const updateAttributeData: FakerAttribute = new FakerAttribute();
+  const valuesToCreate: FakerAttributeValue[] = [
+    new FakerAttributeValue({attributeName: createAttributeData.name}),
+    new FakerAttributeValue({attributeName: createAttributeData.name}),
   ];
-  const updateValueData: AttributeValueData = new AttributeValueData({attributeName: updateAttributeData.name});
+  const updateValueData: FakerAttributeValue = new FakerAttributeValue({attributeName: updateAttributeData.name});
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
 
     // Create needed files
     await Promise.all([
-      files.createFile('./', valuesToCreate[0].textureFileName, 'text'),
-      files.createFile('./', valuesToCreate[1].textureFileName, 'text'),
-      files.createFile('./', updateValueData.textureFileName, 'text'),
+      utilsFile.createFile('./', valuesToCreate[0].textureFileName, 'text'),
+      utilsFile.createFile('./', valuesToCreate[1].textureFileName, 'text'),
+      utilsFile.createFile('./', updateValueData.textureFileName, 'text'),
     ]);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
 
     await Promise.all([
-      files.deleteFile(valuesToCreate[0].textureFileName),
-      files.deleteFile(valuesToCreate[1].textureFileName),
-      files.deleteFile(updateValueData.textureFileName),
+      utilsFile.deleteFile(valuesToCreate[0].textureFileName),
+      utilsFile.deleteFile(valuesToCreate[1].textureFileName),
+      utilsFile.deleteFile(updateValueData.textureFileName),
     ]);
   });
 
@@ -76,22 +77,22 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
   it('should go to \'Catalog > Attributes & Features\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToAttributesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.attributesAndFeaturesLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.attributesAndFeaturesLink,
     );
     await attributesPage.closeSfToolBar(page);
 
     const pageTitle = await attributesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(attributesPage.pageTitle);
+    expect(pageTitle).to.contains(attributesPage.pageTitle);
   });
 
   it('should reset all filters and get number of attributes in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfAttributes = await attributesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfAttributes).to.be.above(0);
+    expect(numberOfAttributes).to.be.above(0);
   });
 
   describe('Create attribute', async () => {
@@ -101,17 +102,17 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await attributesPage.goToAddAttributePage(page);
 
       const pageTitle = await addAttributePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addAttributePage.createPageTitle);
+      expect(pageTitle).to.equal(addAttributePage.createPageTitle);
     });
 
     it('should create new attribute', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'createNewAttribute', baseContext);
 
       const textResult = await addAttributePage.addEditAttribute(page, createAttributeData);
-      await expect(textResult).to.contains(attributesPage.successfulCreationMessage);
+      expect(textResult).to.contains(attributesPage.successfulCreationMessage);
 
       const numberOfAttributesAfterCreation = await attributesPage.getNumberOfElementInGrid(page);
-      await expect(numberOfAttributesAfterCreation).to.equal(numberOfAttributes + 1);
+      expect(numberOfAttributesAfterCreation).to.equal(numberOfAttributes + 1);
     });
   });
 
@@ -119,10 +120,13 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
     it('should filter list of attributes', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterToViewCreatedAttribute', baseContext);
 
-      await attributesPage.filterTable(page, 'b!name', createAttributeData.name);
+      await attributesPage.filterTable(page, 'name', createAttributeData.name);
 
-      const textColumn = await attributesPage.getTextColumn(page, 1, 'b!name');
-      await expect(textColumn).to.contains(createAttributeData.name);
+      const textColumn = await attributesPage.getTextColumn(page, 1, 'name');
+      expect(textColumn).to.contains(createAttributeData.name);
+
+      attributeId = parseInt(await attributesPage.getTextColumn(page, 1, 'id_attribute_group'), 10);
+      expect(attributeId).to.be.gt(0);
     });
 
     it('should view attribute', async function () {
@@ -131,7 +135,7 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await attributesPage.viewAttribute(page, 1);
 
       const pageTitle = await viewAttributePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(`${viewAttributePage.pageTitle} ${createAttributeData.name}`);
+      expect(pageTitle).to.equal(viewAttributePage.pageTitle(createAttributeData.name));
     });
   });
 
@@ -142,16 +146,26 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await viewAttributePage.goToAddNewValuePage(page);
 
       const pageTitle = await addValuePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addValuePage.createPageTitle);
+      expect(pageTitle).to.equal(addValuePage.createPageTitle);
     });
 
-    valuesToCreate.forEach((valueToCreate: AttributeValueData, index: number) => {
+    valuesToCreate.forEach((valueToCreate: FakerAttributeValue, index: number) => {
       it(`should create value n°${index + 1}`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createValue${index}`, baseContext);
 
+        valueToCreate.setAttributeId(attributeId);
         const textResult = await addValuePage.addEditValue(page, valueToCreate, index === 0);
-        await expect(textResult).to.contains(viewAttributePage.successfulCreationMessage);
+        expect(textResult).to.contains(viewAttributePage.successfulCreationMessage);
       });
+    });
+
+    it('return to the Attributes page', async function () {
+      await testContext.addContextItem(this, 'testIdentifier', 'returnAttributesPage', baseContext);
+
+      await viewAttributePage.backToAttributesList(page);
+
+      const pageTitle = await attributesPage.getPageTitle(page);
+      expect(pageTitle).to.contains(attributesPage.pageTitle);
     });
   });
 
@@ -160,10 +174,10 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await testContext.addContextItem(this, 'testIdentifier', 'filterToUpdateAttribute', baseContext);
 
       await attributesPage.resetFilter(page);
-      await attributesPage.filterTable(page, 'b!name', createAttributeData.name);
+      await attributesPage.filterTable(page, 'name', createAttributeData.name);
 
-      const textColumn = await attributesPage.getTextColumn(page, 1, 'b!name');
-      await expect(textColumn).to.contains(createAttributeData.name);
+      const textColumn = await attributesPage.getTextColumn(page, 1, 'name');
+      expect(textColumn).to.contains(createAttributeData.name);
     });
 
     it('should go to edit attribute page', async function () {
@@ -172,14 +186,14 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await attributesPage.goToEditAttributePage(page, 1);
 
       const pageTitle = await addAttributePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addAttributePage.editPageTitle);
+      expect(pageTitle).to.equal(addAttributePage.editPageTitle(createAttributeData.name));
     });
 
     it('should update attribute', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'updateAttribute', baseContext);
 
       const textResult = await addAttributePage.addEditAttribute(page, updateAttributeData);
-      await expect(textResult).to.contains(attributesPage.successfulUpdateMessage);
+      expect(textResult).to.contains(attributesPage.successfulUpdateMessage);
     });
   });
 
@@ -187,10 +201,10 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
     it('should filter list of attributes', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterToViewUpdateAttribute', baseContext);
 
-      await attributesPage.filterTable(page, 'b!name', updateAttributeData.name);
+      await attributesPage.filterTable(page, 'name', updateAttributeData.name);
 
-      const textColumn = await attributesPage.getTextColumn(page, 1, 'b!name');
-      await expect(textColumn).to.contains(updateAttributeData.name);
+      const textColumn = await attributesPage.getTextColumn(page, 1, 'name');
+      expect(textColumn).to.contains(updateAttributeData.name);
     });
 
     it('should view updated attribute', async function () {
@@ -199,10 +213,10 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await attributesPage.viewAttribute(page, 1);
 
       const pageTitle = await viewAttributePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(`${viewAttributePage.pageTitle} ${updateAttributeData.name}`);
+      expect(pageTitle).to.equal(viewAttributePage.pageTitle(updateAttributeData.name));
 
       const numberOfValues = await viewAttributePage.getNumberOfElementInGrid(page);
-      await expect(numberOfValues).to.equal(2);
+      expect(numberOfValues).to.equal(2);
     });
   });
 
@@ -210,10 +224,10 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
     it('should filter values', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterValuesToUpdate', baseContext);
 
-      await viewAttributePage.filterTable(page, 'b!name', valuesToCreate[0].value);
+      await viewAttributePage.filterTable(page, 'name', valuesToCreate[0].value);
 
-      const textColumn = await viewAttributePage.getTextColumn(page, 1, 'b!name');
-      await expect(textColumn).to.contains(valuesToCreate[0].value);
+      const textColumn = await viewAttributePage.getTextColumn(page, 1, 'name');
+      expect(textColumn).to.contains(valuesToCreate[0].value);
     });
 
     it('should go to edit value page', async function () {
@@ -222,14 +236,15 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await viewAttributePage.goToEditValuePage(page, 1);
 
       const pageTitle = await addValuePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addValuePage.editPageTitle);
+      expect(pageTitle).to.contains(addValuePage.editPageTitle(valuesToCreate[0].value));
     });
 
     it('should update value', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'updateValue', baseContext);
 
+      updateValueData.setAttributeId(attributeId);
       const textResult = await addValuePage.addEditValue(page, updateValueData);
-      await expect(textResult).to.contains(addValuePage.successfulUpdateMessage);
+      expect(textResult).to.contains(addValuePage.successfulUpdateMessage);
     });
   });
 
@@ -237,20 +252,20 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
     it('should filter values', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterValuesToDelete', baseContext);
 
-      await viewAttributePage.filterTable(page, 'b!name', valuesToCreate[1].value);
+      await viewAttributePage.filterTable(page, 'name', valuesToCreate[1].value);
 
-      const textColumn = await viewAttributePage.getTextColumn(page, 1, 'b!name');
-      await expect(textColumn).to.contains(valuesToCreate[1].value);
+      const textColumn = await viewAttributePage.getTextColumn(page, 1, 'name');
+      expect(textColumn).to.contains(valuesToCreate[1].value);
     });
 
     it('should delete value', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'deleteValue', baseContext);
 
       const textResult = await viewAttributePage.deleteValue(page, 1);
-      await expect(textResult).to.contains(viewAttributePage.successfulDeleteMessage);
+      expect(textResult).to.contains(viewAttributePage.successfulDeleteMessage);
 
       const numberOfValues = await viewAttributePage.resetAndGetNumberOfLines(page);
-      await expect(numberOfValues).to.equal(1);
+      expect(numberOfValues).to.equal(1);
     });
   });
 
@@ -261,27 +276,27 @@ describe('BO - Catalog - Attributes & Features : CRUD attribute and values', asy
       await viewAttributePage.backToAttributesList(page);
 
       const pageTitle = await attributesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(attributesPage.pageTitle);
+      expect(pageTitle).to.contains(attributesPage.pageTitle);
     });
 
     it('should filter attributes', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterAttributesToDelete', baseContext);
 
       await attributesPage.resetFilter(page);
-      await attributesPage.filterTable(page, 'b!name', updateAttributeData.name);
+      await attributesPage.filterTable(page, 'name', updateAttributeData.name);
 
-      const textColumn = await attributesPage.getTextColumn(page, 1, 'b!name');
-      await expect(textColumn).to.contains(updateAttributeData.name);
+      const textColumn = await attributesPage.getTextColumn(page, 1, 'name');
+      expect(textColumn).to.contains(updateAttributeData.name);
     });
 
     it('should delete attribute', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'deleteAttribute', baseContext);
 
       const textResult = await attributesPage.deleteAttribute(page, 1);
-      await expect(textResult).to.contains(attributesPage.successfulDeleteMessage);
+      expect(textResult).to.contains(attributesPage.successfulDeleteMessage);
 
       const numberOfAttributesAfterDelete = await attributesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfAttributesAfterDelete).to.equal(numberOfAttributes);
+      expect(numberOfAttributesAfterDelete).to.equal(numberOfAttributes);
     });
   });
 });

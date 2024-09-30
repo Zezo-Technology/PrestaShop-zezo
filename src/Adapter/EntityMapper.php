@@ -29,7 +29,9 @@ namespace PrestaShop\PrestaShop\Adapter;
 use Cache;
 use Db;
 use DbQuery;
+use ObjectModel;
 use ObjectModelCore;
+use PrestaShopDatabaseException;
 use Shop;
 
 class EntityMapper
@@ -44,7 +46,7 @@ class EntityMapper
      * @param int $id_shop
      * @param bool $should_cache_objects
      *
-     * @throws \PrestaShopDatabaseException
+     * @throws PrestaShopDatabaseException
      */
     public function load($id, $id_lang, $entity, $entity_defs, $id_shop, $should_cache_objects)
     {
@@ -95,7 +97,18 @@ class EntityMapper
                 foreach ($object_datas as $key => $value) {
                     if (array_key_exists($key, $entity_defs['fields'])
                         || array_key_exists($key, $objectVars)) {
-                        $entity->{$key} = $value;
+                        if (isset($entity_defs['fields'][$key]['type']) && in_array($entity_defs['fields'][$key]['type'], [
+                            ObjectModel::TYPE_BOOL,
+                        ])) {
+                            if (is_array($value)) {
+                                array_walk($value, function (&$v) { $v = strval($v); });
+                                $entity->{$key} = $value;
+                            } else {
+                                $entity->{$key} = strval($value);
+                            }
+                        } else {
+                            $entity->{$key} = $value;
+                        }
                     } else {
                         unset($object_datas[$key]);
                     }

@@ -185,7 +185,7 @@ class CartRules extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToCatalogPriceRulesTab(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.catalogPriceRulesTab);
+    await this.clickAndWaitForURL(page, this.catalogPriceRulesTab);
     await this.waitForVisibleSelector(page, `${this.catalogPriceRulesTab}.current`);
   }
 
@@ -195,7 +195,7 @@ class CartRules extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToAddNewCartRulesPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewCartRuleButton);
+    await this.clickAndWaitForURL(page, this.addNewCartRuleButton);
   }
 
   /* Table methods */
@@ -206,7 +206,7 @@ class CartRules extends BOBasePage {
    * @returns {Promise<void>}
    */
   async goToEditCartRulePage(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.tableColumnActionsEditLink(row));
+    await this.clickAndWaitForURL(page, this.tableColumnActionsEditLink(row));
   }
 
   /**
@@ -221,12 +221,12 @@ class CartRules extends BOBasePage {
       await this.filterCartRules(page, 'input', 'name', cartRuleName);
     }
 
-    await page.click(this.tableColumnActionsToggleButton(row));
+    await page.locator(this.tableColumnActionsToggleButton(row)).click();
 
     await this.waitForSelectorAndClick(page, this.tableColumnActionsDeleteLink(row));
 
     // Confirm delete action
-    await this.clickAndWaitForNavigation(page, this.deleteModalButtonYes);
+    await this.clickAndWaitForURL(page, this.deleteModalButtonYes);
 
     // Get successful message
     return this.getAlertSuccessBlockContent(page);
@@ -280,7 +280,7 @@ class CartRules extends BOBasePage {
    * @param row {number} Row on table
    * @return {Promise<boolean>}
    */
-  getCartRuleStatus(page: Page, row: number): Promise<boolean> {
+  async getCartRuleStatus(page: Page, row: number): Promise<boolean> {
     return this.elementVisible(page, this.tableColumnStatusEnableLink(row), 1000);
   }
 
@@ -293,7 +293,7 @@ class CartRules extends BOBasePage {
    */
   async setCartRuleStatus(page: Page, row: number, wantedStatus: boolean): Promise<void> {
     if (wantedStatus !== await this.getCartRuleStatus(page, row)) {
-      await this.clickAndWaitForNavigation(page, this.tableColumnStatusLink(row));
+      await page.locator(this.tableColumnStatusLink(row)).click();
     }
   }
 
@@ -305,7 +305,8 @@ class CartRules extends BOBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (await this.elementVisible(page, this.filterResetButton, 2000)) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForLoadState(page, this.filterResetButton);
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
 
     // No search button displayed if only one element in table
@@ -341,15 +342,17 @@ class CartRules extends BOBasePage {
    */
   async filterCartRules(page: Page, filterType: string, filterBy: string, value: string): Promise<void> {
     await this.resetFilter(page);
+    const currentUrl: string = page.url();
+
     switch (filterType) {
       case 'input':
         await this.setValue(page, this.filterColumn(filterBy), value);
-        await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+        await this.clickAndWaitForURL(page, this.filterSearchButton);
         break;
 
       case 'select':
         await Promise.all([
-          page.waitForNavigation({waitUntil: 'networkidle'}),
+          page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
           this.selectByVisibleText(page, this.filterColumn(filterBy), value === '1' ? 'Yes' : 'No'),
         ]);
         break;
@@ -367,10 +370,10 @@ class CartRules extends BOBasePage {
    * @return {Promise<void>}
    */
   async bulkSelectRows(page: Page): Promise<void> {
-    await page.click(this.bulkActionMenuButton);
+    await page.locator(this.bulkActionMenuButton).click();
 
     await Promise.all([
-      page.click(this.selectAllLink),
+      page.locator(this.selectAllLink).click(),
       this.waitForHiddenSelector(page, this.selectAllLink),
     ]);
   }
@@ -388,8 +391,8 @@ class CartRules extends BOBasePage {
     await this.bulkSelectRows(page);
 
     // Perform delete
-    await page.click(this.bulkActionMenuButton);
-    await this.clickAndWaitForNavigation(page, this.bulkDeleteLink);
+    await page.locator(this.bulkActionMenuButton).click();
+    await this.clickAndWaitForURL(page, this.bulkDeleteLink);
 
     // Return successful message
     return this.getAlertSuccessBlockContent(page);
@@ -407,11 +410,11 @@ class CartRules extends BOBasePage {
 
     // Set status
     await Promise.all([
-      page.click(this.bulkActionMenuButton),
+      page.locator(this.bulkActionMenuButton).click(),
       this.waitForVisibleSelector(page, this.bulkEnableLink),
     ]);
 
-    await this.clickAndWaitForNavigation(
+    await this.clickAndWaitForURL(
       page,
       wantedStatus ? this.bulkEnableLink : this.bulkDisableLink,
     );
@@ -423,7 +426,7 @@ class CartRules extends BOBasePage {
    * @param page {Page} Browser tab
    * @return {Promise<string>}
    */
-  getPaginationLabel(page: Page): Promise<string> {
+  async getPaginationLabel(page: Page): Promise<string> {
     return this.getTextContent(page, this.paginationActiveLabel);
   }
 
@@ -446,7 +449,7 @@ class CartRules extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -457,7 +460,7 @@ class CartRules extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }
@@ -521,7 +524,7 @@ class CartRules extends BOBasePage {
     }
 
     const sortColumnButton = `${columnSelector} i.icon-caret-${sortDirection}`;
-    await this.clickAndWaitForNavigation(page, sortColumnButton);
+    await this.clickAndWaitForURL(page, sortColumnButton);
   }
 }
 

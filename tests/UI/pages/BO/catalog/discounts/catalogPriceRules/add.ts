@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type CatalogPriceRuleData from '@data/faker/catalogPriceRule';
-
 import type {Page} from 'playwright';
+import {
+  type FakerCatalogPriceRule,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add catalog price rule page, contains functions that can be used on the page
@@ -67,25 +68,25 @@ class AddCatalogPriceRule extends BOBasePage {
   /**
    * Create/edit price rule
    * @param page {Page} Browser tab
-   * @param priceRuleData {CatalogPriceRuleData} Data to set on new/edit catalog price rule form
+   * @param priceRuleData {FakerCatalogPriceRule} Data to set on new/edit catalog price rule form
    * @returns {Promise<string>}
    */
-  async setCatalogPriceRule(page: Page, priceRuleData: CatalogPriceRuleData): Promise<string> {
+  async setCatalogPriceRule(page: Page, priceRuleData: FakerCatalogPriceRule): Promise<string> {
     await this.setValue(page, this.nameInput, priceRuleData.name);
     await this.selectByVisibleText(page, this.currencySelect, priceRuleData.currency);
     await this.selectByVisibleText(page, this.countrySelect, priceRuleData.country);
     await this.selectByVisibleText(page, this.groupSelect, priceRuleData.group);
     await this.setValue(page, this.fromQuantityInput, priceRuleData.fromQuantity);
     if (priceRuleData.fromDate !== '') {
-      await page.type(this.fromDateInput, priceRuleData.fromDate);
+      await page.locator(this.fromDateInput).fill(priceRuleData.fromDate);
     }
     if (priceRuleData.toDate !== '') {
-      await page.type(this.toDateInput, priceRuleData.toDate);
+      await page.locator(this.toDateInput).fill(priceRuleData.toDate);
     }
     await this.selectByVisibleText(page, this.reductionTypeSelect, priceRuleData.reductionType);
     await this.selectByVisibleText(page, this.reductionTaxSelect, priceRuleData.reductionTax);
     await this.setValue(page, this.reductionInput, priceRuleData.reduction);
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
 
     return this.getAlertSuccessBlockContent(page);
   }

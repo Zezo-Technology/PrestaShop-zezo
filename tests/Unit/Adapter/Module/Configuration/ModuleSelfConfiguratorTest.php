@@ -29,7 +29,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Adapter\Module\Configuration;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Driver\PDOMySql\Driver;
+use Doctrine\DBAL\Driver\PDO\MySQL\Driver;
+use Doctrine\DBAL\Result;
 use Doctrine\DBAL\Statement;
 use PHPUnit\Framework\TestCase;
 use PrestaShop\PrestaShop\Adapter\Configuration;
@@ -73,10 +74,10 @@ class ModuleSelfConfiguratorTest extends TestCase
     }
 
     private function getModuleSelfConfigurator(
-        ModuleRepository $moduleRepository = null,
-        Configuration $configuration = null,
-        Connection $connection = null,
-        Filesystem $filesystem = null
+        ?ModuleRepository $moduleRepository = null,
+        ?Configuration $configuration = null,
+        ?Connection $connection = null,
+        ?Filesystem $filesystem = null
     ): ModuleSelfConfigurator {
         return new ModuleSelfConfigurator(
             $moduleRepository ?: $this->moduleRepository,
@@ -294,12 +295,6 @@ class ModuleSelfConfiguratorTest extends TestCase
             ->method('onReset')
             ->willReturn(true);
         $moduleS
-            ->method('onMobileDisable')
-            ->willReturn(true);
-        $moduleS
-            ->method('onMobileEnable')
-            ->willReturn(true);
-        $moduleS
             ->method('hasValidInstance')
             ->willReturn(true);
 
@@ -317,14 +312,14 @@ class ConfigurationMock extends Configuration
 {
     private $configurationData = [];
 
-    public function set($key, $value, ShopConstraint $shopConstraint = null, array $options = [])
+    public function set($key, $value, ?ShopConstraint $shopConstraint = null, array $options = [])
     {
         $this->configurationData[$key] = $value;
 
         return $this;
     }
 
-    public function get($key, $default = null, ShopConstraint $shopConstraint = null)
+    public function get($key, $default = null, ?ShopConstraint $shopConstraint = null): mixed
     {
         return isset($this->configurationData[$key]) ? $this->configurationData[$key] : $default;
     }
@@ -367,7 +362,7 @@ class ConnectionMock extends Connection
         return true;
     }
 
-    public function prepare($statement)
+    public function prepare($statement): Statement
     {
         $this->sql[] = $statement;
 
@@ -382,8 +377,15 @@ class StatementMock extends Statement
     {
     }
 
-    public function execute($params = null)
+    public function execute($params = null): Result
     {
-        return true;
+        return new ResultMock();
+    }
+}
+
+class ResultMock extends Result
+{
+    public function __construct()
+    {
     }
 }

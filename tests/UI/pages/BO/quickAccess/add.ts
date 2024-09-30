@@ -1,6 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
 import type {Page} from 'playwright';
+import {
+  type FakerQuickAccess,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add quick access page, contains functions that can be used on the page
@@ -40,15 +43,14 @@ class AddQuickAccess extends BOBasePage {
   /**
    * Set quick access link
    * @param page {Page} Browser tab
-   * @param quickAccessLinkData {{name: string, url: string,
-   * openNewWindow: boolean}} Data to set on new quick access form
+   * @param quickAccessLinkData {FakerQuickAccess} Data to set on new quick access form
    * @returns {Promise<string>}
    */
-  async setQuickAccessLink(page: Page, quickAccessLinkData): Promise<string> {
+  async setQuickAccessLink(page: Page, quickAccessLinkData: FakerQuickAccess): Promise<string> {
     await this.setValue(page, this.nameInput, quickAccessLinkData.name);
     await this.setValue(page, this.urlInput, quickAccessLinkData.url);
     await this.setChecked(page, this.newWindowToggle(quickAccessLinkData.openNewWindow ? 'on' : 'off'));
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
 
     // Return successful message
     return this.getAlertSuccessBlockContent(page);

@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -7,16 +6,18 @@ import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
 import orderSettingsPage from '@pages/BO/shopParameters/orderSettings';
 // Import FO pages
-import foLoginPage from '@pages/FO/login';
-import homePage from '@pages/FO/home';
-import myAccountPage from '@pages/FO/myAccount';
-import orderHistoryPage from '@pages/FO/myAccount/orderHistory';
+import {orderHistoryPage} from '@pages/FO/classic/myAccount/orderHistory';
 
-// Import data
-import Customers from '@data/demo/customers';
+import {
+  boDashboardPage,
+  dataCustomers,
+  foClassicHomePage,
+  foClassicLoginPage,
+  foClassicMyAccountPage,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -25,7 +26,7 @@ const baseContext: string = 'functional_BO_shopParameters_orderSettings_orderSet
 
 /*
 Enable/disable reordering option
-Check reordering option in FO (Go to history page and check reodering link)
+Check reordering option in FO (Go to history page and check reordering link)
  */
 describe('BO - Shop Parameters - Order Settings : Enable/Disable reordering option', async () => {
   let browserContext: BrowserContext;
@@ -33,12 +34,12 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable reordering opti
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -48,15 +49,15 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable reordering opti
   it('should go to \'Shop Parameters > Order Settings\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToOrderSettingsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.shopParametersParentLink,
-      dashboardPage.orderSettingsLink,
+      boDashboardPage.shopParametersParentLink,
+      boDashboardPage.orderSettingsLink,
     );
     await orderSettingsPage.closeSfToolBar(page);
 
     const pageTitle = await orderSettingsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
+    expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
   });
 
   const tests = [
@@ -69,7 +70,7 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable reordering opti
       await testContext.addContextItem(this, 'testIdentifier', `setReorderingOption${index}`, baseContext);
 
       const result = await orderSettingsPage.setReorderOptionStatus(page, test.args.status);
-      await expect(result).to.contains(orderSettingsPage.successfulUpdateMessage);
+      expect(result).to.contains(orderSettingsPage.successfulUpdateMessage);
     });
 
     it('should view my shop', async function () {
@@ -78,29 +79,29 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable reordering opti
       // Click on view my shop
       page = await orderSettingsPage.viewMyShop(page);
       // Change language
-      await homePage.changeLanguage(page, 'en');
+      await foClassicHomePage.changeLanguage(page, 'en');
 
-      const isHomePage = await homePage.isHomePage(page);
-      await expect(isHomePage, 'Home page is not displayed').to.be.true;
+      const isHomePage = await foClassicHomePage.isHomePage(page);
+      expect(isHomePage, 'Home page is not displayed').to.eq(true);
     });
 
     it('should verify the reordering option', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `checkReorderingOption${index}`, baseContext);
 
       // Login FO
-      await homePage.goToLoginPage(page);
-      await foLoginPage.customerLogin(page, Customers.johnDoe);
+      await foClassicHomePage.goToLoginPage(page);
+      await foClassicLoginPage.customerLogin(page, dataCustomers.johnDoe);
 
-      const isCustomerConnected = await foLoginPage.isCustomerConnected(page);
-      await expect(isCustomerConnected).to.be.true;
+      const isCustomerConnected = await foClassicLoginPage.isCustomerConnected(page);
+      expect(isCustomerConnected).to.eq(true);
 
       // Go to order history page
-      await homePage.goToMyAccountPage(page);
-      await myAccountPage.goToHistoryAndDetailsPage(page);
+      await foClassicHomePage.goToMyAccountPage(page);
+      await foClassicMyAccountPage.goToHistoryAndDetailsPage(page);
 
       // Check reorder link
       const isReorderLinkVisible = await orderHistoryPage.isReorderLinkVisible(page);
-      await expect(isReorderLinkVisible).to.be.equal(test.args.reorderOption);
+      expect(isReorderLinkVisible).to.be.equal(test.args.reorderOption);
     });
 
     it('should go back to BO', async function () {
@@ -111,7 +112,7 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable reordering opti
       page = await orderHistoryPage.closePage(browserContext, page, 0);
 
       const pageTitle = await orderSettingsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
+      expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
     });
   });
 });

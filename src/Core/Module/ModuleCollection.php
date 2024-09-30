@@ -33,6 +33,8 @@ use ArrayIterator;
 use Countable;
 use IteratorAggregate;
 use PrestaShopException;
+use ReturnTypeWillChange;
+use Throwable;
 use Traversable;
 
 /**
@@ -42,6 +44,8 @@ class ModuleCollection implements ArrayAccess, Countable, IteratorAggregate
 {
     /** @var ModuleInterface[] */
     private $modules = [];
+
+    private $errors = [];
 
     public function __construct(array $modules = [])
     {
@@ -85,7 +89,7 @@ class ModuleCollection implements ArrayAccess, Countable, IteratorAggregate
      *
      * @return ModuleInterface|null
      */
-    #[\ReturnTypeWillChange]
+    #[ReturnTypeWillChange]
     public function offsetGet($offset)
     {
         return $this->modules[$offset] ?? null;
@@ -111,5 +115,20 @@ class ModuleCollection implements ArrayAccess, Countable, IteratorAggregate
     public function filter(callable $callable): ModuleCollection
     {
         return static::createFrom(array_filter($this->modules, $callable));
+    }
+
+    public function add(ModuleInterface $module): void
+    {
+        $this->modules[] = $module;
+    }
+
+    public function addError(Throwable $error): void
+    {
+        $this->errors[] = $error;
+    }
+
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }

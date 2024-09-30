@@ -151,7 +151,7 @@ class Suppliers extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewSupplierPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.newSupplierLink);
+    await this.clickAndWaitForURL(page, this.newSupplierLink);
   }
 
   /* Column Methods */
@@ -162,7 +162,7 @@ class Suppliers extends BOBasePage {
    * @return {Promise<void>}
    */
   async viewSupplier(page: Page, row: number = 1): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.viewRowLink(row));
+    await this.clickAndWaitForURL(page, this.viewRowLink(row));
   }
 
   /**
@@ -173,10 +173,10 @@ class Suppliers extends BOBasePage {
    */
   async goToEditSupplierPage(page: Page, row: number = 1): Promise<void> {
     await Promise.all([
-      page.click(this.dropdownToggleButton(row)),
+      page.locator(this.dropdownToggleButton(row)).click(),
       this.waitForVisibleSelector(page, `${this.dropdownToggleButton(row)}[aria-expanded='true']`),
     ]);
-    await this.clickAndWaitForNavigation(page, this.editRowLink(row));
+    await this.clickAndWaitForURL(page, this.editRowLink(row));
   }
 
   /**
@@ -187,11 +187,11 @@ class Suppliers extends BOBasePage {
    */
   async deleteSupplier(page: Page, row: number = 1): Promise<string> {
     await Promise.all([
-      page.click(this.dropdownToggleButton(row)),
+      page.locator(this.dropdownToggleButton(row)).click(),
       this.waitForVisibleSelector(page, `${this.dropdownToggleButton(row)}[aria-expanded='true']`),
     ]);
     await Promise.all([
-      page.click(this.deleteRowLink(row)),
+      page.locator(this.deleteRowLink(row)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
     await this.confirmDeleteSuppliers(page);
@@ -226,7 +226,7 @@ class Suppliers extends BOBasePage {
    */
   async setStatus(page: Page, row: number = 1, valueWanted: boolean = true): Promise<boolean> {
     if (await this.getStatus(page, row) !== valueWanted) {
-      await this.clickAndWaitForNavigation(page, this.statusColumn(row));
+      await this.clickAndWaitForLoadState(page, this.statusColumn(row));
       return true;
     }
 
@@ -252,7 +252,8 @@ class Suppliers extends BOBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (await this.elementVisible(page, this.filterResetButton, 2000)) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForLoadState(page, this.filterResetButton);
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
   }
 
@@ -296,7 +297,7 @@ class Suppliers extends BOBasePage {
       // Do nothing
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 
   /**
@@ -319,18 +320,18 @@ class Suppliers extends BOBasePage {
   async bulkSetStatus(page: Page, enable: boolean = true): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
-    await this.clickAndWaitForNavigation(page, enable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton);
+    await page.locator(enable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton).click();
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 
@@ -342,19 +343,19 @@ class Suppliers extends BOBasePage {
   async deleteWithBulkActions(page: Page): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
 
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
 
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.bulkActionsDeleteButton),
+      page.locator(this.bulkActionsDeleteButton).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
     await this.confirmDeleteSuppliers(page);
@@ -367,7 +368,7 @@ class Suppliers extends BOBasePage {
    * @return {Promise<void>}
    */
   async confirmDeleteSuppliers(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton);
+    await this.clickAndWaitForLoadState(page, this.confirmDeleteButton);
   }
 
   // Sort methods
@@ -406,7 +407,7 @@ class Suppliers extends BOBasePage {
 
     let i: number = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -441,7 +442,7 @@ class Suppliers extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -452,7 +453,7 @@ class Suppliers extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }

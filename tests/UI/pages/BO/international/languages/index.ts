@@ -145,7 +145,7 @@ class Languages extends LocalizationBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewLanguage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewLanguageLink);
+    await this.clickAndWaitForURL(page, this.addNewLanguageLink);
   }
 
   /* Reset methods */
@@ -156,7 +156,8 @@ class Languages extends LocalizationBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForLoadState(page, this.filterResetButton);
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
   }
 
@@ -201,7 +202,7 @@ class Languages extends LocalizationBasePage {
       // Do nothing
     }
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 
   /* Table methods */
@@ -241,7 +242,7 @@ class Languages extends LocalizationBasePage {
    * @return {Promise<void>}
    */
   async goToEditLanguage(page: Page, row: number = 1): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.editRowLink(row));
+    await this.clickAndWaitForURL(page, this.editRowLink(row));
   }
 
   /**
@@ -252,7 +253,7 @@ class Languages extends LocalizationBasePage {
    */
   async deleteLanguage(page: Page, row: number = 1): Promise<string> {
     await Promise.all([
-      page.click(this.dropdownToggleButton(row)),
+      page.locator(this.dropdownToggleButton(row)).click(),
       this.waitForVisibleSelector(
         page,
         `${this.dropdownToggleButton(row)}[aria-expanded='true']`,
@@ -261,12 +262,26 @@ class Languages extends LocalizationBasePage {
 
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.deleteRowLink(row)),
+      page.locator(this.deleteRowLink(row)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
     await this.confirmDeleteLanguages(page);
 
     return this.getAlertSuccessBlockParagraphContent(page);
+  }
+
+  /**
+   * Get image source
+   * @param page {Page} Browser tab
+   * @param row {number} Row to get status
+   * @return {Promise<string>}
+   */
+  async getImgSrc(page: Page, row: number): Promise<string> {
+    return this.getAttributeContent(
+      page,
+      `${this.tableColumn(row, 'flag')} img`,
+      'src',
+    );
   }
 
   /**
@@ -296,7 +311,7 @@ class Languages extends LocalizationBasePage {
    */
   async setStatus(page: Page, row: number, valueWanted: boolean = true): Promise<boolean> {
     if (await this.getStatus(page, row) !== valueWanted) {
-      await this.clickAndWaitForNavigation(page, this.statusColumn(row));
+      await page.locator(this.statusColumn(row)).click();
 
       return true;
     }
@@ -314,16 +329,17 @@ class Languages extends LocalizationBasePage {
   async bulkSetStatus(page: Page, toEnable: boolean = true): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
     // Click on delete and wait for modal
-    await this.clickAndWaitForNavigation(page, toEnable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton);
+    await page.locator(toEnable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton).click();
+    await this.elementNotVisible(page, toEnable ? this.bulkActionsEnableButton : this.bulkActionsDisableButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }
@@ -336,17 +352,17 @@ class Languages extends LocalizationBasePage {
   async deleteWithBulkActions(page: Page): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}[aria-expanded='true']`),
     ]);
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.bulkActionsDeleteButton),
+      page.locator(this.bulkActionsDeleteButton).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
     await this.confirmDeleteLanguages(page);
@@ -360,7 +376,8 @@ class Languages extends LocalizationBasePage {
    * @return {Promise<void>}
    */
   async confirmDeleteLanguages(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton);
+    await page.locator(this.confirmDeleteButton).click();
+    await this.elementNotVisible(page, this.confirmDeleteButton, 2000);
   }
 
   /* Sort functions */
@@ -377,7 +394,7 @@ class Languages extends LocalizationBasePage {
 
     let i = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -401,9 +418,11 @@ class Languages extends LocalizationBasePage {
    * @returns {Promise<string>}
    */
   async selectPaginationLimit(page: Page, number: number): Promise<string> {
+    const currentUrl: string = page.url();
+
     await Promise.all([
       this.selectByVisibleText(page, this.paginationLimitSelect, number),
-      page.waitForNavigation({waitUntil: 'networkidle'}),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
     ]);
 
     return this.getPaginationLabel(page);
@@ -416,7 +435,7 @@ class Languages extends LocalizationBasePage {
    */
   async paginationNext(page: Page): Promise<string> {
     await this.scrollTo(page, this.paginationNextLink);
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -428,7 +447,7 @@ class Languages extends LocalizationBasePage {
    */
   async paginationPrevious(page: Page): Promise<string> {
     await this.scrollTo(page, this.paginationPreviousLink);
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }

@@ -78,7 +78,7 @@ class TagRepository
         } catch (PrestaShopException $e) {
             throw new CoreException(
                 sprintf('Error occurred when trying to add tags to product #%d', $productIdValue
-            ));
+                ));
         }
     }
 
@@ -102,7 +102,7 @@ class TagRepository
         } catch (PrestaShopException $e) {
             throw new CoreException(
                 sprintf('Error occurred when trying to delete product #%d tags', $productIdValue
-            ));
+                ));
         }
     }
 
@@ -128,7 +128,7 @@ class TagRepository
         } catch (PrestaShopException $e) {
             throw new CoreException(
                 sprintf('Error occurred when trying to delete product #%d tags', $productIdValue
-            ));
+                ));
         }
     }
 
@@ -148,7 +148,7 @@ class TagRepository
             ->setParameter('productId', $productId->getValue())
         ;
 
-        $result = $qb->execute()->fetchAllAssociative();
+        $result = $qb->executeQuery()->fetchAllAssociative();
         if (empty($result)) {
             return [];
         }

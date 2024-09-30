@@ -214,7 +214,7 @@ abstract class DbCore
         static $id = 0;
 
         // This MUST not be declared with the class members because some defines (like _DB_SERVER_) may not exist yet (the constructor can be called directly with params)
-        if (!self::$_servers) {
+        if (!self::$_servers && defined('_DB_SERVER_') && defined('_DB_USER_') && defined('_DB_PASSWD_') && defined('_DB_NAME_')) {
             self::$_servers = [
                 ['server' => _DB_SERVER_, 'user' => _DB_USER_, 'password' => _DB_PASSWD_, 'database' => _DB_NAME_], /* MySQL Master server */
             ];
@@ -233,6 +233,10 @@ abstract class DbCore
         }
 
         if (!isset(self::$instance[$id_server])) {
+            if (!isset(self::$_servers[$id_server])) {
+                throw new PrestaShopException('Database server configuration not found');
+            }
+
             $class = Db::getClass();
             self::$instance[$id_server] = new $class(
                 self::$_servers[$id_server]['server'],
@@ -278,7 +282,7 @@ abstract class DbCore
 
         // Add here your slave(s) server(s) in this file
         if (file_exists(_PS_ROOT_DIR_ . '/config/db_slave_server.inc.php')) {
-            self::$_servers = array_merge(self::$_servers, require(_PS_ROOT_DIR_ . '/config/db_slave_server.inc.php'));
+            self::$_servers = array_merge(self::$_servers, require (_PS_ROOT_DIR_ . '/config/db_slave_server.inc.php'));
         }
 
         self::$_slave_servers_loaded = true;
@@ -293,7 +297,7 @@ abstract class DbCore
     {
         $class = '';
         /* @phpstan-ignore-next-line */
-        if (PHP_VERSION_ID >= 50200 && extension_loaded('pdo_mysql')) {
+        if (extension_loaded('pdo_mysql')) {
             $class = 'DbPDO';
         } elseif (extension_loaded('mysqli')) {
             $class = 'DbMySQLi';
@@ -603,12 +607,12 @@ abstract class DbCore
         }
 
         // This method must be used only with queries which display results
-        if (!preg_match('#^\s*\(?\s*(select|show|explain|describe|desc|checksum)\s#i', $sql)) {
-            if (defined('_PS_MODE_DEV_') && _PS_MODE_DEV_) {
-                throw new PrestaShopDatabaseException('Db->executeS() must be used only with select, show, explain or describe queries');
-            }
-
-            return $this->execute($sql, $use_cache);
+        if (
+            !preg_match('#^\s*\(?\s*(select|show|explain|describe|desc|checksum)\s#i', $sql)
+            || stripos($sql, 'outfile') !== false
+            || stripos($sql, 'dumpfile') !== false
+        ) {
+            throw new PrestaShopDatabaseException('Db->executeS() must be used only with select, show, explain or describe queries');
         }
 
         $this->result = $this->query($sql);

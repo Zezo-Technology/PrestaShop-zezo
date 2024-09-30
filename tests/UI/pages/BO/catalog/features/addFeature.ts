@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type FeatureData from '@data/faker/feature';
-
 import type {Page} from 'playwright';
+import {
+  type FakerFeature,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add feature page, contains functions that can be used on add feature page
@@ -11,6 +12,8 @@ import type {Page} from 'playwright';
  */
 class AddFeature extends BOBasePage {
   public readonly createPageTitle: string;
+
+  private readonly featureForm: string;
 
   private readonly nameInput: string;
 
@@ -29,25 +32,24 @@ class AddFeature extends BOBasePage {
   constructor() {
     super();
 
-    this.createPageTitle = 'Features > Add New Feature •';
-
-    this.alertSuccessBlockParagraph = '.alert-success';
+    this.createPageTitle = `New feature • ${global.INSTALL.SHOP_NAME}`;
 
     // Form selectors
-    this.nameInput = '#name_1';
-    this.urlInput = 'input[name=\'url_name_1\']';
-    this.metaTitleInput = 'input[name=\'meta_title_1\']';
-    this.indexableToggle = (toggle: string) => `#indexable_${toggle}`;
-    this.saveButton = '#feature_form_submit_btn';
+    this.featureForm = 'form[name="feature"]';
+    this.nameInput = `${this.featureForm} #feature_name_1`;
+    this.urlInput = `${this.featureForm} #feature_url_name_1`;
+    this.metaTitleInput = `${this.featureForm} #feature_meta_title_1`;
+    this.indexableToggle = (toggle: string) => `${this.featureForm} #feature_layered_indexable_${toggle}`;
+    this.saveButton = `${this.featureForm} #save-button`;
   }
 
   /**
    * Fill feature form and save it
    * @param page {Page} Browser tab
-   * @param featureData {FeatureData} Values to set on add feature form inputs
+   * @param featureData {FakerFeature} Values to set on add feature form inputs
    * @return {Promise<string>}
    */
-  async setFeature(page: Page, featureData: FeatureData): Promise<string> {
+  async setFeature(page: Page, featureData: FakerFeature): Promise<string> {
     // Set name
     await this.setValue(page, this.nameInput, featureData.name);
 
@@ -56,10 +58,10 @@ class AddFeature extends BOBasePage {
     await this.setValue(page, this.metaTitleInput, featureData.metaTitle);
 
     // Set indexable toggle
-    await this.setChecked(page, this.indexableToggle(featureData.indexable ? 'on' : 'off'));
+    await this.setChecked(page, this.indexableToggle(featureData.indexable ? '1' : '0'));
 
     // Save feature
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
 
     // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);

@@ -1,6 +1,8 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type ZoneData from '@data/faker/zone';
+import {
+  type FakerZone,
+} from '@prestashop-core/ui-testing';
 
 import type {Page} from 'playwright';
 
@@ -27,8 +29,8 @@ class AddZone extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Add new •';
-    this.pageTitleEdit = 'Edit: ';
+    this.pageTitleCreate = `New zone • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing zone';
 
     // Selectors
     this.nameInput = '#zone_name';
@@ -42,15 +44,15 @@ class AddZone extends BOBasePage {
   /**
    * Fill form for add/edit zone
    * @param page {Page} Browser tab
-   * @param zoneData {ZoneData} Data to set on new/edit zone page
+   * @param zoneData {FakerZone} Data to set on new/edit zone page
    * @returns {Promise<string>}
    */
-  async createEditZone(page: Page, zoneData: ZoneData): Promise<string> {
+  async createEditZone(page: Page, zoneData: FakerZone): Promise<string> {
     await this.setValue(page, this.nameInput, zoneData.name);
     await this.setChecked(page, this.statusToggle(zoneData.status ? 1 : 0));
 
     // Save zone
-    await this.clickAndWaitForNavigation(page, this.saveZoneButton);
+    await this.clickAndWaitForURL(page, this.saveZoneButton);
 
     // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);

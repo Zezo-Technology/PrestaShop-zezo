@@ -1,19 +1,19 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import pagesPage from '@pages/BO/design/pages';
-
-// Import data
-import CMSPages from '@data/demo/CMSpage';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  dataCMSPages,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_design_pages_pages_filterAndQuickEditPages';
 
@@ -30,12 +30,12 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -45,22 +45,22 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
   it('should go to \'Design > Pages\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToCmsPagesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.designParentLink,
-      dashboardPage.pagesLink,
+      boDashboardPage.designParentLink,
+      boDashboardPage.pagesLink,
     );
     await pagesPage.closeSfToolBar(page);
 
     const pageTitle = await pagesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(pagesPage.pageTitle);
+    expect(pageTitle).to.contains(pagesPage.pageTitle);
   });
 
   it('should reset all filters and get number of pages in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFiltersFirst', baseContext);
 
     numberOfPages = await pagesPage.resetAndGetNumberOfLines(page, pagesTableName);
-    await expect(numberOfPages).to.be.above(0);
+    expect(numberOfPages).to.be.above(0);
   });
 
   // 1 : Filter pages with all inputs and selects in grid table
@@ -72,7 +72,7 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
             testIdentifier: 'filterById',
             filterType: 'input',
             filterBy: 'id_cms',
-            filterValue: CMSPages.delivery.id.toString(),
+            filterValue: dataCMSPages.delivery.id.toString(),
           },
       },
       {
@@ -81,7 +81,7 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
             testIdentifier: 'filterByLink',
             filterType: 'input',
             filterBy: 'link_rewrite',
-            filterValue: CMSPages.aboutUs.url,
+            filterValue: dataCMSPages.aboutUs.url,
           },
       },
       {
@@ -90,16 +90,7 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
             testIdentifier: 'filterByMetaTitle',
             filterType: 'input',
             filterBy: 'meta_title',
-            filterValue: CMSPages.termsAndCondition.title,
-          },
-      },
-      {
-        args:
-          {
-            testIdentifier: 'filterByPosition',
-            filterType: 'input',
-            filterBy: 'position',
-            filterValue: CMSPages.securePayment.position.toString(),
+            filterValue: dataCMSPages.termsAndCondition.title,
           },
       },
       {
@@ -108,7 +99,7 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
             testIdentifier: 'filterByActive',
             filterType: 'select',
             filterBy: 'active',
-            filterValue: CMSPages.securePayment.displayed ? '1' : '0',
+            filterValue: dataCMSPages.securePayment.displayed ? '1' : '0',
           },
       },
     ];
@@ -126,15 +117,15 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
         );
 
         const numberOfPagesAfterFilter = await pagesPage.getNumberOfElementInGrid(page, pagesTableName);
-        await expect(numberOfPagesAfterFilter).to.be.at.most(numberOfPages);
+        expect(numberOfPagesAfterFilter).to.be.at.most(numberOfPages);
 
         for (let i = 1; i <= numberOfPagesAfterFilter; i++) {
           if (test.args.filterBy === 'active') {
             const pagesStatus = await pagesPage.getStatus(page, pagesTableName, i);
-            await expect(pagesStatus).to.equal(test.args.filterValue === '1');
+            expect(pagesStatus).to.equal(test.args.filterValue === '1');
           } else {
             const textColumn = await pagesPage.getTextColumnFromTableCmsPage(page, i, test.args.filterBy);
-            await expect(textColumn).to.contains(test.args.filterValue);
+            expect(textColumn).to.contains(test.args.filterValue);
           }
         }
       });
@@ -143,7 +134,7 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
         await testContext.addContextItem(this, 'testIdentifier', `reset_${test.args.testIdentifier}`, baseContext);
 
         const numberOfPagesAfterReset = await pagesPage.resetAndGetNumberOfLines(page, pagesTableName);
-        await expect(numberOfPagesAfterReset).to.be.equal(numberOfPages);
+        expect(numberOfPagesAfterReset).to.be.equal(numberOfPages);
       });
     });
   });
@@ -158,19 +149,19 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
         pagesTableName,
         'input',
         'meta_title',
-        CMSPages.termsAndCondition.title,
+        dataCMSPages.termsAndCondition.title,
       );
 
       const numberOfPagesAfterFilter = await pagesPage.getNumberOfElementInGrid(page, pagesTableName);
 
       if (numberOfPages === 0) {
-        await expect(numberOfPagesAfterFilter).to.be.equal(numberOfPages + 1);
+        expect(numberOfPagesAfterFilter).to.be.equal(numberOfPages + 1);
       } else {
-        await expect(numberOfPagesAfterFilter).to.be.at.most(numberOfPages);
+        expect(numberOfPagesAfterFilter).to.be.at.most(numberOfPages);
       }
 
       const textColumn = await pagesPage.getTextColumnFromTableCmsPage(page, 1, 'meta_title');
-      await expect(textColumn).to.contains(CMSPages.termsAndCondition.title);
+      expect(textColumn).to.contains(dataCMSPages.termsAndCondition.title);
     });
 
     [
@@ -184,11 +175,11 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
 
         if (isActionPerformed) {
           const resultMessage = await pagesPage.getAlertSuccessBlockParagraphContent(page);
-          await expect(resultMessage).to.contains(pagesPage.successfulUpdateStatusMessage);
+          expect(resultMessage).to.contains(pagesPage.successfulUpdateStatusMessage);
         }
 
         const currentStatus = await pagesPage.getStatus(page, pagesTableName, 1);
-        await expect(currentStatus).to.be.equal(pageStatus.args.enable);
+        expect(currentStatus).to.be.equal(pageStatus.args.enable);
       });
     });
 
@@ -196,7 +187,7 @@ describe('BO - Design - Pages : Filter and quick edit pages table', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'quickEditReset', baseContext);
 
       const numberOfPagesAfterReset = await pagesPage.resetAndGetNumberOfLines(page, pagesTableName);
-      await expect(numberOfPagesAfterReset).to.be.equal(numberOfPages);
+      expect(numberOfPagesAfterReset).to.be.equal(numberOfPages);
     });
   });
 });

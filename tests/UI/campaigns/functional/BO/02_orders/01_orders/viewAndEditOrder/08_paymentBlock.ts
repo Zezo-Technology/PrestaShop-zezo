@@ -1,28 +1,30 @@
 // Import utils
-import date from '@utils/date';
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import common tests
 import {createCurrencyTest, deleteCurrencyTest} from '@commonTests/BO/international/currency';
 import loginCommon from '@commonTests/BO/loginBO';
-import {createOrderByCustomerTest} from '@commonTests/FO/order';
+import {createOrderByCustomerTest} from '@commonTests/FO/classic/order';
 
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
-import ordersPage from '@pages/BO/orders';
 import orderPageMessagesBlock from '@pages/BO/orders/view/paymentBlock';
-import orderPageProductsBlock from '@pages/BO/orders/view/productsBlock';
-import orderPageTabListBlock from '@pages/BO/orders/view/tabListBlock';
 
-// Import data
-import Currencies from '@data/demo/currencies';
-import Customers from '@data/demo/customers';
-import OrderStatuses from '@data/demo/orderStatuses';
-import PaymentMethods from '@data/demo/paymentMethods';
-import Products from '@data/demo/products';
-import OrderData from '@data/faker/order';
+import {
+  boDashboardPage,
+  boOrdersPage,
+  boOrdersViewBlockProductsPage,
+  boOrdersViewBlockTabListPage,
+  dataCurrencies,
+  dataCustomers,
+  dataOrderStatuses,
+  dataPaymentMethods,
+  dataProducts,
+  FakerOrder,
+  type OrderPayment,
+  utilsDate,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -50,53 +52,53 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
   let filePath: string|null;
   let invoiceID: number = 0;
 
-  const today: string = date.getDateFormat('yyyy-mm-dd');
-  const todayToCheck: string = date.getDateFormat('mm/dd/yyyy');
+  const today: string = utilsDate.getDateFormat('yyyy-mm-dd');
+  const todayToCheck: string = utilsDate.getDateFormat('mm/dd/yyyy');
   const totalOrder: number = 22.94;
   // New order by customer data
-  const orderByCustomerData: OrderData = new OrderData({
-    customer: Customers.johnDoe,
+  const orderByCustomerData: FakerOrder = new FakerOrder({
+    customer: dataCustomers.johnDoe,
     products: [
       {
-        product: Products.demo_1,
+        product: dataProducts.demo_1,
         quantity: 1,
       },
     ],
-    paymentMethod: PaymentMethods.wirePayment,
+    paymentMethod: dataPaymentMethods.wirePayment,
   });
-  const paymentDataAmountInfTotal = {
+  const paymentDataAmountInfTotal: OrderPayment = {
     date: today,
     paymentMethod: 'Payment by check',
-    transactionID: '12156',
+    transactionID: 12156,
     amount: 12.25,
     currency: '€',
   };
-  const paymentDataAmountEqualTotal = {
+  const paymentDataAmountEqualTotal: OrderPayment = {
     date: today,
     paymentMethod: 'Bank transfer',
-    transactionID: '12190',
-    amount: (totalOrder - paymentDataAmountInfTotal.amount).toFixed(2),
+    transactionID: 12190,
+    amount: parseFloat((totalOrder - paymentDataAmountInfTotal.amount).toFixed(2)),
     currency: '€',
   };
-  const paymentDataAmountSupTotal = {
+  const paymentDataAmountSupTotal: OrderPayment = {
     date: today,
     paymentMethod: 'Bank transfer',
-    transactionID: '12639',
+    transactionID: 12639,
     amount: 30.56,
     currency: '€',
   };
-  const paymentDataWithNewCurrency = {
+  const paymentDataWithNewCurrency: OrderPayment = {
     date: today,
     paymentMethod: 'Bank transfer',
-    transactionID: '12640',
+    transactionID: 12640,
     amount: 5.25,
-    currency: Currencies.mad.isoCode,
+    currency: dataCurrencies.mad.isoCode,
   };
-  const paymentDataAmountEqualRest = {
+  const paymentDataAmountEqualRest: OrderPayment = {
     date: today,
     paymentMethod: 'Bank transfer',
-    transactionID: '12190',
-    amount: Products.demo_5.price,
+    transactionID: 12190,
+    amount: dataProducts.demo_5.price,
     currency: '€',
   };
 
@@ -107,17 +109,17 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
   createOrderByCustomerTest(orderByCustomerData, `${baseContext}_preTest_2`);
 
   // Pre-condition: Create currency
-  createCurrencyTest(Currencies.mad, `${baseContext}_preTest_3`);
+  createCurrencyTest(dataCurrencies.mad, `${baseContext}_preTest_3`);
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await files.deleteFile(filePath);
-    await helper.closeBrowserContext(browserContext);
+    await utilsFile.deleteFile(filePath);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   // 1 - Go to view order page
@@ -129,40 +131,40 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
     it('should go to \'Orders > Orders\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToOrdersPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.ordersParentLink,
-        dashboardPage.ordersLink,
+        boDashboardPage.ordersParentLink,
+        boDashboardPage.ordersLink,
       );
-      await ordersPage.closeSfToolBar(page);
+      await boOrdersPage.closeSfToolBar(page);
 
-      const pageTitle = await ordersPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(ordersPage.pageTitle);
+      const pageTitle = await boOrdersPage.getPageTitle(page);
+      expect(pageTitle).to.contains(boOrdersPage.pageTitle);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetOrderTableFilters1', baseContext);
 
-      const numberOfOrders = await ordersPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfOrders, 'Number of orders is not correct!').to.be.above(0);
+      const numberOfOrders = await boOrdersPage.resetAndGetNumberOfLines(page);
+      expect(numberOfOrders, 'Number of orders is not correct!').to.be.above(0);
     });
 
-    it(`should filter the Orders table by 'Customer: ${Customers.johnDoe.lastName}'`, async function () {
+    it(`should filter the Orders table by 'Customer: ${dataCustomers.johnDoe.lastName}'`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterByCustomer1', baseContext);
 
-      await ordersPage.filterOrders(page, 'input', 'customer', Customers.johnDoe.lastName);
+      await boOrdersPage.filterOrders(page, 'input', 'customer', dataCustomers.johnDoe.lastName);
 
-      const textColumn = await ordersPage.getTextColumn(page, 'customer', 1);
-      await expect(textColumn, 'Lastname is not correct').to.contains(Customers.johnDoe.lastName);
+      const textColumn = await boOrdersPage.getTextColumn(page, 'customer', 1);
+      expect(textColumn, 'Lastname is not correct').to.contains(dataCustomers.johnDoe.lastName);
     });
 
     it('should view the order', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'orderPageMessagesBlock1', baseContext);
 
-      await ordersPage.goToOrder(page, 1);
+      await boOrdersPage.goToOrder(page, 1);
 
       const pageTitle = await orderPageMessagesBlock.getPageTitle(page);
-      await expect(pageTitle, 'Error when view order page!').to.contains(orderPageMessagesBlock.pageTitle);
+      expect(pageTitle, 'Error when view order page!').to.contains(orderPageMessagesBlock.pageTitle);
     });
   });
 
@@ -172,7 +174,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'checkPayments1', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(0);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(0);
     });
 
     it('should add payment when amount is inferior to the total', async function () {
@@ -195,7 +197,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments2', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(1);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(1);
     });
 
     it('should check the payment details', async function () {
@@ -205,7 +207,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await Promise.all([
         expect(result.date).to.contain(todayToCheck),
         expect(result.paymentMethod).to.equal(paymentDataAmountInfTotal.paymentMethod),
-        expect(result.transactionID).to.equal(paymentDataAmountInfTotal.transactionID),
+        expect(result.transactionID).to.equal(paymentDataAmountInfTotal.transactionID.toString()),
         expect(result.amount).to.equal(`€${paymentDataAmountInfTotal.amount}`),
         expect(result.invoice).to.equal(''),
       ]);
@@ -226,7 +228,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments3', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(2);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(2);
     });
 
     it('should check the payment details', async function () {
@@ -236,7 +238,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await Promise.all([
         expect(result.date).to.contain(todayToCheck),
         expect(result.paymentMethod).to.equal(paymentDataAmountEqualTotal.paymentMethod),
-        expect(result.transactionID).to.equal(paymentDataAmountEqualTotal.transactionID),
+        expect(result.transactionID).to.equal(paymentDataAmountEqualTotal.transactionID.toString()),
         expect(result.amount).to.equal(`€${paymentDataAmountEqualTotal.amount}`),
         expect(result.invoice).to.equal(''),
       ]);
@@ -266,7 +268,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments4', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(3);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(3);
     });
 
     it('should check the payment details', async function () {
@@ -276,7 +278,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await Promise.all([
         expect(result.date).to.contain(todayToCheck),
         expect(result.paymentMethod).to.equal(paymentDataAmountSupTotal.paymentMethod),
-        expect(result.transactionID).to.equal(paymentDataAmountSupTotal.transactionID),
+        expect(result.transactionID).to.equal(paymentDataAmountSupTotal.transactionID.toString()),
         expect(result.amount).to.equal(`€${paymentDataAmountSupTotal.amount}`),
         expect(result.invoice).to.equal(''),
       ]);
@@ -289,7 +291,7 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'displayPaymentDetail', baseContext);
 
       const result = await orderPageMessagesBlock.displayPaymentDetail(page);
-      await expect(result)
+      expect(result)
         .to.contain('Card number Not defined')
         .and.to.contain('Card type Not defined')
         .and.to.contain('Expiration date Not defined')
@@ -302,48 +304,48 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
     it('should go to \'Orders > Orders\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToOrdersPage2', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.ordersParentLink,
-        dashboardPage.ordersLink,
+        boDashboardPage.ordersParentLink,
+        boDashboardPage.ordersLink,
       );
-      await ordersPage.closeSfToolBar(page);
+      await boOrdersPage.closeSfToolBar(page);
 
-      const pageTitle = await ordersPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(ordersPage.pageTitle);
+      const pageTitle = await boOrdersPage.getPageTitle(page);
+      expect(pageTitle).to.contains(boOrdersPage.pageTitle);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetOrderTableFilters2', baseContext);
 
-      const numberOfOrders = await ordersPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfOrders).to.be.above(0);
+      const numberOfOrders = await boOrdersPage.resetAndGetNumberOfLines(page);
+      expect(numberOfOrders).to.be.above(0);
     });
 
-    it(`should filter the Orders table by 'Customer: ${Customers.johnDoe.lastName}'`, async function () {
+    it(`should filter the Orders table by 'Customer: ${dataCustomers.johnDoe.lastName}'`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterByCustomer2', baseContext);
 
-      await ordersPage.filterOrders(page, 'input', 'customer', Customers.johnDoe.lastName);
+      await boOrdersPage.filterOrders(page, 'input', 'customer', dataCustomers.johnDoe.lastName);
 
-      const textColumn = await ordersPage.getTextColumn(page, 'customer', 1);
-      await expect(textColumn).to.contains(Customers.johnDoe.lastName);
+      const textColumn = await boOrdersPage.getTextColumn(page, 'customer', 1);
+      expect(textColumn).to.contains(dataCustomers.johnDoe.lastName);
     });
 
     it('should view the order', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'orderPageMessagesBlock2', baseContext);
 
-      await ordersPage.goToOrder(page, 1);
+      await boOrdersPage.goToOrder(page, 1);
 
       const pageTitle = await orderPageMessagesBlock.getPageTitle(page);
-      await expect(pageTitle, 'Error when view order page!').to.contains(orderPageMessagesBlock.pageTitle);
+      expect(pageTitle, 'Error when view order page!').to.contains(orderPageMessagesBlock.pageTitle);
     });
 
     it('should check that the new currency is visible on select options', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkSelectOption', baseContext);
 
       const listOfCurrencies = await orderPageMessagesBlock.getCurrencySelectOptions(page);
-      await expect(listOfCurrencies).to.contain('€')
-        .and.to.contain(Currencies.mad.isoCode);
+      expect(listOfCurrencies).to.contain('€')
+        .and.to.contain(dataCurrencies.mad.isoCode);
     });
 
     it('should add payment with new currency', async function () {
@@ -360,60 +362,60 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
     it('should go to \'Orders > Orders\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToOrdersPage1', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.ordersParentLink,
-        dashboardPage.ordersLink,
+        boDashboardPage.ordersParentLink,
+        boDashboardPage.ordersLink,
       );
 
-      const pageTitle = await ordersPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(ordersPage.pageTitle);
+      const pageTitle = await boOrdersPage.getPageTitle(page);
+      expect(pageTitle).to.contains(boOrdersPage.pageTitle);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetOrderTableFilters3', baseContext);
 
-      const numberOfOrders = await ordersPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfOrders).to.be.above(0);
+      const numberOfOrders = await boOrdersPage.resetAndGetNumberOfLines(page);
+      expect(numberOfOrders).to.be.above(0);
     });
 
-    it(`should filter the Orders table by 'Customer: ${Customers.johnDoe.lastName}'`, async function () {
+    it(`should filter the Orders table by 'Customer: ${dataCustomers.johnDoe.lastName}'`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterByCustomer3', baseContext);
 
-      await ordersPage.filterOrders(page, 'input', 'customer', Customers.johnDoe.lastName);
+      await boOrdersPage.filterOrders(page, 'input', 'customer', dataCustomers.johnDoe.lastName);
 
-      const textColumn = await ordersPage.getTextColumn(page, 'customer', 2);
-      await expect(textColumn).to.contains(Customers.johnDoe.lastName);
+      const textColumn = await boOrdersPage.getTextColumn(page, 'customer', 2);
+      expect(textColumn).to.contains(dataCustomers.johnDoe.lastName);
     });
 
     it('should view the order', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'orderPageMessagesBlock3', baseContext);
 
-      await ordersPage.goToOrder(page, 2);
+      await boOrdersPage.goToOrder(page, 2);
 
       const pageTitle = await orderPageMessagesBlock.getPageTitle(page);
-      await expect(pageTitle, 'Error when view order page!').to.contains(orderPageMessagesBlock.pageTitle);
+      expect(pageTitle, 'Error when view order page!').to.contains(orderPageMessagesBlock.pageTitle);
     });
 
     it('should check that the payments number is equal to 0', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments5', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(0);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(0);
     });
 
-    it(`should change the order status to '${OrderStatuses.paymentAccepted.name}'`, async function () {
+    it(`should change the order status to '${dataOrderStatuses.paymentAccepted.name}'`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'updateOrderStatusPaymentAccepted', baseContext);
 
-      const textResult = await orderPageMessagesBlock.modifyOrderStatus(page, OrderStatuses.paymentAccepted.name);
-      await expect(textResult).to.equal(OrderStatuses.paymentAccepted.name);
+      const textResult = await orderPageMessagesBlock.modifyOrderStatus(page, dataOrderStatuses.paymentAccepted.name);
+      expect(textResult).to.equal(dataOrderStatuses.paymentAccepted.name);
     });
 
     it('should check that the payments number is equal to 1', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments6', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(1);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(1);
     });
 
     it('should check the payment details and get the invoice number', async function () {
@@ -431,14 +433,14 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       invoiceID = await orderPageMessagesBlock.getInvoiceID(page);
     });
 
-    it(`should add the product '${Products.demo_5.name}' to the cart`, async function () {
+    it(`should add the product '${dataProducts.demo_5.name}' to the cart`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'searchCustomizedProduct', baseContext);
 
-      await orderPageProductsBlock.searchProduct(page, Products.demo_5.name);
-      await orderPageProductsBlock.selectInvoice(page);
+      await boOrdersViewBlockProductsPage.searchProduct(page, dataProducts.demo_5.name);
+      await boOrdersViewBlockProductsPage.selectInvoice(page);
 
-      const textResult = await orderPageProductsBlock.addProductToCart(page, 1, true);
-      await expect(textResult).to.contains(orderPageProductsBlock.successfulAddProductMessage);
+      const textResult = await boOrdersViewBlockProductsPage.addProductToCart(page, 1, true);
+      expect(textResult).to.contains(boOrdersViewBlockProductsPage.successfulAddProductMessage);
     });
 
     it('should check that products number is equal to 2', async function () {
@@ -446,22 +448,22 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
 
       await orderPageMessagesBlock.reloadPage(page);
 
-      const productCount = await orderPageProductsBlock.getProductsNumber(page);
-      await expect(productCount).to.equal(2);
+      const productCount = await boOrdersViewBlockProductsPage.getProductsNumber(page);
+      expect(productCount).to.equal(2);
     });
 
     it('should check that invoices number is equal to 2', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkDocumentsNumber', baseContext);
 
-      const documentsNumber = await orderPageTabListBlock.getDocumentsNumber(page);
-      await expect(documentsNumber).to.be.equal(2);
+      const documentsNumber = await boOrdersViewBlockTabListPage.getDocumentsNumber(page);
+      expect(documentsNumber).to.be.equal(2);
     });
 
     it('should check that payments number is equal to 1', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments7', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(1);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(1);
     });
 
     it('should check the warning message', async function () {
@@ -486,27 +488,27 @@ describe('BO - Orders - View and edit order : Check payment Block', async () => 
       await testContext.addContextItem(this, 'testIdentifier', 'checkpayments8', baseContext);
 
       const paymentsNumber = await orderPageMessagesBlock.getPaymentsNumber(page);
-      await expect(paymentsNumber, 'Payments number is not correct! ').to.equal(2);
+      expect(paymentsNumber, 'Payments number is not correct! ').to.equal(2);
     });
 
     it('should download the invoice and check payment method and amount', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'downloadInvoiceAndCheckPayment', baseContext);
 
       // Download invoice
-      filePath = await orderPageTabListBlock.downloadInvoice(page, 3);
-      await expect(filePath).to.be.not.null;
+      filePath = await boOrdersViewBlockTabListPage.downloadInvoice(page, 3);
+      expect(filePath).to.not.eq(null);
 
-      const exist = await files.doesFileExist(filePath);
-      await expect(exist, 'File doesn\'t exist!').to.be.true;
+      const exist = await utilsFile.doesFileExist(filePath);
+      expect(exist, 'File doesn\'t exist!').to.eq(true);
 
-      const paymentMethodExist = await files.isTextInPDF(filePath, paymentDataAmountEqualRest.paymentMethod);
-      await expect(paymentMethodExist, 'Payment method does not exist in invoice!').to.be.true;
+      const paymentMethodExist = await utilsFile.isTextInPDF(filePath, paymentDataAmountEqualRest.paymentMethod);
+      expect(paymentMethodExist, 'Payment method does not exist in invoice!').to.eq(true);
 
-      const amountExist = await files.isTextInPDF(filePath, paymentDataAmountEqualRest.amount);
-      await expect(amountExist, 'Payment amount does not exist in invoice!').to.be.true;
+      const amountExist = await utilsFile.isTextInPDF(filePath, paymentDataAmountEqualRest.amount.toString());
+      expect(amountExist, 'Payment amount does not exist in invoice!').to.eq(true);
     });
   });
 
   // Post-condition - Delete currency
-  deleteCurrencyTest(Currencies.mad, `${baseContext}_postTest_1`);
+  deleteCurrencyTest(dataCurrencies.mad, `${baseContext}_postTest_1`);
 });

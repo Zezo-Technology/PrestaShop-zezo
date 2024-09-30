@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type CMSCategoryData from '@data/faker/CMScategory';
-
 import type {Page} from 'playwright';
+import {
+  type FakerCMSCategory,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add page category page, contains functions that can be used on the page
@@ -11,6 +12,8 @@ import type {Page} from 'playwright';
  */
 class AddPageCategory extends BOBasePage {
   public readonly pageTitleCreate: string;
+
+  public readonly pageTitleEdit: string;
 
   private readonly nameInput: string;
 
@@ -33,7 +36,8 @@ class AddPageCategory extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Pages';
+    this.pageTitleCreate = `New category • ${global.INSTALL.SHOP_NAME}`;
+    this.pageTitleEdit = 'Editing category';
 
     // Selectors
     this.nameInput = '#cms_page_category_name_1';
@@ -52,17 +56,17 @@ class AddPageCategory extends BOBasePage {
   /**
    * Fill form for add/edit page category
    * @param page {Page} Browser tab
-   * @param pageCategoryData {CMSCategoryData} Data to set on page category form
+   * @param pageCategoryData {FakerCMSCategory} Data to set on page category form
    * @returns {Promise<string>}
    */
-  async createEditPageCategory(page: Page, pageCategoryData: CMSCategoryData): Promise<string> {
+  async createEditPageCategory(page: Page, pageCategoryData: FakerCMSCategory): Promise<string> {
     await this.setValue(page, this.nameInput, pageCategoryData.name);
     await this.setChecked(page, this.displayedToggleInput(pageCategoryData.displayed ? 1 : 0));
     await this.setValue(page, this.descriptionIframe, pageCategoryData.description);
     await this.setValue(page, this.metaTitleInput, pageCategoryData.metaTitle);
     await this.setValue(page, this.metaDescriptionInput, pageCategoryData.metaDescription);
     await this.setValue(page, this.metaKeywordsInput, pageCategoryData.metaKeywords);
-    await this.clickAndWaitForNavigation(page, this.saveCategoryButton);
+    await this.clickAndWaitForURL(page, this.saveCategoryButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
   }

@@ -67,8 +67,7 @@ class ProductSaleCore
      * @param int $pageNumber Start from (optional)
      * @param int $nbProducts Number of products to return (optional)
      *
-     * @return array|bool from Product::getProductProperties
-     *                    `false` if failure
+     * @return array|bool
      */
     public static function getBestSales($idLang, $pageNumber = 0, $nbProducts = 10, $orderBy = null, $orderWay = null)
     {
@@ -158,7 +157,7 @@ class ProductSaleCore
             return false;
         }
 
-        return Product::getProductsProperties($idLang, $result);
+        return $result;
     }
 
     /**
@@ -170,7 +169,7 @@ class ProductSaleCore
      *
      * @return bool|array keys : id_product, link_rewrite, name, id_image, legend, sales, ean13, upc, link
      */
-    public static function getBestSalesLight($idLang, $pageNumber = 0, $nbProducts = 10, Context $context = null)
+    public static function getBestSalesLight($idLang, $pageNumber = 0, $nbProducts = 10, ?Context $context = null)
     {
         if (!$context) {
             $context = Context::getContext();
@@ -227,7 +226,7 @@ class ProductSaleCore
             return false;
         }
 
-        return Product::getProductsProperties($idLang, $result);
+        return $result;
     }
 
     /**

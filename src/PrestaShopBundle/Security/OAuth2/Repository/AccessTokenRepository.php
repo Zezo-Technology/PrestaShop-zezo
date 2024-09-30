@@ -33,8 +33,10 @@ use League\OAuth2\Server\Entities\ClientEntityInterface;
 use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
 use PrestaShopBundle\Security\OAuth2\Entity\AccessToken;
 
-/*
+/**
  * Repository class responsible for managing PrestaShop's Authorization Server AccessToken entity
+ *
+ * @experimental
  */
 class AccessTokenRepository implements AccessTokenRepositoryInterface
 {
@@ -46,6 +48,9 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface
         $token = new AccessToken();
         $token->setClient($clientEntity);
         $token->setUserIdentifier($userIdentifier);
+        foreach ($scopes as $scope) {
+            $token->addScope($scope);
+        }
 
         return $token;
     }

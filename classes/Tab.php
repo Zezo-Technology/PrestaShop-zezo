@@ -64,11 +64,6 @@ class TabCore extends ObjectModel
     public $wording_domain;
 
     /**
-     * @deprecated Since 1.7.7
-     */
-    public const TAB_MODULE_LIST_URL = '';
-
-    /**
      * @see ObjectModel::$definition
      */
     public static $definition = [
@@ -87,7 +82,7 @@ class TabCore extends ObjectModel
             'wording' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'allow_null' => true, 'size' => 255],
             'wording_domain' => ['type' => self::TYPE_STRING, 'validate' => 'isString', 'allow_null' => true, 'size' => 255],
             /* Lang fields */
-            'name' => ['type' => self::TYPE_STRING, 'lang' => true, 'required' => true, 'validate' => 'isTabName', 'size' => 64],
+            'name' => ['type' => self::TYPE_STRING, 'lang' => true, 'required' => true, 'validate' => 'isTabName', 'size' => 128],
         ],
     ];
 
@@ -113,7 +108,7 @@ class TabCore extends ObjectModel
 
         // Add tab
         if (parent::add($autoDate, $nullValues)) {
-            //forces cache to be reloaded
+            // forces cache to be reloaded
             self::$_getIdFromClassName = null;
 
             return Tab::initAccess($this->id);
@@ -144,7 +139,7 @@ class TabCore extends ObjectModel
      *
      * @return bool true if succeed
      */
-    public static function initAccess($idTab, Context $context = null)
+    public static function initAccess($idTab, ?Context $context = null)
     {
         if (!$context) {
             $context = Context::getContext();
@@ -353,7 +348,7 @@ class TabCore extends ObjectModel
      */
     public static function getIdFromClassName($className)
     {
-        $className = self::getClassName($className);
+        $className = strtolower($className);
         if (empty(self::$_getIdFromClassName)) {
             self::$_getIdFromClassName = [];
             $result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT id_tab, class_name FROM `' . _DB_PREFIX_ . 'tab`', true, false);
@@ -366,29 +361,6 @@ class TabCore extends ObjectModel
         }
 
         return isset(self::$_getIdFromClassName[$className]) ? (int) self::$_getIdFromClassName[$className] : false;
-    }
-
-    /**
-     * @deprecated 1.7.0, to be removed in 1.7.1. Upgrade module to 1.7.
-     */
-    private static function getClassName($className)
-    {
-        $legacyClassNames = [
-            'AdminTools',
-            'AdminPriceRule',
-            'AdminAdmin',
-            'AdminParentStats',
-            'AdminMarketing',
-            'AdminCarrierWizard',
-            'AdminTabs',
-        ];
-
-        if (in_array($className, $legacyClassNames)) {
-            @trigger_error($className . ' is a deprecated tab since version 1.7.0 and "Default" will be removed in 1.7.1.. Upgrade module using the docs: http://build.prestashop.com/news/how-we-reorganized-main-menu-prestashop-1.7/.', E_USER_DEPRECATED);
-            $className = 'DEFAULT';
-        }
-
-        return strtolower($className);
     }
 
     /**
@@ -697,43 +669,5 @@ class TabCore extends ObjectModel
     public static function getClassNameById($idTab)
     {
         return Db::getInstance()->getValue('SELECT class_name FROM ' . _DB_PREFIX_ . 'tab WHERE id_tab = ' . (int) $idTab);
-    }
-
-    public static function getTabModulesList($idTab)
-    {
-        $modulesList = ['default_list' => [], 'slider_list' => []];
-
-        if (!Tools::isFileFresh(Module::CACHE_FILE_TAB_MODULES_LIST, Tools::CACHE_LIFETIME_SECONDS)) {
-            Tools::refreshFile(Module::CACHE_FILE_TAB_MODULES_LIST, _PS_TAB_MODULE_LIST_URL_);
-        }
-
-        $xmlTabModulesList = @simplexml_load_file(_PS_ROOT_DIR_ . Module::CACHE_FILE_TAB_MODULES_LIST);
-
-        $className = null;
-        $displayType = 'default_list';
-        if ($xmlTabModulesList) {
-            foreach ($xmlTabModulesList->tab as $tab) {
-                foreach ($tab->attributes() as $key => $value) {
-                    if ($key == 'class_name') {
-                        $className = (string) $value;
-                    }
-                }
-
-                if (Tab::getIdFromClassName((string) $className) == $idTab) {
-                    foreach ($tab->attributes() as $key => $value) {
-                        if ($key == 'display_type') {
-                            $displayType = (string) $value;
-                        }
-                    }
-
-                    foreach ($tab->children() as $module) {
-                        $modulesList[$displayType][(int) $module['position']] = (string) $module['name'];
-                    }
-                    ksort($modulesList[$displayType]);
-                }
-            }
-        }
-
-        return $modulesList;
     }
 }

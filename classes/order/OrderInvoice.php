@@ -60,6 +60,9 @@ class OrderInvoiceCore extends ObjectModel
     public $total_products_wt;
 
     /** @var float */
+    public $total_shipping;
+
+    /** @var float */
     public $total_shipping_tax_excl;
 
     /** @var float */
@@ -89,6 +92,9 @@ class OrderInvoiceCore extends ObjectModel
     /** @var Order|null */
     private $order;
 
+    /** @var bool|null */
+    public $is_delivery;
+
     /**
      * @see ObjectModel::$definition
      */
@@ -111,8 +117,8 @@ class OrderInvoiceCore extends ObjectModel
             'shipping_tax_computation_method' => ['type' => self::TYPE_INT],
             'total_wrapping_tax_excl' => ['type' => self::TYPE_FLOAT],
             'total_wrapping_tax_incl' => ['type' => self::TYPE_FLOAT],
-            'shop_address' => ['type' => self::TYPE_HTML, 'validate' => 'isCleanHtml', 'size' => 1000],
-            'note' => ['type' => self::TYPE_HTML],
+            'shop_address' => ['type' => self::TYPE_HTML, 'validate' => 'isCleanHtml', 'size' => 4194303],
+            'note' => ['type' => self::TYPE_HTML, 'size' => 4194303],
             'date_add' => ['type' => self::TYPE_DATE, 'validate' => 'isDate'],
         ],
     ];
@@ -264,13 +270,8 @@ class OrderInvoiceCore extends ObjectModel
      */
     protected function setProductCurrentStock(&$product)
     {
-        if (Configuration::get('PS_ADVANCED_STOCK_MANAGEMENT')
-            && (int) $product['advanced_stock_management'] == 1
-            && (int) $product['id_warehouse'] > 0) {
-            $product['current_stock'] = StockManagerFactory::getManager()->getProductPhysicalQuantities($product['product_id'], $product['product_attribute_id'], null, true);
-        } else {
-            $product['current_stock'] = '--';
-        }
+        $product['current_stock'] = StockAvailable::getQuantityAvailableByProduct((int) $product['product_id'], (int) $product['product_attribute_id'], (int) $product['id_shop']);
+        $product['location'] = StockAvailable::getLocation((int) $product['product_id'], (int) $product['product_attribute_id'], (int) $product['id_shop']);
     }
 
     /**
@@ -324,7 +325,7 @@ class OrderInvoiceCore extends ObjectModel
     		AND od.`tax_computation_method` = ' . (int) TaxCalculator::ONE_AFTER_ANOTHER_METHOD)
             || Configuration::get(
                 'PS_INVOICE_TAXES_BREAKDOWN'
-        );
+            );
     }
 
     public function displayTaxBasesInProductTaxesBreakdown()

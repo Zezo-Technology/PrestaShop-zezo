@@ -37,6 +37,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Tests\Integration\Behaviour\Features\Context\CommonFeatureContext;
 use Tests\Integration\Behaviour\Features\Context\LastExceptionTrait;
 use Tests\Integration\Behaviour\Features\Context\SharedStorageTrait;
+use Tests\Resources\MailDevClient;
 
 abstract class AbstractDomainFeatureContext implements Context
 {
@@ -45,9 +46,9 @@ abstract class AbstractDomainFeatureContext implements Context
 
     protected const JPG_IMAGE_TYPE = '.jpg';
     protected const JPG_IMAGE_STRING = 'iVBORw0KGgoAAAANSUhEUgAAABwAAAASCAMAAAB/2U7WAAAABl'
-    . 'BMVEUAAAD///+l2Z/dAAAASUlEQVR4XqWQUQoAIAxC2/0vXZDr'
-    . 'EX4IJTRkb7lobNUStXsB0jIXIAMSsQnWlsV+wULF4Avk9fLq2r'
-    . '8a5HSE35Q3eO2XP1A1wQkZSgETvDtKdQAAAABJRU5ErkJggg==';
+        . 'BMVEUAAAD///+l2Z/dAAAASUlEQVR4XqWQUQoAIAxC2/0vXZDr'
+        . 'EX4IJTRkb7lobNUStXsB0jIXIAMSsQnWlsV+wULF4Avk9fLq2r'
+        . '8a5HSE35Q3eO2XP1A1wQkZSgETvDtKdQAAAABJRU5ErkJggg==';
 
     /**
      * @return CommandBusInterface
@@ -70,6 +71,11 @@ abstract class AbstractDomainFeatureContext implements Context
         return CommonFeatureContext::getContainer();
     }
 
+    protected function getMailDevClient(): MailDevClient
+    {
+        return $this->getContainer()->get(MailDevClient::class);
+    }
+
     /**
      * @param string $references
      *
@@ -77,8 +83,14 @@ abstract class AbstractDomainFeatureContext implements Context
      */
     protected function referencesToIds(string $references): array
     {
+        if (empty($references)) {
+            return [];
+        }
+
         $ids = [];
         foreach (explode(',', $references) as $reference) {
+            $reference = trim($reference);
+
             if (!$this->getSharedStorage()->exists($reference)) {
                 throw new RuntimeException(sprintf('Reference %s does not exist in shared storage', $reference));
             }
@@ -217,7 +229,7 @@ abstract class AbstractDomainFeatureContext implements Context
      */
     protected function pretendImageUploaded(string $dirImage, string $imageName, int $objectId): string
     {
-        //@todo: refactor CategoryCoverUploader. Move uploaded file in Form handler instead of Uploader and use the uploader here in tests
+        // @todo: refactor CategoryCoverUploader. Move uploaded file in Form handler instead of Uploader and use the uploader here in tests
         $im = imagecreatefromstring(base64_decode(self::JPG_IMAGE_STRING));
         if ($im !== false) {
             header('Content-Type: image/jpg');

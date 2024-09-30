@@ -1,19 +1,19 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import categoriesPage from '@pages/BO/catalog/categories';
-
-// Import data
-import Categories from '@data/demo/categories';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  dataCategories,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_categories_filterAndQuickEditCategories';
 
@@ -25,12 +25,12 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -40,22 +40,22 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
   it('should go to \'Catalog > Categories\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToCategoriesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.categoriesLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.categoriesLink,
     );
     await categoriesPage.closeSfToolBar(page);
 
     const pageTitle = await categoriesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(categoriesPage.pageTitle);
+    expect(pageTitle).to.contains(categoriesPage.pageTitle);
   });
 
   it('should reset all filters and get number of Categories in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFirst', baseContext);
 
     numberOfCategories = await categoriesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfCategories).to.be.above(0);
+    expect(numberOfCategories).to.be.above(0);
   });
 
   // 1 : Filter Categories with all inputs and selects in grid table
@@ -67,7 +67,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
             testIdentifier: 'filterId',
             filterType: 'input',
             filterBy: 'id_category',
-            filterValue: Categories.art.id.toString(),
+            filterValue: dataCategories.art.id.toString(),
           },
       },
       {
@@ -76,7 +76,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
             testIdentifier: 'filterName',
             filterType: 'input',
             filterBy: 'name',
-            filterValue: Categories.accessories.name,
+            filterValue: dataCategories.accessories.name,
           },
       },
       {
@@ -85,7 +85,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
             testIdentifier: 'filterDescription',
             filterType: 'input',
             filterBy: 'description',
-            filterValue: Categories.accessories.description,
+            filterValue: dataCategories.accessories.description,
           },
       },
       {
@@ -94,7 +94,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
             testIdentifier: 'filterPosition',
             filterType: 'input',
             filterBy: 'position',
-            filterValue: Categories.art.position.toString(),
+            filterValue: dataCategories.art.position.toString(),
           },
       },
       {
@@ -103,7 +103,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
             testIdentifier: 'filterActive',
             filterType: 'select',
             filterBy: 'active',
-            filterValue: Categories.accessories.displayed ? '1' : '0',
+            filterValue: dataCategories.accessories.displayed ? '1' : '0',
           },
       },
     ];
@@ -123,19 +123,19 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
         // Can't know most categories that can be displayed
         // because we don't have total of categories and subcategories
         const numberOfCategoriesAfterFilter = await categoriesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfCategoriesAfterFilter).to.be.at.least(1);
+        expect(numberOfCategoriesAfterFilter).to.be.at.least(1);
 
         for (let i = 1; i <= numberOfCategoriesAfterFilter; i++) {
           if (test.args.filterBy === 'active') {
             const categoryStatus = await categoriesPage.getStatus(page, i);
-            await expect(categoryStatus).to.equal(test.args.filterValue === '1');
+            expect(categoryStatus).to.equal(test.args.filterValue === '1');
           } else {
             const textColumn = await categoriesPage.getTextColumnFromTableCategories(
               page,
               i,
               test.args.filterBy,
             );
-            await expect(textColumn).to.contains(test.args.filterValue);
+            expect(textColumn).to.contains(test.args.filterValue);
           }
         }
       });
@@ -144,7 +144,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.testIdentifier}Reset`, baseContext);
 
         const numberOfCategoriesAfterReset = await categoriesPage.resetAndGetNumberOfLines(page);
-        await expect(numberOfCategoriesAfterReset).to.equal(numberOfCategories);
+        expect(numberOfCategoriesAfterReset).to.equal(numberOfCategories);
       });
     });
   });
@@ -159,11 +159,11 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
         page,
         'input',
         'name',
-        Categories.art.name,
+        dataCategories.art.name,
       );
 
       const numberOfCategoriesAfterFilter = await categoriesPage.getNumberOfElementInGrid(page);
-      await expect(numberOfCategoriesAfterFilter).to.be.at.above(0);
+      expect(numberOfCategoriesAfterFilter).to.be.at.above(0);
     });
 
     [
@@ -182,11 +182,11 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
         if (isActionPerformed) {
           const resultMessage = await categoriesPage.getGrowlMessageContent(page);
 
-          await expect(resultMessage).to.contains(categoriesPage.successfulUpdateStatusMessage);
+          expect(resultMessage).to.contains(categoriesPage.successfulUpdateStatusMessage);
         }
 
         const categoryStatus = await categoriesPage.getStatus(page, 1);
-        await expect(categoryStatus).to.be.equal(test.args.enabledValue);
+        expect(categoryStatus).to.be.equal(test.args.enabledValue);
       });
     });
 
@@ -194,7 +194,7 @@ describe('BO - Catalog - Categories : Filter and quick edit Categories table', a
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterQuickEdit', baseContext);
 
       const numberOfCategoriesAfterReset = await categoriesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfCategoriesAfterReset).to.equal(numberOfCategories);
+      expect(numberOfCategoriesAfterReset).to.equal(numberOfCategories);
     });
   });
 });

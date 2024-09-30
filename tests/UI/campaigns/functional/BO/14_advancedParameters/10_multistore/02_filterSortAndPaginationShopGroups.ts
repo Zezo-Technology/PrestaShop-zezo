@@ -1,22 +1,22 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
+import setMultiStoreStatus from '@commonTests/BO/advancedParameters/multistore';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import generalPage from '@pages/BO/shopParameters/general';
 import multiStorePage from '@pages/BO/advancedParameters/multistore';
 import addShopGroupPage from '@pages/BO/advancedParameters/multistore/add';
 
-// Import data
-import ShopGroupData from '@data/faker/shopGroup';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerShopGroup,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_advancedParameters_multistore_filterSortAndPaginationShopGroups';
 
@@ -35,89 +35,68 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
 
   let numberOfShopGroups: number = 0;
 
+  //Pre-condition: Enable multistore
+  setMultiStoreStatus(true, `${baseContext}_preTest`);
+
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
-  });
-
-  it('should login in BO', async function () {
-    await loginCommon.loginBO(this, page);
-  });
-
-  // 1 : Enable multi store
-  describe('Enable \'Multistore\'', async () => {
-    it('should go to \'Shop Parameters > General\' page', async function () {
-      await testContext.addContextItem(this, 'testIdentifier', 'goToGeneralPage', baseContext);
-
-      await dashboardPage.goToSubMenu(
-        page,
-        dashboardPage.shopParametersParentLink,
-        dashboardPage.shopParametersGeneralLink,
-      );
-      await generalPage.closeSfToolBar(page);
-
-      const pageTitle = await generalPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(generalPage.pageTitle);
-    });
-
-    it('should enable \'Multistore\'', async function () {
-      await testContext.addContextItem(this, 'testIdentifier', 'enableMultiStore', baseContext);
-
-      const result = await generalPage.setMultiStoreStatus(page, true);
-      await expect(result).to.contains(generalPage.successfulUpdateMessage);
-    });
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   // 2 : Go to multistore page
   describe('Go to \'Advanced Parameters > Multistore\' page', async () => {
+    it('should login in BO', async function () {
+      await loginCommon.loginBO(this, page);
+    });
+
     it('should go to \'Advanced Parameters > Multistore\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToMultiStorePage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.advancedParametersLink,
-        dashboardPage.multistoreLink,
+        boDashboardPage.advancedParametersLink,
+        boDashboardPage.multistoreLink,
       );
       await multiStorePage.closeSfToolBar(page);
 
       const pageTitle = await multiStorePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(multiStorePage.pageTitle);
+      expect(pageTitle).to.contains(multiStorePage.pageTitle);
     });
 
     it('should get number of shop groups', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'getNumberOfShopGroups', baseContext);
 
       numberOfShopGroups = await multiStorePage.getNumberOfElementInGrid(page);
-      await expect(numberOfShopGroups).to.be.above(0);
+      expect(numberOfShopGroups).to.be.above(0);
     });
   });
 
   // 3 : Create 20 shop groups
   describe('Create 20 shop groups', async () => {
     new Array(20).fill(0, 0, 20).forEach((test: number, index: number) => {
-      const shopGroupData: ShopGroupData = new ShopGroupData({name: `todelete${index}`});
+      const shopGroupData: FakerShopGroup = new FakerShopGroup({name: `todelete${index}`});
       it('should go to add new shop group page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToAddNewShopGroupPage${index}`, baseContext);
 
         await multiStorePage.goToNewShopGroupPage(page);
 
         const pageTitle = await addShopGroupPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addShopGroupPage.pageTitleCreate);
+        expect(pageTitle).to.contains(addShopGroupPage.pageTitleCreate);
       });
 
       it(`should create shop group n°${index + 1} and check result`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createShopGroup${index}`, baseContext);
 
         const textResult = await addShopGroupPage.setShopGroup(page, shopGroupData);
-        await expect(textResult).to.contains(addShopGroupPage.successfulCreationMessage);
+        expect(textResult).to.contains(addShopGroupPage.successfulCreationMessage);
 
         const numberOfShopGroupsAfterCreation = await multiStorePage.getNumberOfElementInGrid(page);
-        await expect(numberOfShopGroupsAfterCreation).to.be.equal(numberOfShopGroups + 1 + index);
+        expect(numberOfShopGroupsAfterCreation).to.be.equal(numberOfShopGroups + 1 + index);
       });
     });
   });
@@ -127,7 +106,7 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
     [
       {args: {filterBy: 'id_shop_group', filterValue: '10'}},
       {args: {filterBy: 'a!name', filterValue: 'todelete10'}},
-    ].forEach((test: { args: {filterBy: string, filterValue: string}}, index: number) => {
+    ].forEach((test: { args: { filterBy: string, filterValue: string } }, index: number) => {
       it(`should filter list by ${test.args.filterBy}`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `filterBy_${test.args.filterBy}`, baseContext);
 
@@ -137,7 +116,7 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
 
         for (let i = 1; i <= numberOfElementAfterFilter; i++) {
           const textColumn = await multiStorePage.getTextColumn(page, i, test.args.filterBy);
-          await expect(textColumn).to.contains(test.args.filterValue);
+          expect(textColumn).to.contains(test.args.filterValue);
         }
       });
 
@@ -145,7 +124,7 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
         await testContext.addContextItem(this, 'testIdentifier', `resetFilter_${index}`, baseContext);
 
         const numberOfElement = await multiStorePage.resetAndGetNumberOfLines(page);
-        await expect(numberOfElement).to.be.equal(numberOfShopGroups + 20);
+        expect(numberOfElement).to.be.equal(numberOfShopGroups + 20);
       });
     });
   });
@@ -208,7 +187,7 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
             testIdentifier: 'sortByIdAsc', sortBy: 'id_shop_group', sortDirection: 'up', isFloat: true,
           },
       },
-    ].forEach((test: {args: {testIdentifier: string, sortBy: string, sortDirection: string, isFloat?: boolean}}) => {
+    ].forEach((test: { args: { testIdentifier: string, sortBy: string, sortDirection: string, isFloat?: boolean } }) => {
       it(`should sort by '${test.args.sortBy}' '${test.args.sortDirection}' and check result`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', test.args.testIdentifier, baseContext);
 
@@ -221,20 +200,20 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
           const nonSortedTableFloat = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -250,35 +229,14 @@ describe('BO - Advanced Parameters - MultiStore : Filter, sort and pagination sh
         await multiStorePage.filterTable(page, 'a!name', `todelete${index}`);
 
         const textResult = await multiStorePage.deleteShopGroup(page, 1);
-        await expect(textResult).to.contains(multiStorePage.successfulDeleteMessage);
+        expect(textResult).to.contains(multiStorePage.successfulDeleteMessage);
 
         const numberOfShopGroupsAfterDelete = await multiStorePage.resetAndGetNumberOfLines(page);
-        await expect(numberOfShopGroupsAfterDelete).to.be.equal(numberOfShopGroups + 20 - index - 1);
+        expect(numberOfShopGroupsAfterDelete).to.be.equal(numberOfShopGroups + 20 - index - 1);
       });
     });
   });
 
-  // 8 : Disable multi store
-  describe('Disable \'Multistore\'', async () => {
-    it('should go to \'Shop Parameters > General\' page', async function () {
-      await testContext.addContextItem(this, 'testIdentifier', 'goToGeneralPage2', baseContext);
-
-      await dashboardPage.goToSubMenu(
-        page,
-        dashboardPage.shopParametersParentLink,
-        dashboardPage.shopParametersGeneralLink,
-      );
-      await generalPage.closeSfToolBar(page);
-
-      const pageTitle = await generalPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(generalPage.pageTitle);
-    });
-
-    it('should disable \'Multistore\'', async function () {
-      await testContext.addContextItem(this, 'testIdentifier', 'disableMultiStore', baseContext);
-
-      const result = await generalPage.setMultiStoreStatus(page, false);
-      await expect(result).to.contains(generalPage.successfulUpdateMessage);
-    });
-  });
+  // Post-condition : Disable multi store
+  setMultiStoreStatus(false, `${baseContext}_postTest`);
 });

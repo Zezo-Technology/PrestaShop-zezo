@@ -63,6 +63,7 @@ class ProductResetter
             'customized_data',
             // Specific prices
             'specific_price',
+            'specific_price_priority',
             // Stock
             'stock_available',
             'stock_mvt',
@@ -73,7 +74,6 @@ class ProductResetter
             // Miscellaneous relationships
             'category_product',
             'feature_product',
-            'warehouse_product_location',
         ]);
     }
 }

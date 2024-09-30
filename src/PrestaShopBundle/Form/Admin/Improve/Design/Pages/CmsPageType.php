@@ -268,6 +268,7 @@ class CmsPageType extends TranslatorAwareType
                 'type' => FormattedTextareaType::class,
                 'required' => false,
                 'options' => [
+                    'limit' => FormattedTextareaType::LIMIT_LONGTEXT_UTF8,
                     'constraints' => [
                         new CleanHtml([
                             'message' => $this->trans(
@@ -289,7 +290,7 @@ class CmsPageType extends TranslatorAwareType
 
         if ($this->isMultiShopEnabled) {
             $builder->add('shop_association', ShopChoiceTreeType::class, [
-                'label' => $this->trans('Shop association', 'Admin.Global'),
+                'label' => $this->trans('Store association', 'Admin.Global'),
                 'required' => false,
                 'attr' => [
                     'class' => 'js-shop-assoc-tree',
@@ -300,7 +301,7 @@ class CmsPageType extends TranslatorAwareType
                             'The %s field is required.',
                             'Admin.Notifications.Error',
                             [
-                                sprintf('"%s"', $this->trans('Shop association', 'Admin.Global')),
+                                sprintf('"%s"', $this->trans('Store association', 'Admin.Global')),
                             ]
                         ),
                     ]),

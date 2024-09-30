@@ -1,18 +1,19 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import zonesPage from '@pages/BO/international/locations';
 import addZonePage from '@pages/BO/international/locations/add';
 
-// Import data
-import ZoneData from '@data/faker/zone';
+import {
+  boDashboardPage,
+  FakerZone,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -32,12 +33,12 @@ describe('BO - International - Zones : Sort and pagination', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -47,21 +48,21 @@ describe('BO - International - Zones : Sort and pagination', async () => {
   it('should go to \'International > Locations\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLocationsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.internationalParentLink,
-      dashboardPage.locationsLink,
+      boDashboardPage.internationalParentLink,
+      boDashboardPage.locationsLink,
     );
 
     const pageTitle = await zonesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(zonesPage.pageTitle);
+    expect(pageTitle).to.contains(zonesPage.pageTitle);
   });
 
   it('should reset all filters and get number of zones in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfZones = await zonesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfZones).to.be.above(0);
+    expect(numberOfZones).to.be.above(0);
   });
 
   // 1 : Sort zones
@@ -101,20 +102,20 @@ describe('BO - International - Zones : Sort and pagination', async () => {
           const nonSortedTableFloat = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -126,7 +127,7 @@ describe('BO - International - Zones : Sort and pagination', async () => {
 
   creationTests.forEach((test: number, index: number) => {
     describe(`Create zone n°${index + 1} in BO`, async () => {
-      const createZoneData = new ZoneData({name: `todelete${index}`});
+      const createZoneData: FakerZone = new FakerZone({name: `todelete${index}`});
 
       it('should go to add new zone page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToAddZonePage${index}`, baseContext);
@@ -134,17 +135,17 @@ describe('BO - International - Zones : Sort and pagination', async () => {
         await zonesPage.goToAddNewZonePage(page);
 
         const pageTitle = await addZonePage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addZonePage.pageTitleCreate);
+        expect(pageTitle).to.contains(addZonePage.pageTitleCreate);
       });
 
       it('should create zone and check result', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createZone${index}`, baseContext);
 
         const textResult = await addZonePage.createEditZone(page, createZoneData);
-        await expect(textResult).to.contains(zonesPage.successfulCreationMessage);
+        expect(textResult).to.contains(zonesPage.successfulCreationMessage);
 
         const numberOfZonesAfterCreation = await zonesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfZonesAfterCreation).to.be.equal(numberOfZones + 1 + index);
+        expect(numberOfZonesAfterCreation).to.be.equal(numberOfZones + 1 + index);
       });
     });
   });
@@ -200,7 +201,7 @@ describe('BO - International - Zones : Sort and pagination', async () => {
           i,
           'name',
         );
-        await expect(textColumn).to.contains('todelete');
+        expect(textColumn).to.contains('todelete');
       }
     });
 
@@ -208,14 +209,14 @@ describe('BO - International - Zones : Sort and pagination', async () => {
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteZones', baseContext);
 
       const deleteTextResult = await zonesPage.bulkDeleteZones(page);
-      await expect(deleteTextResult).to.be.contains(zonesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.contains(zonesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterDelete', baseContext);
 
       const numberOfZonesAfterReset = await zonesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfZonesAfterReset).to.be.equal(numberOfZones);
+      expect(numberOfZonesAfterReset).to.be.equal(numberOfZones);
     });
   });
 });

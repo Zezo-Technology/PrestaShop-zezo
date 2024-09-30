@@ -28,6 +28,8 @@ namespace PrestaShopBundle\Controller\Admin\Configure\AdvancedParameters;
 
 use Exception;
 use ImageManager;
+use PrestaShop\PrestaShop\Adapter\Tab\TabDataProvider;
+use PrestaShop\PrestaShop\Core\Context\EmployeeContext;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\BulkDeleteEmployeeCommand;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\BulkUpdateEmployeeStatusCommand;
 use PrestaShop\PrestaShop\Core\Domain\Employee\Command\DeleteEmployeeCommand;
@@ -52,8 +54,9 @@ use PrestaShop\PrestaShop\Core\Search\Filters\EmployeeFilters;
 use PrestaShop\PrestaShop\Core\Security\Permission;
 use PrestaShop\PrestaShop\Core\Util\HelperCard\DocumentationLinkProviderInterface;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
-use PrestaShopBundle\Security\Annotation\DemoRestricted;
+use PrestaShopBundle\Entity\Employee\Employee;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
+use PrestaShopBundle\Security\Attribute\DemoRestricted;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -64,16 +67,22 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EmployeeController extends FrameworkBundleAdminController
 {
+    public static function getSubscribedServices(): array
+    {
+        return parent::getSubscribedServices() + [
+            TabDataProvider::class => TabDataProvider::class,
+        ];
+    }
+
     /**
      * Show employees list & options page.
-     *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
      *
      * @param Request $request
      * @param EmployeeFilters $filters
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))")]
     public function indexAction(Request $request, EmployeeFilters $filters)
     {
         $employeeOptionsFormHandler = $this->get('prestashop.admin.employee_options.form_handler');
@@ -99,21 +108,19 @@ class EmployeeController extends FrameworkBundleAdminController
             'helperCardDocumentationLink' => $helperCardDocumentationLinkProvider->getLink('team'),
             'showcaseCardName' => ShowcaseCard::EMPLOYEES_CARD,
             'isShowcaseCardClosed' => $showcaseCardIsClosed,
+            'enableSidebar' => true,
         ]);
     }
 
     /**
      * Save employee options.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))"
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))")]
     public function saveOptionsAction(Request $request)
     {
         $employeeOptionsFormHandler = $this->get('prestashop.admin.employee_options.form_handler');
@@ -138,13 +145,12 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Toggle given employee status.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute="admin_employees_index")
-     *
      * @param int $employeeId
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_employees_index')]
     public function toggleStatusAction($employeeId)
     {
         try {
@@ -164,16 +170,15 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Bulk enables employee status action.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))")]
     public function bulkStatusEnableAction(Request $request)
     {
-        $employeeIds = $request->request->get('employee_employee_bulk');
+        $employeeIds = $request->request->all('employee_employee_bulk');
 
         try {
             $this->getCommandBus()->handle(
@@ -194,16 +199,15 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Bulk disables employee status action.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))")]
     public function bulkStatusDisableAction(Request $request)
     {
-        $employeeIds = $request->request->get('employee_employee_bulk');
+        $employeeIds = $request->request->all('employee_employee_bulk');
 
         try {
             $this->getCommandBus()->handle(
@@ -224,13 +228,12 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Delete employee.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))")
-     *
      * @param int $employeeId
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))")]
     public function deleteAction($employeeId)
     {
         try {
@@ -247,23 +250,22 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Delete employees in bulk actions.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))")]
     public function bulkDeleteAction(Request $request)
     {
-        $employeeIds = $request->request->get('employee_employee_bulk');
+        $employeeIds = $request->request->all('employee_employee_bulk');
 
         try {
             $this->getCommandBus()->handle(new BulkDeleteEmployeeCommand($employeeIds));
 
             $this->addFlash(
                 'success',
-                $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
             );
         } catch (EmployeeException $e) {
             $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages($e)));
@@ -275,13 +277,12 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Show employee creation form page and handle it's submit.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     * @AdminSecurity("is_granted('create', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      *
      * @return Response
      */
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    #[AdminSecurity("is_granted('create', request.get('_legacy_controller'))")]
     public function createAction(Request $request)
     {
         $employeeForm = $this->getEmployeeFormBuilder()->getForm();
@@ -303,6 +304,7 @@ class EmployeeController extends FrameworkBundleAdminController
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'employeeForm' => $employeeForm->createView(),
             'enableSidebar' => true,
+            'layoutTitle' => $this->trans('New employee', 'Admin.Navigation.Menu'),
         ];
 
         return $this->render(
@@ -314,19 +316,16 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Show Employee edit page.
      *
-     * @DemoRestricted(redirectRoute="admin_employees_index")
-     *
      * @param int $employeeId
      * @param Request $request
      *
      * @return Response
      */
-    public function editAction($employeeId, Request $request)
+    #[DemoRestricted(redirectRoute: 'admin_employees_index')]
+    public function editAction(int $employeeId, Request $request, EmployeeContext $employeeContext)
     {
-        $contextEmployeeProvider = $this->get('prestashop.adapter.data_provider.employee');
-
         // If employee is editing his own profile - he doesn't need to have access to the edit form.
-        if ($contextEmployeeProvider->getId() != $employeeId) {
+        if ($employeeContext->getEmployee()->getId() != $employeeId) {
             if (!$this->isGranted(Permission::UPDATE, $request->get('_legacy_controller'))) {
                 $this->addFlash(
                     'error',
@@ -371,9 +370,7 @@ class EmployeeController extends FrameworkBundleAdminController
             if ($result->isSubmitted() && $result->isValid()) {
                 $this->addFlash('success', $this->trans('Successful update', 'Admin.Notifications.Success'));
 
-                return $this->redirectToRoute('admin_employees_edit', [
-                    'employeeId' => $result->getIdentifiableObjectId(),
-                ]);
+                return $this->redirectToRoute('admin_employees_edit', ['employeeId' => $employeeId]);
             }
         } catch (Exception $e) {
             $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages($e)));
@@ -390,6 +387,15 @@ class EmployeeController extends FrameworkBundleAdminController
             'employeeForm' => $employeeForm->createView(),
             'isRestrictedAccess' => $isRestrictedAccess,
             'editableEmployee' => $editableEmployee,
+            'enableSidebar' => true,
+            'layoutTitle' => $this->trans(
+                'Editing %lastname% %firstname%\'s profile',
+                'Admin.Navigation.Menu',
+                [
+                    '%firstname%' => $editableEmployee->getFirstname()->getValue(),
+                    '%lastname%' => $editableEmployee->getLastName()->getValue(),
+                ]
+            ),
         ];
 
         return $this->render(
@@ -435,19 +441,15 @@ class EmployeeController extends FrameworkBundleAdminController
     /**
      * Get tabs which are accessible for given profile.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_employees_index"
-     * )
-     *
      * @param Request $request
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_employees_index')]
     public function getAccessibleTabsAction(Request $request)
     {
         $profileId = $request->query->get('profileId');
-        $tabsDataProvider = $this->get('prestashop.adapter.data_provider.tab');
+        $tabsDataProvider = $this->get(TabDataProvider::class);
         $contextEmployeeProvider = $this->get('prestashop.adapter.data_provider.employee');
 
         return $this->json(
@@ -493,7 +495,7 @@ class EmployeeController extends FrameworkBundleAdminController
                 'Admin.Notifications.Error'
             ),
             EmployeeNotFoundException::class => $this->trans(
-                'The object cannot be loaded (or found)',
+                'The object cannot be loaded (or found).',
                 'Admin.Notifications.Error'
             ),
             AdminEmployeeException::class => [
@@ -553,6 +555,10 @@ class EmployeeController extends FrameworkBundleAdminController
                 ),
                 EmployeeConstraintException::INVALID_PASSWORD => $this->trans(
                     'The password doesn\'t meet the password policy requirements.',
+                    'Admin.Notifications.Error'
+                ),
+                EmployeeConstraintException::INVALID_HOMEPAGE => $this->trans(
+                    'The selected default page is not accessible by the selected profile.',
                     'Admin.Notifications.Error'
                 ),
             ],

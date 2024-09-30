@@ -1,21 +1,21 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import date from '@utils/date';
-import helper from '@utils/helpers';
 import {expect} from 'chai';
 import testContext from '@utils/testContext';
 
 // Import common
 import loginCommon from '@commonTests/BO/loginBO';
 
-// Import data
-import Employees from '@data/demo/employees';
-
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import logsPage from '@pages/BO/advancedParameters/logs';
 
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  dataEmployees,
+  utilsCore,
+  utilsDate,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_advancedParameters_logs_filterSortAndPagination';
 
@@ -32,16 +32,16 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
   let browserContext: BrowserContext;
   let page: Page;
   let numberOfLogs: number = 0;
-  const today = date.getDateFormat('mm/dd/yyyy');
+  const today = utilsDate.getDateFormat('mm/dd/yyyy');
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -51,21 +51,21 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
   it('should go to \'Advanced Parameters > Logs\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLogsPageToEraseLogs', baseContext);
 
-    await dashboardPage.goToSubMenu(page, dashboardPage.advancedParametersLink, dashboardPage.logsLink);
+    await boDashboardPage.goToSubMenu(page, boDashboardPage.advancedParametersLink, boDashboardPage.logsLink);
     await logsPage.closeSfToolBar(page);
 
     const pageTitle = await logsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(logsPage.pageTitle);
+    expect(pageTitle).to.contains(logsPage.pageTitle);
   });
 
   it('should erase all logs', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'eraseLogs', baseContext);
 
     const textResult = await logsPage.eraseAllLogs(page);
-    await expect(textResult).to.equal(logsPage.successfulUpdateMessage);
+    expect(textResult).to.equal(logsPage.successfulUpdateMessage);
 
     numberOfLogs = await logsPage.getNumberOfElementInGrid(page);
-    await expect(numberOfLogs).to.be.equal(0);
+    expect(numberOfLogs).to.be.equal(0);
   });
 
   // Login and logout 11 times to have 11 logs
@@ -85,17 +85,17 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
     it('should go to \'Advanced parameters > Logs\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToLogsPage', baseContext);
 
-      await dashboardPage.goToSubMenu(page, dashboardPage.advancedParametersLink, dashboardPage.logsLink);
+      await boDashboardPage.goToSubMenu(page, boDashboardPage.advancedParametersLink, boDashboardPage.logsLink);
 
       const pageTitle = await logsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(logsPage.pageTitle);
+      expect(pageTitle).to.contains(logsPage.pageTitle);
     });
 
     it('should check the number of logs', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkLogsNumber', baseContext);
 
       const numberOfElements = await logsPage.getNumberOfElementInGrid(page);
-      await expect(numberOfElements).to.be.equal(11);
+      expect(numberOfElements).to.be.equal(11);
     });
   });
 
@@ -104,13 +104,13 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
     it('should go to \'Advanced parameters > Logs\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToLogsPageToFilter', baseContext);
 
-      await dashboardPage.goToSubMenu(page, dashboardPage.advancedParametersLink, dashboardPage.logsLink);
+      await logsPage.reloadPage(page);
 
       const pageTitle = await logsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(logsPage.pageTitle);
+      expect(pageTitle).to.contains(logsPage.pageTitle);
 
       const numberOfElements = await logsPage.getNumberOfElementInGrid(page);
-      await expect(numberOfElements).to.be.equal(numberOfLogs + 11);
+      expect(numberOfElements).to.be.equal(numberOfLogs + 11);
     });
 
     it('should change the items number to 10 per page', async function () {
@@ -160,7 +160,7 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
             testIdentifier: 'filterByEmployee',
             filterType: 'input',
             filterBy: 'employee',
-            filterValue: Employees.DefaultEmployee.lastName,
+            filterValue: dataEmployees.defaultEmployee.lastName,
           },
       },
       {
@@ -221,12 +221,12 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
 
         const numberOfLogsAfterFilter = await logsPage.getNumberOfElementInGrid(page);
 
-        await expect(numberOfLogsAfterFilter).to.be.at.most(numberOfLogs + 11);
+        expect(numberOfLogsAfterFilter).to.be.at.most(numberOfLogs + 11);
 
         for (let i = 1; i <= numberOfLogsAfterFilter; i++) {
           const textColumn = await logsPage.getTextColumn(page, i, test.args.filterBy);
 
-          await expect(textColumn).to.contains(test.args.filterValue);
+          expect(textColumn).to.contains(test.args.filterValue);
         }
       });
 
@@ -234,7 +234,7 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.testIdentifier}Reset`, baseContext);
 
         const numberOfLogsAfterReset = await logsPage.resetAndGetNumberOfLines(page);
-        await expect(numberOfLogsAfterReset).to.equal(numberOfLogs + 11);
+        expect(numberOfLogsAfterReset).to.equal(numberOfLogs + 11);
       });
     });
 
@@ -244,11 +244,11 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
       await logsPage.filterLogsByDate(page, today, today);
 
       const numberOfEmailsAfterFilter = await logsPage.getNumberOfElementInGrid(page);
-      await expect(numberOfEmailsAfterFilter).to.be.at.most(numberOfLogs + 11);
+      expect(numberOfEmailsAfterFilter).to.be.at.most(numberOfLogs + 11);
 
       for (let row: number = 1; row <= numberOfEmailsAfterFilter; row++) {
         const textColumn = await logsPage.getTextColumn(page, row, 'date_add');
-        await expect(textColumn).to.contains(today);
+        expect(textColumn).to.contains(today);
       }
     });
 
@@ -256,7 +256,7 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterFilterByDate', baseContext);
 
       const numberOfLogsAfterReset = await logsPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfLogsAfterReset).to.equal(numberOfLogs + 11);
+      expect(numberOfLogsAfterReset).to.equal(numberOfLogs + 11);
     });
   });
 
@@ -372,20 +372,20 @@ describe('BO - Advanced Parameters - Logs : Filter, sort and pagination logs tab
           const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });

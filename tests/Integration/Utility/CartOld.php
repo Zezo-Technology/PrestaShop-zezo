@@ -28,11 +28,11 @@ namespace Tests\Integration\Utility;
 
 use Cart;
 use CartRule;
+use Configuration;
 use Context;
 use Order;
 use PrestaShop\PrestaShop\Adapter\ServiceLocator;
 use Shop;
-use Tax;
 use Tools;
 
 /**
@@ -51,7 +51,6 @@ class CartOld extends Cart
      *                  - Cart::BOTH_WITHOUT_SHIPPING
      *                  - Cart::ONLY_SHIPPING
      *                  - Cart::ONLY_WRAPPING
-     *                  - Cart::ONLY_PRODUCTS_WITHOUT_SHIPPING
      *                  - Cart::ONLY_PHYSICAL_PRODUCTS_WITHOUT_SHIPPING
      * @param array $products
      * @param int $id_carrier
@@ -73,7 +72,7 @@ class CartOld extends Cart
         $ps_use_ecotax = $this->configuration->get('PS_USE_ECOTAX');
         $ps_round_type = $this->configuration->get('PS_ROUND_TYPE');
         $ps_ecotax_tax_rules_group_id = $this->configuration->get('PS_ECOTAX_TAX_RULES_GROUP_ID');
-        $compute_precision = $this->configuration->get('_PS_PRICE_COMPUTE_PRECISION_');
+        $compute_precision = 2;
 
         if (!$this->id) {
             return 0;
@@ -87,7 +86,6 @@ class CartOld extends Cart
             Cart::BOTH_WITHOUT_SHIPPING,
             Cart::ONLY_SHIPPING,
             Cart::ONLY_WRAPPING,
-            Cart::ONLY_PRODUCTS_WITHOUT_SHIPPING,
             Cart::ONLY_PHYSICAL_PRODUCTS_WITHOUT_SHIPPING,
         ];
 
@@ -130,10 +128,6 @@ class CartOld extends Cart
             return $shipping_fees;
         }
 
-        if ($type == Cart::ONLY_PRODUCTS_WITHOUT_SHIPPING) {
-            $type = Cart::ONLY_PRODUCTS;
-        }
-
         $param_product = true;
         if (null === $products) {
             $param_product = false;
@@ -150,7 +144,7 @@ class CartOld extends Cart
         }
 
         $order_total = 0;
-        if (Tax::excludeTaxeOption()) {
+        if (!Configuration::get('PS_TAX')) {
             $with_taxes = false;
         }
 
@@ -174,7 +168,7 @@ class CartOld extends Cart
                 $virtual_context->shop = new Shop((int) $product['id_shop']);
             }
 
-            $id_address = $this->getProductAddressId($product);
+            $id_address = $this->getProductAddressId();
 
             // The $null variable below is not used,
             // but it is necessary to pass it to getProductPrice because
@@ -226,7 +220,7 @@ class CartOld extends Cart
 
                 case Order::ROUND_ITEM:
                 default:
-                    $product_price = /*$with_taxes ? $tax_calculator->addTaxes($price) : */
+                    $product_price = /* $with_taxes ? $tax_calculator->addTaxes($price) : */
                         $price;
                     $products_total[$id_tax_rules_group] += Tools::ps_round($product_price, $compute_precision)
                         * (int) $product['cart_quantity'];
@@ -257,14 +251,14 @@ class CartOld extends Cart
 
             $package = [
                 'id_carrier' => $id_carrier,
-                'id_address' => $this->getDeliveryAddressId($products),
+                'id_address' => $this->id_address_delivery,
                 'products' => $products,
             ];
 
             // Then, calculate the contextual value for each one
             $flag = false;
             foreach ($cart_rules as $item) {
-                /** @var \CartRule $cartRule */
+                /** @var CartRule $cartRule */
                 $cartRule = $item['obj'];
                 // If the cart rule offers free shipping, add the shipping cost
                 if (($with_shipping || $type == Cart::ONLY_DISCOUNTS) && $cartRule->free_shipping && !$flag) {
@@ -273,7 +267,7 @@ class CartOld extends Cart
                             $with_taxes,
                             $virtual_context,
                             CartRule::FILTER_ACTION_SHIPPING,
-                            ($param_product ? $package : null),
+                            $param_product ? $package : null,
                             $use_cache
                         ),
                         $compute_precision

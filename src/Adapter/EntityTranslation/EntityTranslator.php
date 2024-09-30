@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -24,6 +23,7 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
+
 declare(strict_types=1);
 
 namespace PrestaShop\PrestaShop\Adapter\EntityTranslation;
@@ -36,6 +36,8 @@ use PrestaShop\PrestaShop\Core\Domain\Language\Exception\LanguageNotFoundExcepti
 use PrestaShop\PrestaShop\Core\Domain\Language\ValueObject\LanguageId;
 use PrestaShop\PrestaShop\Core\Translation\EntityTranslatorInterface;
 use PrestaShopBundle\Translation\TranslatorInterface;
+use PrestaShopDatabaseException;
+use PrestaShopException;
 
 /**
  * Translates an entity in database using DataLang classes
@@ -93,8 +95,8 @@ class EntityTranslator implements EntityTranslatorInterface
      * @param int $shopId
      *
      * @throws LanguageNotFoundException
-     * @throws \PrestaShopDatabaseException
-     * @throws \PrestaShopException
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     public function translate(int $languageId, int $shopId): void
     {
@@ -166,7 +168,7 @@ class EntityTranslator implements EntityTranslatorInterface
      *
      * @return bool
      *
-     * @throws \PrestaShopDatabaseException
+     * @throws PrestaShopDatabaseException
      */
     protected function shopFieldExists(string $tableNameSql): bool
     {
@@ -230,7 +232,7 @@ class EntityTranslator implements EntityTranslatorInterface
     private function buildTableNameFromDataLang(DataLangCore $dataLang): string
     {
         $tableName = $this->dataLang->getTableName();
-        if (substr($tableName, 0, strlen($this->dbPrefix)) !== $this->dbPrefix) {
+        if (!str_starts_with($tableName, $this->dbPrefix)) {
             $tableName = $this->dbPrefix . $tableName;
         }
 

@@ -33,6 +33,13 @@ use PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopException;
 class ShopConstraint
 {
     /**
+     * These are the legacy values used to define the shop context, kept here for backward compatibility
+     */
+    public const SHOP = 1;
+    public const SHOP_GROUP = 2;
+    public const ALL_SHOPS = 4;
+
+    /**
      * @var ShopId|null
      */
     protected $shopId;
@@ -135,5 +142,41 @@ class ShopConstraint
     public function isStrict(): bool
     {
         return $this->strict;
+    }
+
+    public function isEqual(self $constraint): bool
+    {
+        if ($this->isStrict() !== $constraint->isStrict()) {
+            return false;
+        }
+
+        if ($this->getShopId() !== null && $constraint->getShopId() !== null && $this->getShopId()->getValue() === $constraint->getShopId()->getValue()) {
+            return true;
+        }
+
+        if ($this->getShopGroupId() !== null && $constraint->getShopGroupId() !== null && $this->getShopGroupId()->getValue() === $constraint->getShopGroupId()->getValue()) {
+            return true;
+        }
+
+        if ($this->forAllShops() && $constraint->forAllShops()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function isSingleShopContext(): bool
+    {
+        return null !== $this->shopId;
+    }
+
+    public function isShopGroupContext(): bool
+    {
+        return null !== $this->shopGroupId;
+    }
+
+    public function isAllShopContext(): bool
+    {
+        return $this->forAllShops();
     }
 }

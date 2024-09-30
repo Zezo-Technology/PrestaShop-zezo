@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -8,13 +7,14 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import attributesPage from '@pages/BO/catalog/attributes';
 import viewAttributePage from '@pages/BO/catalog/attributes/view';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import Attributes from '@data/demo/attributes';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  dataAttributes,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_attributesAndFeatures_attributes_values_filterValues';
 
@@ -30,12 +30,12 @@ describe('BO - Catalog - Attributes & Features : Filter attribute values table',
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -45,24 +45,24 @@ describe('BO - Catalog - Attributes & Features : Filter attribute values table',
   it('should go to \'Catalog > Attributes & Features\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToAttributesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.attributesAndFeaturesLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.attributesAndFeaturesLink,
     );
     await attributesPage.closeSfToolBar(page);
 
     const pageTitle = await attributesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(attributesPage.pageTitle);
+    expect(pageTitle).to.contains(attributesPage.pageTitle);
   });
 
   it('should filter attributes table by name \'Color\'', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'filterAttributes', baseContext);
 
-    await attributesPage.filterTable(page, 'b!name', Attributes.color.name);
+    await attributesPage.filterTable(page, 'name', dataAttributes.color.name);
 
-    const textColumn = await attributesPage.getTextColumn(page, 1, 'b!name');
-    await expect(textColumn).to.contains(Attributes.color.name);
+    const textColumn = await attributesPage.getTextColumn(page, 1, 'name');
+    expect(textColumn).to.contains(dataAttributes.color.name);
   });
 
   it('should view attribute', async function () {
@@ -71,14 +71,14 @@ describe('BO - Catalog - Attributes & Features : Filter attribute values table',
     await attributesPage.viewAttribute(page, 1);
 
     const pageTitle = await viewAttributePage.getPageTitle(page);
-    await expect(pageTitle).to.contains(`${viewAttributePage.pageTitle} ${Attributes.color.name}`);
+    expect(pageTitle).to.equal(viewAttributePage.pageTitle(dataAttributes.color.name));
   });
 
   it('should reset all filters and get number of values in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfValues = await viewAttributePage.resetAndGetNumberOfLines(page);
-    await expect(numberOfValues).to.be.above(0);
+    expect(numberOfValues).to.be.above(0);
   });
 
   describe('Filter values table', async () => {
@@ -88,31 +88,23 @@ describe('BO - Catalog - Attributes & Features : Filter attribute values table',
           {
             testIdentifier: 'filterId',
             filterBy: 'id_attribute',
-            filterValue: Attributes.color.values[13].id.toString(),
+            filterValue: dataAttributes.color.values[13].id.toString(),
           },
       },
       {
         args:
           {
             testIdentifier: 'filterName',
-            filterBy: 'b!name',
-            filterValue: Attributes.color.values[3].value,
+            filterBy: 'name',
+            filterValue: dataAttributes.color.values[3].value,
           },
       },
       {
         args:
           {
             testIdentifier: 'filterColor',
-            filterBy: 'a!color',
-            filterValue: Attributes.color.values[7].color,
-          },
-      },
-      {
-        args:
-          {
-            testIdentifier: 'filterPosition',
-            filterBy: 'a!position',
-            filterValue: (Attributes.color.values[10].position - 1),
+            filterBy: 'color',
+            filterValue: dataAttributes.color.values[7].color,
           },
       },
     ];
@@ -124,26 +116,21 @@ describe('BO - Catalog - Attributes & Features : Filter attribute values table',
         await viewAttributePage.filterTable(
           page,
           test.args.filterBy,
-          typeof test.args.filterValue === 'number' ? test.args.filterValue.toString() : test.args.filterValue,
+          test.args.filterValue,
         );
 
         const numberOfValuesAfterFilter = await viewAttributePage.getNumberOfElementInGrid(page);
-        await expect(numberOfValuesAfterFilter).to.be.at.most(numberOfValues);
+        expect(numberOfValuesAfterFilter).to.be.at.most(numberOfValues);
 
         const textColumn = await viewAttributePage.getTextColumn(page, 1, test.args.filterBy);
-
-        if (typeof test.args.filterValue === 'number') {
-          await expect(textColumn).to.contains(test.args.filterValue + 1);
-        } else {
-          await expect(textColumn).to.contains(test.args.filterValue);
-        }
+        expect(textColumn).to.contains(test.args.filterValue);
       });
 
       it('should reset all filters', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.testIdentifier}Reset`, baseContext);
 
         const numberOfValuesAfterReset = await viewAttributePage.resetAndGetNumberOfLines(page);
-        await expect(numberOfValuesAfterReset).to.equal(numberOfValues);
+        expect(numberOfValuesAfterReset).to.equal(numberOfValues);
       });
     });
   });

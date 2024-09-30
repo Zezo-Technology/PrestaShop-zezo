@@ -28,13 +28,13 @@ namespace PrestaShopBundle\Controller\Admin\Improve\Shipping;
 
 use PrestaShop\PrestaShop\Core\Form\FormHandlerInterface;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Controller responsible of "Improve > Shipping > Preferences" page.
+ * Controller responsible for "Improve > Shipping > Preferences" page.
  */
 class PreferencesController extends FrameworkBundleAdminController
 {
@@ -43,10 +43,9 @@ class PreferencesController extends FrameworkBundleAdminController
      *
      * @param Request $request
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
-     *
      * @return Response
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))")]
     public function indexAction(Request $request)
     {
         $handlingForm = $this->getHandlingFormHandler()->getForm();
@@ -56,21 +55,17 @@ class PreferencesController extends FrameworkBundleAdminController
     }
 
     /**
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))",
-     *     message="You do not have permission to edit this.",
-     *     redirectRoute="admin_shipping_preferences")
-     *
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))", message: 'You do not have permission to edit this.', redirectRoute: 'admin_shipping_preferences')]
     public function processCarrierOptionsFormAction(Request $request)
     {
         $formHandler = $this->getCarrierOptionsFormHandler();
         $this->dispatchHook(
             'actionAdminShippingPreferencesControllerPostProcessCarrierOptionsBefore',
-                ['controller' => $this]
+            ['controller' => $this]
         );
 
         $this->dispatchHook('actionAdminShippingPreferencesControllerPostProcessBefore', ['controller' => $this]);
@@ -94,15 +89,11 @@ class PreferencesController extends FrameworkBundleAdminController
     }
 
     /**
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))",
-     *     message="You do not have permission to edit this.",
-     *     redirectRoute="admin_shipping_preferences")
-     *
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller')) && is_granted('delete', request.get('_legacy_controller'))", message: 'You do not have permission to edit this.', redirectRoute: 'admin_shipping_preferences')]
     public function processHandlingFormAction(Request $request)
     {
         $formHandler = $this->getHandlingFormHandler();
@@ -144,22 +135,6 @@ class PreferencesController extends FrameworkBundleAdminController
     protected function getCarrierOptionsFormHandler(): FormHandlerInterface
     {
         return $this->get('prestashop.admin.shipping_preferences.carrier_options.form_handler');
-    }
-
-    /**
-     * @deprecated since 8.1.0 and will be removed in next major version.
-     */
-    protected function renderForm($handlingForm, $carrierOptionsForm, $request)
-    {
-        @trigger_error(
-            sprintf(
-                '%s is deprecated since version 8.1.0 and will be removed in the next major version. Use doRenderForm() instead.',
-                __METHOD__
-            ),
-            E_USER_DEPRECATED
-        );
-
-        return $this->doRenderForm($handlingForm, $carrierOptionsForm, $request);
     }
 
     /**

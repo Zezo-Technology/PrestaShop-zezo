@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type InvoiceData from '@data/faker/invoice';
-
 import type {Page} from 'playwright';
+import {
+  type FakerOrderInvoice,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Invoices page, contains functions that can be used on invoices page
@@ -120,7 +121,7 @@ class Invoice extends BOBasePage {
    */
   async generatePDFByDateAndFail(page: Page, dateFrom: string = '', dateTo: string = ''): Promise<string> {
     await this.setValuesForGeneratingPDFByDate(page, dateFrom, dateTo);
-    await page.click(this.generatePdfByDateButton);
+    await page.locator(this.generatePdfByDateButton).click();
 
     return this.getAlertDangerBlockParagraphContent(page);
   }
@@ -134,8 +135,8 @@ class Invoice extends BOBasePage {
    */
   async setValuesForGeneratingPDFByDate(page: Page, dateFrom: string = '', dateTo: string = ''): Promise<void> {
     if (dateFrom) {
-      await page.fill(this.dateFromInput, dateFrom);
-      await page.fill(this.dateToInput, dateTo);
+      await page.locator(this.dateFromInput).fill(dateFrom);
+      await page.locator(this.dateToInput).fill(dateTo);
     }
   }
 
@@ -146,14 +147,15 @@ class Invoice extends BOBasePage {
    * @returns {Promise<void>}
    */
   async chooseStatus(page: Page, statusName: string): Promise<void> {
-    const statusElements = await page.$$(this.statusOrderStateSpan);
+    const statusLocator = page
+      .locator(this.statusOrderStateSpan)
+      .filter({hasText: statusName});
 
-    for (let i = 0; i < statusElements.length; i++) {
-      if (await page.evaluate((element) => element.textContent, statusElements[i]) === statusName) {
-        await statusElements[i].click();
-        break;
-      }
+    if (await statusLocator.count() === 0) {
+      throw new Error(`${statusName} was not found on list`);
     }
+
+    await statusLocator.first().click();
   }
 
   /**
@@ -171,7 +173,7 @@ class Invoice extends BOBasePage {
    * @returns {Promise<string>}
    */
   async generatePDFByStatusAndFail(page: Page): Promise<string> {
-    await page.click(this.generatePdfByStatusButton);
+    await page.locator(this.generatePdfByStatusButton).click();
     return this.getAlertDangerBlockParagraphContent(page);
   }
 
@@ -191,7 +193,7 @@ class Invoice extends BOBasePage {
    * @returns {Promise<string>}
    */
   async saveInvoiceOptions(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.saveInvoiceOptionsButton);
+    await page.locator(this.saveInvoiceOptionsButton).click();
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 
@@ -218,10 +220,10 @@ class Invoice extends BOBasePage {
   /**
    * Set invoiceNumber, LegalFreeText, footerText
    * @param page {Page} Browser tab
-   * @param data {InvoiceData} Values to set on invoice option inputs
+   * @param data {FakerOrderInvoice} Values to set on invoice option inputs
    * @returns {Promise<void>}
    */
-  async setInputOptions(page: Page, data: InvoiceData): Promise<void> {
+  async setInputOptions(page: Page, data: FakerOrderInvoice): Promise<void> {
     await this.setValue(page, this.invoiceNumberInput, data.invoiceNumber);
     await this.setValue(page, this.legalFreeTextInput, data.legalFreeText);
     await this.setValue(page, this.footerTextInput, data.footerText);
@@ -244,7 +246,7 @@ class Invoice extends BOBasePage {
    * @returns {Promise<void>}
    */
   async chooseInvoiceOptionsYearPosition(page: Page, id: number): Promise<void> {
-    await page.click(this.optionYearPositionRadioButton(id));
+    await page.locator(this.optionYearPositionRadioButton(id)).click();
   }
 
   /**

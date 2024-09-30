@@ -30,33 +30,23 @@ namespace PrestaShop\PrestaShop\Adapter\Form\ChoiceProvider;
 
 use PrestaShop\PrestaShop\Adapter\Feature\Repository\FeatureRepository;
 use PrestaShop\PrestaShop\Adapter\LegacyContext;
+use PrestaShop\PrestaShop\Core\ConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Form\FormChoiceProviderInterface;
 
 class FeaturesChoiceProvider implements FormChoiceProviderInterface
 {
     /**
-     * @var FeatureRepository
+     * Cache value to avoid performing the same request multiple times as the value should remain the same inside a request.
+     *
+     * @var array
      */
-    private $featureRepository;
-
-    /**
-     * @var int
-     */
-    private $contextLanguageId;
-
-    /**
-     * @var int
-     */
-    private $defaultLanguageId;
+    private $cacheFeatureChoices;
 
     public function __construct(
-        FeatureRepository $featureRepository,
-        LegacyContext $legacyContext,
-        int $defaultLanguageId
+        protected readonly FeatureRepository $featureRepository,
+        protected readonly LegacyContext $legacyContext,
+        protected readonly ConfigurationInterface $configuration
     ) {
-        $this->featureRepository = $featureRepository;
-        $this->contextLanguageId = (int) $legacyContext->getLanguage()->getId();
-        $this->defaultLanguageId = $defaultLanguageId;
     }
 
     /**
@@ -64,17 +54,18 @@ class FeaturesChoiceProvider implements FormChoiceProviderInterface
      */
     public function getChoices()
     {
-        $features = $this->featureRepository->getFeatures();
-        $choices = [];
-        foreach ($features as $feature) {
-            if (!empty($feature['localized_names'][$this->contextLanguageId])) {
-                $featureName = $feature['localized_names'][$this->contextLanguageId];
-            } else {
-                $featureName = $feature['localized_names'][$this->defaultLanguageId];
-            }
-            $choices[$featureName] = $feature['id_feature'];
+        if (!empty($this->cacheFeatureChoices)) {
+            return $this->cacheFeatureChoices;
         }
 
-        return $choices;
+        $contextLangId = (int) $this->legacyContext->getLanguage()->getId();
+
+        $features = $this->featureRepository->getFeaturesByLang($contextLangId);
+        $this->cacheFeatureChoices = [];
+        foreach ($features as $feature) {
+            $this->cacheFeatureChoices[$feature['localized_names'][$contextLangId]] = $feature['id_feature'];
+        }
+
+        return $this->cacheFeatureChoices;
     }
 }

@@ -29,7 +29,7 @@ declare(strict_types=1);
 namespace PrestaShop\PrestaShop\Adapter\Product\Combination\Update;
 
 use PrestaShop\PrestaShop\Adapter\Product\Combination\Repository\CombinationRepository;
-use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductMultiShopRepository;
+use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductRepository;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CannotDeleteCombinationException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\ValueObject\CombinationId;
 use PrestaShop\PrestaShop\Core\Domain\Product\Exception\InvalidProductTypeException;
@@ -41,14 +41,14 @@ use PrestaShop\PrestaShop\Core\Exception\CoreException;
 class CombinationDeleter
 {
     /**
-     * @var ProductMultiShopRepository
+     * @var ProductRepository
      */
     private $productRepository;
 
     /**
      * @var CombinationRepository
      */
-    private $combinationMultiShopRepository;
+    private $combinationRepository;
 
     /**
      * @var DefaultCombinationUpdater
@@ -56,17 +56,17 @@ class CombinationDeleter
     private $defaultCombinationUpdater;
 
     /**
-     * @param ProductMultiShopRepository $productRepository
-     * @param CombinationRepository $combinationMultiShopRepository
+     * @param ProductRepository $productRepository
+     * @param CombinationRepository $combinationRepository
      * @param DefaultCombinationUpdater $defaultCombinationUpdater
      */
     public function __construct(
-        ProductMultiShopRepository $productRepository,
-        CombinationRepository $combinationMultiShopRepository,
+        ProductRepository $productRepository,
+        CombinationRepository $combinationRepository,
         DefaultCombinationUpdater $defaultCombinationUpdater
     ) {
         $this->productRepository = $productRepository;
-        $this->combinationMultiShopRepository = $combinationMultiShopRepository;
+        $this->combinationRepository = $combinationRepository;
         $this->defaultCombinationUpdater = $defaultCombinationUpdater;
     }
 
@@ -76,8 +76,8 @@ class CombinationDeleter
      */
     public function deleteCombination(CombinationId $combinationId, ShopConstraint $shopConstraint): void
     {
-        $combination = $this->combinationMultiShopRepository->getByShopConstraint($combinationId, $shopConstraint);
-        $this->combinationMultiShopRepository->delete($combinationId, $shopConstraint);
+        $combination = $this->combinationRepository->getByShopConstraint($combinationId, $shopConstraint);
+        $this->combinationRepository->delete($combinationId, $shopConstraint);
 
         if ($combination->default_on) {
             $productId = new ProductId((int) $combination->id_product);
@@ -92,7 +92,7 @@ class CombinationDeleter
     public function bulkDeleteProductCombinations(ProductId $productId, array $combinationIds, ShopConstraint $shopConstraint): void
     {
         try {
-            $this->combinationMultiShopRepository->bulkDelete($combinationIds, $shopConstraint);
+            $this->combinationRepository->bulkDelete($combinationIds, $shopConstraint);
         } finally {
             $this->updateDefaultCombination($productId, $shopConstraint);
         }
@@ -112,7 +112,7 @@ class CombinationDeleter
             throw new InvalidProductTypeException(InvalidProductTypeException::EXPECTED_COMBINATIONS_TYPE);
         }
 
-        $this->combinationMultiShopRepository->deleteByProductId($productId, $shopConstraint);
+        $this->combinationRepository->deleteByProductId($productId, $shopConstraint);
     }
 
     /**
@@ -120,7 +120,7 @@ class CombinationDeleter
      */
     private function updateDefaultCombination(ProductId $productId, ShopConstraint $shopConstraint): void
     {
-        $newDefaultCombinationId = $this->combinationMultiShopRepository->findFirstCombinationId($productId, $shopConstraint);
+        $newDefaultCombinationId = $this->combinationRepository->findFirstCombinationId($productId, $shopConstraint);
 
         if (!$newDefaultCombinationId) {
             $this->productRepository->updateCachedDefaultCombination($productId, $shopConstraint);

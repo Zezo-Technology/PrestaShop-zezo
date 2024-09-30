@@ -72,7 +72,7 @@ class GenerateMailTemplatesCommand extends Command
      * @param InputInterface $input
      * @param OutputInterface $output
      *
-     * @return int|void|null
+     * @return int
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -104,6 +104,8 @@ class GenerateMailTemplatesCommand extends Command
             $modulesOutputFolder ?: ''
         );
         $this->commandBus->handle($generateCommand);
+
+        return self::SUCCESS;
     }
 
     /**
@@ -111,10 +113,10 @@ class GenerateMailTemplatesCommand extends Command
      */
     private function initContext()
     {
-        //We need to have an employee or the module hooks don't work
-        //see LegacyHookSubscriber
+        // We need to have an employee or the module hooks don't work
+        // see LegacyHookSubscriber
         if (!$this->legacyContext->getContext()->employee) {
-            //Even a non existing employee is fine
+            // Even a non existing employee is fine
             $this->legacyContext->getContext()->employee = new Employee(42);
         }
     }

@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type AttributeValueData from '@data/faker/attributeValue';
-
 import type {Page} from 'playwright';
+import {
+  type FakerAttributeValue,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add value page, contains functions that can be used on the page
@@ -12,7 +13,7 @@ import type {Page} from 'playwright';
 class AddValue extends BOBasePage {
   public readonly createPageTitle: string;
 
-  public readonly editPageTitle: string;
+  public readonly editPageTitle: (name: string) => string;
 
   private readonly attributeGroupSelect: string;
 
@@ -23,8 +24,6 @@ class AddValue extends BOBasePage {
   private readonly metaTitleInput: string;
 
   private readonly colorInput: string;
-
-  private readonly textureFileInput: string;
 
   private readonly saveButton: string;
 
@@ -37,20 +36,17 @@ class AddValue extends BOBasePage {
   constructor() {
     super();
 
-    this.createPageTitle = 'Attributes > Add new value • ';
-    this.editPageTitle = 'Attributes > Edit:';
-
-    this.alertSuccessBlockParagraph = '.alert-success';
+    this.createPageTitle = `New attribute value • ${global.INSTALL.SHOP_NAME}`;
+    this.editPageTitle = (name: string) => `Editing attribute value ${name} • ${global.INSTALL.SHOP_NAME}`;
 
     // Form selectors
-    this.attributeGroupSelect = '#id_attribute_group';
-    this.valueInput = '#name_1';
-    this.urlInput = 'input[name=\'url_name_1\']';
-    this.metaTitleInput = 'input[name=\'meta_title_1\']';
+    this.attributeGroupSelect = '#attribute_attribute_group';
+    this.valueInput = '#attribute_name_1';
+    this.urlInput = '#attribute_url_name_1';
+    this.metaTitleInput = '#attribute_meta_title_1';
     this.colorInput = '#color_0';
-    this.textureFileInput = '#texture-name';
-    this.saveButton = '#attribute_form_submit_btn';
-    this.saveAndStayButton = 'button[name=\'submitAddattributeAndStay\']';
+    this.saveButton = 'form[name="attribute"] div.card-footer button#save-button';
+    this.saveAndStayButton = 'form[name="attribute"] div.card-footer button[name="save-and-add-new"]';
   }
 
   /*
@@ -60,13 +56,13 @@ class AddValue extends BOBasePage {
   /**
    * Fill value form and save it
    * @param page {Page} Browser tab
-   * @param valueData {AttributeValueData} Data to set on add/edit value form
+   * @param valueData {FakerAttributeValue} Data to set on add/edit value form
    * @param saveAndStay {boolean} True if we need to save and stay, false if not
    * @return {Promise<string>}
    */
-  async addEditValue(page: Page, valueData: AttributeValueData, saveAndStay: boolean = false): Promise<string> {
+  async addEditValue(page: Page, valueData: FakerAttributeValue, saveAndStay: boolean = false): Promise<string> {
     // Set group and value
-    await this.selectByVisibleText(page, this.attributeGroupSelect, valueData.attributeName);
+    await this.selectByVisibleText(page, this.attributeGroupSelect, `${valueData.attributeName} (#${valueData.attributeID})`);
     await this.setValue(page, this.valueInput, valueData.value);
 
     // Set Url and meta title
@@ -76,14 +72,13 @@ class AddValue extends BOBasePage {
     // Set color and texture inputs
     if (await this.elementVisible(page, this.colorInput, 1000)) {
       await this.setValue(page, this.colorInput, valueData.color);
-      // await page.setInputFiles(this.textureFileInput, valueData.textureFileName);
     }
 
     // Save value
     if (saveAndStay) {
-      await this.clickAndWaitForNavigation(page, this.saveAndStayButton);
+      await page.locator(this.saveAndStayButton).click();
     } else {
-      await this.clickAndWaitForNavigation(page, this.saveButton);
+      await this.clickAndWaitForURL(page, this.saveButton);
     }
 
     // Return successful message

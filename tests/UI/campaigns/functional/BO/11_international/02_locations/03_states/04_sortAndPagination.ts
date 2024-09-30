@@ -1,18 +1,19 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import zonesPage from '@pages/BO/international/locations';
 import statesPage from '@pages/BO/international/locations/states';
 
-// Import data
-import Countries from '@data/demo/countries';
+import {
+  boDashboardPage,
+  dataCountries,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -29,12 +30,12 @@ describe('BO - International - States : Sort and pagination', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -44,14 +45,14 @@ describe('BO - International - States : Sort and pagination', async () => {
   it('should go to \'International > Locations\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLocationsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.internationalParentLink,
-      dashboardPage.locationsLink,
+      boDashboardPage.internationalParentLink,
+      boDashboardPage.locationsLink,
     );
 
     const pageTitle = await zonesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(zonesPage.pageTitle);
+    expect(pageTitle).to.contains(zonesPage.pageTitle);
   });
 
   it('should go to \'States\' page', async function () {
@@ -60,7 +61,7 @@ describe('BO - International - States : Sort and pagination', async () => {
     await zonesPage.goToSubTabStates(page);
 
     const pageTitle = await statesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(statesPage.pageTitle);
+    expect(pageTitle).to.contains(statesPage.pageTitle);
   });
 
   // 1 - Pagination next and previous
@@ -96,10 +97,10 @@ describe('BO - International - States : Sort and pagination', async () => {
 
   // 2 : Sort states table
   describe('Sort states table', async () => {
-    it('should reset all filters', async function () {
+    it(`should filter by country '${dataCountries.canada.name}'`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterBeforeSort', baseContext);
 
-      await statesPage.filterStates(page, 'select', 'id_country', Countries.canada.name);
+      await statesPage.filterStates(page, 'select', 'id_country', dataCountries.canada.name);
 
       const paginationNumber = await statesPage.selectPaginationLimit(page, 100);
       expect(paginationNumber).to.contains('(page 1 / 1)');
@@ -170,20 +171,20 @@ describe('BO - International - States : Sort and pagination', async () => {
           const nonSortedTableFloat = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -193,7 +194,7 @@ describe('BO - International - States : Sort and pagination', async () => {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterSort', baseContext);
 
       const numberOfStates = await statesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfStates).to.be.above(0);
+      expect(numberOfStates).to.be.above(0);
     });
 
     it('should change the item number to 50 per page', async function () {

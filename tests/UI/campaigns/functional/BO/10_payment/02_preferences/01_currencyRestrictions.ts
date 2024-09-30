@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -7,16 +6,17 @@ import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
 import preferencesPage from '@pages/BO/payment/preferences';
-// Import FO pages
-import cartPage from '@pages/FO/cart';
-import checkoutPage from '@pages/FO/checkout';
-import homePage from '@pages/FO/home';
-import productPage from '@pages/FO/product';
 
-// Importing data
-import Customers from '@data/demo/customers';
+import {
+  boDashboardPage,
+  dataCustomers,
+  foClassicCartPage,
+  foClassicCheckoutPage,
+  foClassicHomePage,
+  foClassicProductPage,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -29,12 +29,12 @@ describe('BO - Payment - Preferences : Configure currency restrictions', async (
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -44,15 +44,15 @@ describe('BO - Payment - Preferences : Configure currency restrictions', async (
   it('should go to \'Payment > Preferences\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToPreferencesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.paymentParentLink,
-      dashboardPage.preferencesLink,
+      boDashboardPage.paymentParentLink,
+      boDashboardPage.preferencesLink,
     );
     await preferencesPage.closeSfToolBar(page);
 
     const pageTitle = await preferencesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(preferencesPage.pageTitle);
+    expect(pageTitle).to.contains(preferencesPage.pageTitle);
   });
 
   [
@@ -69,7 +69,7 @@ describe('BO - Payment - Preferences : Configure currency restrictions', async (
         test.args.paymentModule,
         test.args.exist,
       );
-      await expect(result).to.contains(preferencesPage.successfulUpdateMessage);
+      expect(result).to.contains(preferencesPage.successfulUpdateMessage);
     });
 
     it('should view my shop', async function () {
@@ -78,54 +78,54 @@ describe('BO - Payment - Preferences : Configure currency restrictions', async (
       // Click on view my shop
       page = await preferencesPage.viewMyShop(page);
       // Change language in FO
-      await homePage.changeLanguage(page, 'en');
+      await foClassicHomePage.changeLanguage(page, 'en');
 
-      const pageTitle = await homePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(homePage.pageTitle);
+      const pageTitle = await foClassicHomePage.getPageTitle(page);
+      expect(pageTitle).to.contains(foClassicHomePage.pageTitle);
     });
 
     it('should create the order and go to payment step', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `createOrder${index}`, baseContext);
 
       // Go to the first product page
-      await homePage.goToProductPage(page, 1);
+      await foClassicHomePage.goToProductPage(page, 1);
       // Add the product to the cart
-      await productPage.addProductToTheCart(page);
+      await foClassicProductPage.addProductToTheCart(page);
       // Proceed to checkout the shopping cart
-      await cartPage.clickOnProceedToCheckout(page);
+      await foClassicCartPage.clickOnProceedToCheckout(page);
 
       // Checkout the order
       if (index === 0) {
         // Personal information step - Login
-        await checkoutPage.clickOnSignIn(page);
-        await checkoutPage.customerLogin(page, Customers.johnDoe);
+        await foClassicCheckoutPage.clickOnSignIn(page);
+        await foClassicCheckoutPage.customerLogin(page, dataCustomers.johnDoe);
       }
 
       // Address step - Go to delivery step
-      const isStepAddressComplete = await checkoutPage.goToDeliveryStep(page);
-      await expect(isStepAddressComplete, 'Step Address is not complete').to.be.true;
+      const isStepAddressComplete = await foClassicCheckoutPage.goToDeliveryStep(page);
+      expect(isStepAddressComplete, 'Step Address is not complete').to.eq(true);
 
       // Delivery step - Go to payment step
-      const isStepDeliveryComplete = await checkoutPage.goToPaymentStep(page);
-      await expect(isStepDeliveryComplete, 'Step Address is not complete').to.be.true;
+      const isStepDeliveryComplete = await foClassicCheckoutPage.goToPaymentStep(page);
+      expect(isStepDeliveryComplete, 'Step Address is not complete').to.eq(true);
     });
 
     it(`should check the '${test.args.paymentModule}' payment module`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', `checkPaymentModule${index}`, baseContext);
 
       // Payment step - Choose payment step
-      const isVisible = await checkoutPage.isPaymentMethodExist(page, test.args.paymentModule);
-      await expect(isVisible).to.be.equal(test.args.exist);
+      const isVisible = await foClassicCheckoutPage.isPaymentMethodExist(page, test.args.paymentModule);
+      expect(isVisible).to.be.equal(test.args.exist);
     });
 
     it('should go back to BO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `goBackToBO${index}`, baseContext);
 
       // Go back to BO
-      page = await checkoutPage.closePage(browserContext, page, 0);
+      page = await foClassicCheckoutPage.closePage(browserContext, page, 0);
 
       const pageTitle = await preferencesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(preferencesPage.pageTitle);
+      expect(pageTitle).to.contains(preferencesPage.pageTitle);
     });
   });
 });

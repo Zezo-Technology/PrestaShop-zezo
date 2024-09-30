@@ -38,12 +38,11 @@ class AddressCore extends ObjectModel
     /** @var int Supplier ID which address belongs to */
     public $id_supplier = null;
 
-    /**
-     * @since 1.5.0
+    /** @var int Id warehouse the address belongs to
      *
-     * @var int Warehouse ID which address belongs to
+     * @deprecated since 9.0, advanced stock management has been completely removed
      */
-    public $id_warehouse = null;
+    public $id_warehouse = 0;
 
     /** @var int Country ID */
     public $id_country;
@@ -102,13 +101,16 @@ class AddressCore extends ObjectModel
     /** @var bool True if address has been deleted (staying in database as deleted) */
     public $deleted = false;
 
+    /** @var int|null */
+    public $id_address;
+
     /** @var array Zone IDs cache */
     protected static $_idZones = [];
 
     /** @var array Country IDs cache */
     protected static $_idCountries = [];
 
-    /** @var array<int, bool> Store if an adress ID exists */
+    /** @var array<int, bool> Store if an adress ID exists. Please note that soft-deleted address also belongs to this cache. */
     protected static $addressExists = [];
 
     /**
@@ -131,12 +133,12 @@ class AddressCore extends ObjectModel
             'company' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 255],
             'lastname' => ['type' => self::TYPE_STRING, 'validate' => 'isName', 'required' => true, 'size' => 255],
             'firstname' => ['type' => self::TYPE_STRING, 'validate' => 'isName', 'required' => true, 'size' => 255],
-            'vat_number' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName'],
+            'vat_number' => ['type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'size' => 32],
             'address1' => ['type' => self::TYPE_STRING, 'validate' => 'isAddress', 'required' => true, 'size' => 128],
             'address2' => ['type' => self::TYPE_STRING, 'validate' => 'isAddress', 'size' => 128],
             'postcode' => ['type' => self::TYPE_STRING, 'validate' => 'isPostCode', 'size' => 12],
             'city' => ['type' => self::TYPE_STRING, 'validate' => 'isCityName', 'required' => true, 'size' => 64],
-            'other' => ['type' => self::TYPE_STRING, 'validate' => 'isMessage', 'size' => 300],
+            'other' => ['type' => self::TYPE_STRING, 'validate' => 'isMessage', 'size' => 4194303],
             'phone' => ['type' => self::TYPE_STRING, 'validate' => 'isPhoneNumber', 'size' => 32],
             'phone_mobile' => ['type' => self::TYPE_STRING, 'validate' => 'isPhoneNumber', 'size' => 32],
             'dni' => ['type' => self::TYPE_STRING, 'validate' => 'isDniLite', 'size' => 16],
@@ -153,7 +155,6 @@ class AddressCore extends ObjectModel
             'id_customer' => ['xlink_resource' => 'customers'],
             'id_manufacturer' => ['xlink_resource' => 'manufacturers'],
             'id_supplier' => ['xlink_resource' => 'suppliers'],
-            'id_warehouse' => ['xlink_resource' => 'warehouse'],
             'id_country' => ['xlink_resource' => 'countries'],
             'id_state' => ['xlink_resource' => 'states'],
         ],
@@ -218,6 +219,7 @@ class AddressCore extends ObjectModel
         }
 
         // Update the cache
+        // This is probably not correct, because it should be true only if the address is NOT flagged as deleted
         static::$addressExists[$this->id] = true;
 
         if (Validate::isUnsignedId($this->id_customer)) {
@@ -241,51 +243,51 @@ class AddressCore extends ObjectModel
             Customer::resetAddressCache($this->id_customer, $this->id);
         }
 
-        if (!$this->isUsed()) {
-            $this->deleteCartAddress();
+        /*
+         * Deleting an address can go two ways.
+         *
+         * 1) If the address is used in an order, we will only soft-delete it. This means mark it with a flag,
+         *    hide it everywhere and prevent anyone using it. We must absolutely retain all the business data
+         *    for the order.
+         * 2) If it's not used, we can safely delete the address.
+         */
 
-            // Update the cache
+        // First step is to unlink this address from all NON-ORDERED carts.
+        $this->deleteCartAddress();
+
+        // Second step - check if the address has been used in some order.
+        if (!$this->isUsed()) {
+            // If NO, we can safely delete it.
             if (isset(static::$addressExists[$this->id])) {
                 static::$addressExists[$this->id] = false;
             }
 
             return parent::delete();
         } else {
-            $this->deleted = true;
-
-            return $this->update();
+            // If YES, we only soft delete it and keep it in the database.
+            return $this->softDelete();
         }
     }
 
     /**
-     * removes the address from carts using it, to avoid errors on not existing address
+     * Removes the address from all non ordered carts using it,
+     * to avoid errors on not existing address.
      */
     protected function deleteCartAddress()
     {
-        // keep pending carts, but unlink it from current address
-        $sql = 'UPDATE ' . _DB_PREFIX_ . 'cart
-                    SET id_address_delivery = 0
-                    WHERE id_address_delivery = ' . $this->id;
+        // Reset it from all delivery addresses
+        $sql = 'UPDATE ' . _DB_PREFIX_ . 'cart c
+            LEFT JOIN ' . _DB_PREFIX_ . 'orders o ON c.id_cart = o.id_cart
+            SET c.id_address_delivery = 0
+            WHERE c.id_address_delivery = ' . $this->id . ' AND o.id_order IS NULL';
         Db::getInstance()->execute($sql);
-        $sql = 'UPDATE ' . _DB_PREFIX_ . 'cart
-                    SET id_address_invoice = 0
-                    WHERE id_address_invoice = ' . $this->id;
+
+        // Reset it from all invoice addresses
+        $sql = 'UPDATE ' . _DB_PREFIX_ . 'cart c
+            LEFT JOIN ' . _DB_PREFIX_ . 'orders o ON c.id_cart = o.id_cart
+            SET c.id_address_invoice = 0
+            WHERE c.id_address_invoice = ' . $this->id . ' AND o.id_order IS NULL';
         Db::getInstance()->execute($sql);
-    }
-
-    /**
-     * Returns fields required for an address in an array hash.
-     *
-     * @return array Hash values
-     */
-    public static function getFieldsValidate()
-    {
-        $tmp_addr = new Address();
-        $out = $tmp_addr->fieldsValidate;
-
-        unset($tmp_addr);
-
-        return $out;
     }
 
     /**
@@ -381,7 +383,7 @@ class AddressCore extends ObjectModel
 
             return $this->trans(
                 'Property %s is empty.',
-                [get_class($this) . '->' . $field],
+                [get_class($this) . '->' . htmlspecialchars($field)],
                 'Admin.Notifications.Error'
             );
         }
@@ -431,7 +433,7 @@ class AddressCore extends ObjectModel
      *
      * @param int $id_address Address ID
      *
-     * @return array
+     * @return array|bool
      */
     public static function getCountryAndState($id_address)
     {
@@ -451,7 +453,8 @@ class AddressCore extends ObjectModel
     }
 
     /**
-     * Specify if an address is already in base.
+     * Specify if an address is already in database.
+     * Please note that a soft-deleted address also counts as existing.
      *
      * @param int $id_address Address id
      * @param bool $useCache Use Cache for optimizing queries
@@ -608,7 +611,6 @@ class AddressCore extends ObjectModel
         $query->where('deleted = 0');
         $query->where('id_customer = 0');
         $query->where('id_manufacturer = 0');
-        $query->where('id_warehouse = 0');
 
         return (int) Db::getInstance(_PS_USE_SQL_SLAVE_)->getValue($query);
     }
@@ -621,6 +623,7 @@ class AddressCore extends ObjectModel
      * @param int $id_customer Customer id
      *
      * @return false|string|null Amount of aliases found
+     *
      * @todo: Find out if we shouldn't be returning an int instead? (breaking change)
      */
     public static function aliasExist($alias, $id_address, $id_customer)

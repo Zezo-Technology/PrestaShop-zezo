@@ -111,7 +111,7 @@ class Contacts extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToStoresPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.storesTabLink);
+    await this.clickAndWaitForURL(page, this.storesTabLink);
   }
 
   /**
@@ -120,8 +120,9 @@ class Contacts extends BOBasePage {
    * @returns {Promise<void>}
    */
   async resetFilter(page: Page): Promise<void> {
-    if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+    if (await this.elementVisible(page, this.filterResetButton, 2000)) {
+      await page.locator(this.filterResetButton).click();
+      await this.elementNotVisible(page, this.filterResetButton, 2000);
     }
   }
 
@@ -154,7 +155,7 @@ class Contacts extends BOBasePage {
   async filterContacts(page: Page, filterBy: string, value: string = ''): Promise<void> {
     await this.setValue(page, this.contactFilterInput(filterBy), value.toString());
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 
   /**
@@ -192,7 +193,7 @@ class Contacts extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToAddNewContactPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.addNewContactButton);
+    await this.clickAndWaitForURL(page, this.addNewContactButton);
   }
 
   /**
@@ -202,7 +203,7 @@ class Contacts extends BOBasePage {
    * @return {Promise<void>}
    */
   async goToEditContactPage(page: Page, row: number): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.listTableEditLink(row));
+    await this.clickAndWaitForURL(page, this.listTableEditLink(row));
   }
 
   /**
@@ -214,7 +215,7 @@ class Contacts extends BOBasePage {
   async deleteContact(page: Page, row: number): Promise<string> {
     // Click on dropDown
     await Promise.all([
-      page.click(this.listTableToggleDropDown(row)),
+      page.locator(this.listTableToggleDropDown(row)).click(),
       this.waitForVisibleSelector(
         page,
         `${this.listTableToggleDropDown(row)}[aria-expanded='true']`,
@@ -223,7 +224,7 @@ class Contacts extends BOBasePage {
 
     // Click on delete
     await Promise.all([
-      page.click(this.deleteRowLink(row)),
+      page.locator(this.deleteRowLink(row)).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
     await this.confirmDeleteContact(page);
@@ -236,7 +237,7 @@ class Contacts extends BOBasePage {
    * @return {Promise<void>}
    */
   async confirmDeleteContact(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.confirmDeleteButton);
+    await this.clickAndWaitForURL(page, this.confirmDeleteButton);
   }
 
   /**
@@ -247,18 +248,18 @@ class Contacts extends BOBasePage {
   async deleteContactsBulkActions(page: Page): Promise<string> {
     // Click on Select All
     await Promise.all([
-      page.$eval(this.selectAllRowsLabel, (el: HTMLElement) => el.click()),
+      page.locator(this.selectAllRowsLabel).evaluate((el: HTMLElement) => el.click()),
       this.waitForVisibleSelector(page, `${this.bulkActionsToggleButton}:not([disabled])`),
     ]);
     // Click on Button Bulk actions
     await Promise.all([
-      page.click(this.bulkActionsToggleButton),
+      page.locator(this.bulkActionsToggleButton).click(),
       this.waitForVisibleSelector(page, this.bulkActionsToggleButton),
     ]);
 
     // Click on delete and wait for modal
     await Promise.all([
-      page.click(this.bulkActionsDeleteButton),
+      page.locator(this.bulkActionsDeleteButton).click(),
       this.waitForVisibleSelector(page, `${this.confirmDeleteModal}.show`),
     ]);
 
@@ -280,7 +281,7 @@ class Contacts extends BOBasePage {
 
     let i = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 

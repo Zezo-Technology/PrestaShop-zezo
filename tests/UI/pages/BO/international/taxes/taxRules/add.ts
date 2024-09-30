@@ -1,7 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type TaxRuleData from '@data/faker/taxRule';
-import type TaxRulesGroupData from '@data/faker/taxRulesGroup';
+import {
+  type FakerTaxRule,
+  type FakerTaxRulesGroup,
+} from '@prestashop-core/ui-testing';
 
 import type {Page} from 'playwright';
 
@@ -73,14 +75,14 @@ class AddTaxRules extends BOBasePage {
   /**
    * Fill form for add/edit tax rules group
    * @param page {Page} Browser tab
-   * @param taxRuleGroupData {TaxRulesGroupData} Data to set on tax rule group data
+   * @param taxRuleGroupData {FakerTaxRulesGroup} Data to set on tax rule group data
    * @returns {Promise<string>}
    */
-  async createEditTaxRulesGroup(page: Page, taxRuleGroupData: TaxRulesGroupData): Promise<string> {
+  async createEditTaxRulesGroup(page: Page, taxRuleGroupData: FakerTaxRulesGroup): Promise<string> {
     await this.setValue(page, this.nameInput, taxRuleGroupData.name);
     await this.setChecked(page, this.statusInput(taxRuleGroupData.enabled ? 'on' : 'off'));
     // Save Tax rules group
-    await this.clickAndWaitForNavigation(page, this.saveTaxButton);
+    await this.clickAndWaitForURL(page, this.saveTaxButton);
 
     return this.getAlertSuccessBlockContent(page);
   }
@@ -88,16 +90,16 @@ class AddTaxRules extends BOBasePage {
   /**
    * Fill form for add/edit tax rules group
    * @param page {Page} Browser tab
-   * @param taxRuleData {TaxRuleData} Data to set on new/edit tax rule data
+   * @param taxRuleData {FakerTaxRule} Data to set on new/edit tax rule data
    * @returns {Promise<string>}
    */
-  async createEditTaxRules(page: Page, taxRuleData: TaxRuleData): Promise<string> {
+  async createEditTaxRules(page: Page, taxRuleData: FakerTaxRule): Promise<string> {
     await this.selectByVisibleText(page, this.countrySelect, taxRuleData.country);
     await this.selectByVisibleText(page, this.behaviourSelect, taxRuleData.behaviour);
     await this.selectByVisibleText(page, this.taxSelect, taxRuleData.name);
     await this.setValue(page, this.descriptionInput, taxRuleData.description);
     // Save Tax rules
-    await this.clickAndWaitForNavigation(page, this.saveAndStayButton);
+    await page.locator(this.saveAndStayButton).click();
 
     return this.getAlertSuccessBlockContent(page);
   }
@@ -108,7 +110,7 @@ class AddTaxRules extends BOBasePage {
    * @return {Promise<void>}
    */
   async clickOnAddNewTaxRule(page: Page): Promise<void> {
-    await page.click(this.addNewTaxRuleButton);
+    await page.locator(this.addNewTaxRuleButton).click();
   }
 }
 export default new AddTaxRules();

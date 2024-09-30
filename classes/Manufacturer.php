@@ -78,11 +78,11 @@ class ManufacturerCore extends ObjectModel
             'date_upd' => ['type' => self::TYPE_DATE],
 
             /* Lang fields */
-            'description' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml'],
-            'short_description' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml'],
+            'description' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 4194303],
+            'short_description' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 4194303],
             'meta_title' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 255],
             'meta_description' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 512],
-            'meta_keywords' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName'],
+            'meta_keywords' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'size' => 255],
         ],
     ];
 
@@ -145,12 +145,8 @@ class ManufacturerCore extends ObjectModel
      *
      * return boolean Deletion result
      */
-    public function deleteSelection($selection)
+    public function deleteSelection(array $selection)
     {
-        if (!is_array($selection)) {
-            die(Tools::displayError());
-        }
-
         $result = true;
         foreach ($selection as $id) {
             $this->id = (int) $id;
@@ -235,7 +231,7 @@ class ManufacturerCore extends ObjectModel
 						WHERE p.`id_product` = cp.`id_product` AND cg.`id_group` ' . $sqlGroups . '
 					)') . '
 					GROUP BY p.`id_manufacturer`'
-                );
+            );
 
             $counts = [];
             foreach ($results as $result) {
@@ -380,7 +376,7 @@ class ManufacturerCore extends ObjectModel
         $getTotal = false,
         $active = true,
         $activeCategory = true,
-        Context $context = null
+        ?Context $context = null
     ) {
         if (!$context) {
             $context = Context::getContext();
@@ -404,7 +400,7 @@ class ManufacturerCore extends ObjectModel
         }
 
         if (!Validate::isOrderBy($orderBy) || !Validate::isOrderWay($orderWay)) {
-            die(Tools::displayError());
+            die(Tools::displayError('Invalid sorting parameters provided.'));
         }
 
         $groups = FrontController::getCurrentCustomerGroups();
@@ -507,7 +503,7 @@ class ManufacturerCore extends ObjectModel
             $result = array_slice($result, (int) (($p - 1) * $n), (int) $n);
         }
 
-        return Product::getProductsProperties($idLang, $result);
+        return $result;
     }
 
     /**

@@ -26,26 +26,154 @@
 
 namespace PrestaShopBundle\Controller\Admin;
 
+use Context;
+use Doctrine\Persistence\ManagerRegistry;
 use Exception;
+use LogicException;
 use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Grid\GridInterface;
 use PrestaShop\PrestaShop\Core\Help\Documentation;
-use PrestaShop\PrestaShop\Core\Localization\Locale;
 use PrestaShop\PrestaShop\Core\Localization\Locale\Repository as LocaleRepository;
+use PrestaShop\PrestaShop\Core\Localization\LocaleInterface;
 use PrestaShop\PrestaShop\Core\Module\Exception\ModuleErrorInterface;
 use PrestaShop\PrestaShop\Core\Security\Permission;
+use PrestaShopBundle\Translation\TranslatorInterface;
+use Psr\Container\ContainerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Contracts\Service\ServiceProviderInterface;
 
 /**
  * Extends The Symfony framework bundle controller to add common functions for PrestaShop needs.
+ *
+ * @deprecated since 9.0 to be removed in future versions (10+ at least, when it will not be used anymore),
+ * should stop using it in favor of PrestaShopAdminController.
  */
 class FrameworkBundleAdminController extends AbstractController
 {
+    /**
+     * @deprecated since 9.0
+     */
     public const PRESTASHOP_CORE_CONTROLLERS_TAG = 'prestashop.core.controllers';
+
+    protected ?ServiceProviderInterface $controllerContainer = null;
+
+    protected ?Container $globalContainer = null;
+
+    /**
+     * This method is completely hacky, we count on the fact that it is going to be used to inject the controller's dedicated
+     * minified controller (thanks to the @required annotation, autowiring and AbstractController parent class), this allows us
+     * to store the controller container in a dedicated field.
+     *
+     * On a second call, made by Symfony\Bundle\FrameworkBundle\Controller\ControllerResolver, this setter is called with the
+     * global container (mainly to cehck the current value actually), so we use the occasion to store the global container.
+     *
+     * The real container should be the controller one, but it doesn't contain all the public services we need that are in
+     * the global container, so we keep a reference on both containers so that the get and has methods can try fallback on
+     * both of them.
+     *
+     * This is quite ugly, but it prevents refactoring all the controllers (from both core and modules controllers), it is only
+     * done on controllers that extend this class which should not be used anymore and be replaced by PrestaShopAdminController
+     * controller by controller along with a refacto to do proper dependency injection.
+     *
+     * @param ContainerInterface $container
+     *
+     * @return ContainerInterface|null
+     *
+     * Note: this annotation is a MUST-HAVE, we have to keep it
+     *
+     * @required
+     */
+    public function setContainer(ContainerInterface $container): ?ContainerInterface
+    {
+        $return = parent::setContainer($container);
+        if ($container instanceof ServiceProviderInterface) {
+            $this->controllerContainer = $container;
+        }
+        if ($container instanceof Container) {
+            $this->globalContainer = $container;
+        }
+
+        return $return;
+    }
+
+    /**
+     * This method was removed in Symfony 6, for backward compatibility reasons this method is temporarily
+     * maintained so the modules can keep using it a little longer. It will be removed in the next major though
+     * along with this base controller class
+     *
+     * @deprecated since 9.0
+     */
+    protected function has(string $id): bool
+    {
+        trigger_deprecation('prestashop/prestashop', '9.0', 'Method "%s()" is deprecated, use method or constructor injection in your controller instead.', __METHOD__);
+
+        if ($this->controllerContainer && $this->controllerContainer->has($id)) {
+            return true;
+        }
+        if ($this->globalContainer && $this->globalContainer->has($id)) {
+            return true;
+        }
+
+        return $this->container->has($id);
+    }
+
+    /**
+     * This method was removed in Symfony 6, for backward compatibility reasons this method is temporarily
+     * maintained so the modules can keep using it a little longer. It will be removed in the next major though
+     * along with this base controller class
+     *
+     * @deprecated since 9.0
+     */
+    protected function get(string $id): object
+    {
+        trigger_deprecation('prestashop/prestashop', '9.0', 'Method "%s()" is deprecated, use method or constructor injection in your controller instead.', __METHOD__);
+
+        return $this->doGet($id);
+    }
+
+    /**
+     * This special get method tries to get a service either in the controller custom-made container (that contains
+     * the most regular aliases to private services like twig, security, ...) and if it doesn't find it it tries to
+     * get it from the global container (that contains all public services).
+     *
+     * This is completely going around the framework, we do this to allow this class to behave as it used to without
+     * having to refactor the controller completely with proper dependncy injection, but it's a temporary solution that
+     * will disappear with this fix.
+     *
+     * @param string $id
+     *
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     */
+    protected function doGet(string $id): object
+    {
+        if ($this->controllerContainer && $this->controllerContainer->has($id)) {
+            return $this->controllerContainer->get($id);
+        }
+
+        if ($this->globalContainer && $this->globalContainer->has($id)) {
+            return $this->globalContainer->get($id);
+        }
+
+        return $this->container->get($id);
+    }
+
+    /**
+     * This method was removed in Symfony 6, for backward compatibility reasons this method is temporarily
+     * maintained so the modules can keep using it a little longer. It will be removed in the next major though
+     * along with this base controller class
+     *
+     * @deprecated since 9.0
+     */
+    protected function getDoctrine(): ManagerRegistry
+    {
+        return $this->get('doctrine');
+    }
 
     /**
      * @var string|null
@@ -57,7 +185,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function getConfiguration(): ShopConfigurationInterface
     {
-        return $this->container->get('prestashop.adapter.legacy.configuration');
+        return $this->get('prestashop.adapter.legacy.configuration');
     }
 
     /**
@@ -79,28 +207,28 @@ class FrameworkBundleAdminController extends AbstractController
             return $errors;
         }
 
-        $translator = $this->get('translator');
-
         foreach ($form->getErrors(true) as $error) {
-            if (!$error->getCause()) {
-                $formId = 'bubbling_errors';
-            } else {
+            if ($error->getCause() && method_exists($error->getCause(), 'getPropertyPath')) {
                 $formId = str_replace(
                     ['.', 'children[', ']', '_data'],
                     ['_', '', '', ''],
                     $error->getCause()->getPropertyPath()
                 );
+            } else {
+                $formId = 'bubbling_errors';
             }
 
             if ($error->getMessagePluralization()) {
-                $errors[$formId][] = $translator->transChoice(
+                $errors[$formId][] = $this->getTranslator()->trans(
                     $error->getMessageTemplate(),
-                    $error->getMessagePluralization(),
-                    $error->getMessageParameters(),
+                    array_merge(
+                        $error->getMessageParameters(),
+                        ['%count%' => $error->getMessagePluralization()]
+                    ),
                     'validators'
                 );
             } else {
-                $errors[$formId][] = $translator->trans(
+                $errors[$formId][] = $this->getTranslator()->trans(
                     $error->getMessageTemplate(),
                     $error->getMessageParameters(),
                     'validators'
@@ -121,7 +249,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function dispatchHook($hookName, array $parameters)
     {
-        $this->container->get('prestashop.core.hook.dispatcher')->dispatchWithParameters($hookName, $parameters);
+        $this->get('prestashop.core.hook.dispatcher')->dispatchWithParameters($hookName, $parameters);
     }
 
     /**
@@ -138,7 +266,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function renderHook($hookName, array $parameters)
     {
-        return $this->container->get('prestashop.core.hook.dispatcher')->renderForParameters($hookName, $parameters)->getContent();
+        return $this->get('prestashop.core.hook.dispatcher')->renderForParameters($hookName, $parameters)->getContent();
     }
 
     /**
@@ -159,16 +287,19 @@ class FrameworkBundleAdminController extends AbstractController
 
         $iso = (string) $legacyContext->getEmployeeLanguageIso();
 
-        return $this->generateUrl('admin_common_sidebar', [
-            'url' => $this->container->get(Documentation::class)->generateLink($section, $iso),
+        $url = $this->generateUrl('admin_common_sidebar', [
+            'url' => $this->get(Documentation::class)->generateLink($section, $iso),
             'title' => $title,
         ]);
+
+        // this line is allow to revert a new behaviour introduce in sf 5.4 which break the result we used to have
+        return strtr($url, ['%2F' => '%252F']);
     }
 
     /**
      * Get the old but still useful context.
      *
-     * @return \Context
+     * @return Context
      */
     protected function getContext()
     {
@@ -188,9 +319,9 @@ class FrameworkBundleAdminController extends AbstractController
     /**
      * Get the locale based on the context
      *
-     * @return Locale
+     * @return LocaleInterface
      */
-    protected function getContextLocale(): Locale
+    protected function getContextLocale(): LocaleInterface
     {
         $locale = $this->getContext()->getCurrentLocale();
         if (null !== $locale) {
@@ -213,7 +344,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function langToLocale($lang)
     {
-        return $this->container->get('prestashop.service.translation')->langToLocale($lang);
+        return $this->get('prestashop.service.translation')->langToLocale($lang);
     }
 
     /**
@@ -239,7 +370,7 @@ class FrameworkBundleAdminController extends AbstractController
      *
      * @return int
      *
-     * @throws \LogicException
+     * @throws LogicException
      */
     protected function authorizationLevel($controller)
     {
@@ -273,7 +404,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function trans($key, $domain, array $parameters = [])
     {
-        return $this->container->get('translator')->trans($key, $parameters, $domain);
+        return $this->getTranslator()->trans($key, $parameters, $domain);
     }
 
     /**
@@ -281,7 +412,7 @@ class FrameworkBundleAdminController extends AbstractController
      *
      * @param array $errorMessages
      *
-     * @throws \LogicException
+     * @throws LogicException
      */
     protected function flashErrors(array $errorMessages)
     {
@@ -298,7 +429,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function redirectToDefaultPage()
     {
-        $legacyContext = $this->container->get('prestashop.adapter.legacy.context');
+        $legacyContext = $this->get('prestashop.adapter.legacy.context');
         $defaultTab = $legacyContext->getDefaultEmployeeTab();
 
         return $this->redirect($legacyContext->getAdminLink($defaultTab));
@@ -313,19 +444,19 @@ class FrameworkBundleAdminController extends AbstractController
      *
      * @return bool
      *
-     * @throws \LogicException
+     * @throws LogicException
      */
     protected function actionIsAllowed($action, $object = '', $suffix = '')
     {
         return (
-                $action === 'delete' . $suffix && $this->isGranted(Permission::DELETE, $object)
-            ) || (
-                ($action === 'activate' . $suffix || $action === 'deactivate' . $suffix) &&
-                $this->isGranted(Permission::UPDATE, $object)
-            ) || (
-                ($action === 'duplicate' . $suffix) &&
-                ($this->isGranted(Permission::UPDATE, $object) || $this->isGranted(Permission::CREATE, $object))
-            );
+            $action === 'delete' . $suffix && $this->isGranted(Permission::DELETE, $object)
+        ) || (
+            ($action === 'activate' . $suffix || $action === 'deactivate' . $suffix)
+            && $this->isGranted(Permission::UPDATE, $object)
+        ) || (
+            ($action === 'duplicate' . $suffix)
+            && ($this->isGranted(Permission::UPDATE, $object) || $this->isGranted(Permission::CREATE, $object))
+        );
     }
 
     /**
@@ -366,7 +497,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function getFallbackErrorMessage($type, $code, $message = '')
     {
-        $isDebug = $this->container->get('kernel')->isDebug();
+        $isDebug = $this->get('kernel')->isDebug();
         if ($isDebug && !empty($message)) {
             return $this->trans(
                 'An unexpected error occurred. [%type% code %code%]: %message%',
@@ -400,7 +531,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function getAdminLink($controller, array $params, $withToken = true)
     {
-        return $this->container->get('prestashop.adapter.legacy.context')->getAdminLink($controller, $withToken, $params);
+        return $this->get('prestashop.adapter.legacy.context')->getAdminLink($controller, $withToken, $params);
     }
 
     /**
@@ -412,7 +543,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function presentGrid(GridInterface $grid)
     {
-        return $this->container->get('prestashop.core.grid.presenter.grid_presenter')->present($grid);
+        return $this->get('prestashop.core.grid.presenter.grid_presenter')->present($grid);
     }
 
     /**
@@ -422,7 +553,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function getCommandBus()
     {
-        return $this->container->get('prestashop.core.command_bus');
+        return $this->get('prestashop.core.command_bus');
     }
 
     /**
@@ -432,7 +563,7 @@ class FrameworkBundleAdminController extends AbstractController
      */
     protected function getQueryBus()
     {
-        return $this->container->get('prestashop.core.query_bus');
+        return $this->get('prestashop.core.query_bus');
     }
 
     /**
@@ -491,7 +622,7 @@ class FrameworkBundleAdminController extends AbstractController
             return $e->getMessage();
         }
 
-        $exceptionType = get_class($e);
+        $exceptionType = $e::class;
         $exceptionCode = $e->getCode();
 
         if (isset($messages[$exceptionType])) {
@@ -511,5 +642,10 @@ class FrameworkBundleAdminController extends AbstractController
             $exceptionCode,
             $e->getMessage()
         );
+    }
+
+    protected function getTranslator(): TranslatorInterface
+    {
+        return $this->get(TranslatorInterface::class);
     }
 }

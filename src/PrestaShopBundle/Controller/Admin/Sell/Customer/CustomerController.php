@@ -54,20 +54,24 @@ use PrestaShop\PrestaShop\Core\Domain\Customer\QueryResult\AddressCreationCustom
 use PrestaShop\PrestaShop\Core\Domain\Customer\QueryResult\EditableCustomer;
 use PrestaShop\PrestaShop\Core\Domain\Customer\QueryResult\ViewableCustomer;
 use PrestaShop\PrestaShop\Core\Domain\Customer\ValueObject\Password;
+use PrestaShop\PrestaShop\Core\Domain\Shop\ValueObject\ShopConstraint;
 use PrestaShop\PrestaShop\Core\Domain\ShowcaseCard\Query\GetShowcaseCardIsClosed;
 use PrestaShop\PrestaShop\Core\Domain\ShowcaseCard\ValueObject\ShowcaseCard;
-use PrestaShop\PrestaShop\Core\Grid\Definition\Factory\CustomerGridDefinitionFactory;
 use PrestaShop\PrestaShop\Core\Search\Filters\CustomerAddressFilters;
+use PrestaShop\PrestaShop\Core\Search\Filters\CustomerBoughtProductFilters;
+use PrestaShop\PrestaShop\Core\Search\Filters\CustomerCartFilters;
 use PrestaShop\PrestaShop\Core\Search\Filters\CustomerDiscountFilters;
 use PrestaShop\PrestaShop\Core\Search\Filters\CustomerFilters;
+use PrestaShop\PrestaShop\Core\Search\Filters\CustomerOrderFilters;
+use PrestaShop\PrestaShop\Core\Search\Filters\CustomerViewedProductFilters;
 use PrestaShopBundle\Component\CsvResponse;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController as AbstractAdminController;
 use PrestaShopBundle\Form\Admin\Sell\Customer\DeleteCustomersType;
 use PrestaShopBundle\Form\Admin\Sell\Customer\PrivateNoteType;
 use PrestaShopBundle\Form\Admin\Sell\Customer\RequiredFieldsType;
 use PrestaShopBundle\Form\Admin\Sell\Customer\TransferGuestAccountType;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
-use PrestaShopBundle\Security\Annotation\DemoRestricted;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
+use PrestaShopBundle\Security\Attribute\DemoRestricted;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -82,17 +86,12 @@ class CustomerController extends AbstractAdminController
     /**
      * Show customers listing.
      *
-     * @AdminSecurity(
-     *     "is_granted('read', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to view this."
-     * )
-     *
      * @param Request $request
      * @param CustomerFilters $filters
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to view this.')]
     public function indexAction(Request $request, CustomerFilters $filters)
     {
         $customersKpiFactory = $this->get('prestashop.core.kpi_row.factory.customers');
@@ -115,42 +114,19 @@ class CustomerController extends AbstractAdminController
             'deleteCustomersForm' => $deleteCustomerForm->createView(),
             'showcaseCardName' => ShowcaseCard::CUSTOMERS_CARD,
             'isShowcaseCardClosed' => $showcaseCardIsClosed,
-            'layoutHeaderToolbarBtn' => $this->getCustomerToolbarButtons(),
+            'layoutHeaderToolbarBtn' => $this->getCustomerIndexToolbarButtons(),
+            'enableSidebar' => true,
         ]);
-    }
-
-    /**
-     * @deprecated since 1.7.8 and will be removed in next major. Use CommonController:searchGridAction instead
-     *
-     * Process Grid search.
-     *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
-     *
-     * @param Request $request
-     *
-     * @return RedirectResponse
-     */
-    public function searchGridAction(Request $request)
-    {
-        $responseBuilder = $this->get('prestashop.bundle.grid.response_builder');
-
-        return $responseBuilder->buildSearchResponse(
-            $this->get('prestashop.core.grid.definition.factory.customer'),
-            $request,
-            CustomerGridDefinitionFactory::GRID_ID,
-            'admin_customers_index'
-        );
     }
 
     /**
      * Show customer create form & handle processing of it.
      *
-     * @AdminSecurity("is_granted('create', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('create', request.get('_legacy_controller'))")]
     public function createAction(Request $request)
     {
         if (!$this->get('prestashop.adapter.shop.context')->isSingleShopContext()) {
@@ -158,8 +134,12 @@ class CustomerController extends AbstractAdminController
         }
 
         $this->addGroupSelectionToRequest($request);
-
-        $customerForm = $this->get('prestashop.core.form.identifiable_object.builder.customer_form_builder')->getForm();
+        $customerForm = $this->get('prestashop.core.form.identifiable_object.builder.customer_form_builder')->getForm(
+            [],
+            [
+                'show_guest_field' => (bool) $this->get('prestashop.adapter.legacy.configuration')->get('PS_GUEST_CHECKOUT_ENABLED'),
+            ]
+        );
         $customerForm->handleRequest($request);
 
         $customerFormHandler = $this->get('prestashop.core.form.identifiable_object.handler.customer_form_handler');
@@ -186,25 +166,36 @@ class CustomerController extends AbstractAdminController
             $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages($e)));
         }
 
+        // Get default groups for JS purposes
+        $defaultGroups = $this->get('prestashop.adapter.group.provider.default_groups_provider')->getGroups();
+
         return $this->render('@PrestaShop/Admin/Sell/Customer/create.html.twig', [
             'customerForm' => $customerForm->createView(),
             'isB2bFeatureActive' => $this->get('prestashop.core.b2b.b2b_feature')->isActive(),
             'minPasswordLength' => Password::MIN_LENGTH,
             'displayInIframe' => $request->query->has('submitFormAjax'),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
+            'enableSidebar' => true,
+            'layoutTitle' => $this->trans('New customer', 'Admin.Navigation.Menu'),
+            'defaultGroups' => [
+                $defaultGroups->getVisitorsGroup()->getId(),
+                $defaultGroups->getGuestsGroup()->getId(),
+                $defaultGroups->getCustomersGroup()->getId(),
+            ],
+            'customerGroupId' => $defaultGroups->getCustomersGroup()->getId(),
+            'guestGroupId' => $defaultGroups->getGuestsGroup()->getId(),
         ]);
     }
 
     /**
      * Show customer edit form & handle processing of it.
      *
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))")
-     *
      * @param int $customerId
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))")]
     public function editAction($customerId, Request $request)
     {
         $this->addGroupSelectionToRequest($request);
@@ -212,6 +203,7 @@ class CustomerController extends AbstractAdminController
         $customerInformation = $this->getQueryBus()->handle(new GetCustomerForEditing((int) $customerId));
         $customerFormOptions = [
             'is_password_required' => false,
+            'show_guest_field' => false,
         ];
         try {
             $customerForm = $this->get('prestashop.core.form.identifiable_object.builder.customer_form_builder')
@@ -247,27 +239,42 @@ class CustomerController extends AbstractAdminController
             'isB2bFeatureActive' => $this->get('prestashop.core.b2b.b2b_feature')->isActive(),
             'minPasswordLength' => Password::MIN_LENGTH,
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
+            'enableSidebar' => true,
+            'layoutTitle' => $this->trans(
+                'Editing customer %name%',
+                'Admin.Navigation.Menu',
+                [
+                    '%name%' => mb_substr($customerInformation->getFirstName()->getValue(), 0, 1) . '. ' . $customerInformation->getLastName()->getValue(),
+                ]
+            ),
         ]);
     }
 
     /**
      * View customer information.
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))", redirectRoute="admin_customers_index")
-     * @DemoRestricted(redirectRoute="admin_customers_index")
-     *
      * @param int $customerId
      * @param Request $request
      * @param CustomerDiscountFilters $customerDiscountFilters
      * @param CustomerAddressFilters $customerAddressFilters
+     * @param CustomerCartFilters $customerCartFilters
+     * @param CustomerOrderFilters $customerOrderFilters
+     * @param CustomerBoughtProductFilters $customerBoughtProductFilters
+     * @param CustomerViewedProductFilters $customerViewedProductFilters
      *
      * @return Response
      */
+    #[DemoRestricted(redirectRoute: 'admin_customers_index')]
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index')]
     public function viewAction(
         $customerId,
         Request $request,
         CustomerDiscountFilters $customerDiscountFilters,
-        CustomerAddressFilters $customerAddressFilters
+        CustomerAddressFilters $customerAddressFilters,
+        CustomerCartFilters $customerCartFilters,
+        CustomerOrderFilters $customerOrderFilters,
+        CustomerBoughtProductFilters $customerBoughtProductFilters,
+        CustomerViewedProductFilters $customerViewedProductFilters
     ) {
         try {
             /** @var ViewableCustomer $customerInformation */
@@ -292,21 +299,35 @@ class CustomerController extends AbstractAdminController
             'note' => $customerInformation->getGeneralInformation()->getPrivateNote(),
         ]);
 
+        // Discount listing
         $customerDiscountGridFactory = $this->get('prestashop.core.grid.factory.customer.discount');
-        $customerDiscountFilters = new CustomerDiscountFilters([
-            'filters' => [
-                'id_customer' => $customerId,
-            ],
-        ] + $customerDiscountFilters->all());
+        $customerDiscountFilters->addFilter(['id_customer' => $customerId]);
         $customerDiscountGrid = $customerDiscountGridFactory->getGrid($customerDiscountFilters);
 
+        // Addresses listing
         $customerAddressGridFactory = $this->get('prestashop.core.grid.factory.customer.address');
-        $customerAddressFilters = new CustomerAddressFilters([
-            'filters' => [
-                'id_customer' => $customerId,
-            ],
-        ] + $customerAddressFilters->all());
+        $customerAddressFilters->addFilter(['id_customer' => $customerId]);
         $customerAddressGrid = $customerAddressGridFactory->getGrid($customerAddressFilters);
+
+        // Order listing
+        $customerOrderGridFactory = $this->get('prestashop.core.grid.factory.customer.order');
+        $customerOrderFilters->addFilter(['id_customer' => $customerId]);
+        $customerOrderGrid = $customerOrderGridFactory->getGrid($customerOrderFilters);
+
+        // Cart listing
+        $customerCartGridFactory = $this->get('prestashop.core.grid.factory.customer.cart');
+        $customerCartFilters->addFilter(['id_customer' => $customerId]);
+        $customerCartGrid = $customerCartGridFactory->getGrid($customerCartFilters);
+
+        // Bought products listing
+        $customerBoughtProductGridFactory = $this->get('prestashop.core.grid.factory.customer.bought_product');
+        $customerBoughtProductFilters->addFilter(['id_customer' => $customerId]);
+        $customerBoughtProductGrid = $customerBoughtProductGridFactory->getGrid($customerBoughtProductFilters);
+
+        // Viewed products listing
+        $customerViewedProductGridFactory = $this->get('prestashop.core.grid.factory.customer.viewed_product');
+        $customerViewedProductFilters->addFilter(['id_customer' => $customerId]);
+        $customerViewedProductGrid = $customerViewedProductGridFactory->getGrid($customerViewedProductFilters);
 
         if ($request->query->has('conf')) {
             $this->manageLegacyFlashes($request->query->get('conf'));
@@ -318,25 +339,33 @@ class CustomerController extends AbstractAdminController
             'customerInformation' => $customerInformation,
             'customerDiscountGrid' => $this->presentGrid($customerDiscountGrid),
             'customerAddressGrid' => $this->presentGrid($customerAddressGrid),
+            'customerOrderGrid' => $this->presentGrid($customerOrderGrid),
+            'customerCartGrid' => $this->presentGrid($customerCartGrid),
+            'customerBoughtProductGrid' => $this->presentGrid($customerBoughtProductGrid),
+            'customerViewedProductGrid' => $this->presentGrid($customerViewedProductGrid),
             'isMultistoreEnabled' => $this->get('prestashop.adapter.feature.multistore')->isActive(),
             'transferGuestAccountForm' => $transferGuestAccountForm,
             'privateNoteForm' => $privateNoteForm->createView(),
+            'layoutHeaderToolbarBtn' => $this->getCustomerViewToolbarButtons($customerId),
+            'layoutTitle' => $this->trans(
+                'Customer %name%',
+                'Admin.Navigation.Menu',
+                [
+                    '%name%' => mb_substr($customerInformation->getPersonalInformation()->getFirstName(), 0, 1) . '. ' . $customerInformation->getPersonalInformation()->getLastName(),
+                ]
+            ),
         ]);
     }
 
     /**
      * Set private note about customer.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller'))",
-     *      redirectRoute="admin_customers_index"
-     * )
-     *
      * @param int $customerId
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index')]
     public function setPrivateNoteAction($customerId, Request $request)
     {
         $privateNoteForm = $this->createForm(PrivateNoteType::class);
@@ -367,16 +396,12 @@ class CustomerController extends AbstractAdminController
     /**
      * Transforms guest to customer
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller'))",
-     *      redirectRoute="admin_customers_index"
-     * )
-     *
      * @param int $customerId
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index')]
     public function transformGuestToCustomerAction($customerId, Request $request)
     {
         try {
@@ -404,15 +429,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Sets required fields for customer
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller'))",
-     *      redirectRoute="admin_customers_index"
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')) && is_granted('create', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index')]
     public function setRequiredFieldsAction(Request $request)
     {
         $requiredFieldsForm = $this->getRequiredFieldsForm();
@@ -432,20 +453,30 @@ class CustomerController extends AbstractAdminController
     /**
      * Search for customers by query.
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('create', 'AdminOrders')")
-     *
      * @param Request $request
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('create', 'AdminOrders')")]
     public function searchAction(Request $request)
     {
         $query = $request->query->get('customer_search');
         $phrases = explode(' OR ', $query);
         $isRequestFromLegacyPage = !$request->query->has('sf2');
 
+        if (!$request->query->has('shopId')) {
+            // this is important for keeping backwards compatibility, null acts different compared to AllShops constraint.
+            $shopConstraint = null;
+        } else {
+            $shopId = $request->query->getInt('shopId');
+            $shopConstraint = $shopId ? ShopConstraint::shop($shopId) : ShopConstraint::allShops();
+        }
+
         try {
-            $customers = $this->getQueryBus()->handle(new SearchCustomers($phrases));
+            $customers = $this->getQueryBus()->handle(new SearchCustomers(
+                $phrases,
+                $shopConstraint
+            ));
         } catch (Exception $e) {
             return $this->json(
                 ['message' => $this->getErrorMessageForException($e, $this->getErrorMessages($e))],
@@ -468,12 +499,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Provides customer information for address creation in json format
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))")]
     public function getCustomerInformationAction(Request $request): Response
     {
         try {
@@ -501,16 +531,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Toggle customer status.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to edit this."
-     * )
-     *
      * @param int $customerId
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to edit this.')]
     public function toggleStatusAction($customerId)
     {
         try {
@@ -539,16 +564,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Toggle customer newsletter subscription status.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to edit this."
-     * )
-     *
      * @param int $customerId
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to edit this.')]
     public function toggleNewsletterSubscriptionAction($customerId)
     {
         try {
@@ -579,16 +599,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Toggle customer partner offer subscription status.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to edit this."
-     * )
-     *
      * @param int $customerId
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to edit this.')]
     public function togglePartnerOfferSubscriptionAction($customerId)
     {
         try {
@@ -617,16 +632,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Delete customers in bulk action.
      *
-     * @AdminSecurity(
-     *     "is_granted('delete', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to delete this."
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to delete this.')]
     public function deleteBulkAction(Request $request)
     {
         $form = $this->createForm(DeleteCustomersType::class);
@@ -649,7 +659,7 @@ class CustomerController extends AbstractAdminController
 
                 $this->addFlash(
                     'success',
-                    $this->trans('The selection has been successfully deleted', 'Admin.Notifications.Success')
+                    $this->trans('The selection has been successfully deleted.', 'Admin.Notifications.Success')
                 );
             } catch (CustomerException $e) {
                 $this->addFlash('error', $this->getErrorMessageForException($e, $this->getErrorMessages($e)));
@@ -662,16 +672,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Delete customer.
      *
-     * @AdminSecurity(
-     *     "is_granted('delete', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to delete this."
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to delete this.')]
     public function deleteAction(Request $request)
     {
         $form = $this->createForm(DeleteCustomersType::class);
@@ -702,21 +707,16 @@ class CustomerController extends AbstractAdminController
     /**
      * Enable customers in bulk action.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to edit this."
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to edit this.')]
     public function enableBulkAction(Request $request)
     {
         $customerIds = array_map(function ($customerId) {
             return (int) $customerId;
-        }, $request->request->get('customer_customers_bulk', []));
+        }, $request->request->all('customer_customers_bulk'));
 
         try {
             $command = new BulkEnableCustomerCommand($customerIds);
@@ -734,22 +734,17 @@ class CustomerController extends AbstractAdminController
     /**
      * Disable customers in bulk action.
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_customers_index",
-     *     message="You do not have permission to edit this."
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_customers_index', message: 'You do not have permission to edit this.')]
     public function disableBulkAction(Request $request)
     {
         try {
             $customerIds = array_map(function ($customerId) {
                 return (int) $customerId;
-            }, $request->request->get('customer_customers_bulk', []));
+            }, $request->request->all('customer_customers_bulk'));
 
             $command = new BulkDisableCustomerCommand($customerIds);
 
@@ -766,12 +761,11 @@ class CustomerController extends AbstractAdminController
     /**
      * Export filtered customers
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
-     *
      * @param CustomerFilters $filters
      *
      * @return CsvResponse
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))")]
     public function exportAction(CustomerFilters $filters)
     {
         $filters = new CustomerFilters(['limit' => null] + $filters->all());
@@ -821,12 +815,11 @@ class CustomerController extends AbstractAdminController
     }
 
     /**
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('create', 'AdminOrders')")
-     *
      * @param int $customerId
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('create', 'AdminOrders')")]
     public function getCartsAction(int $customerId)
     {
         try {
@@ -844,12 +837,11 @@ class CustomerController extends AbstractAdminController
     }
 
     /**
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('create', 'AdminOrders')")
-     *
      * @param int $customerId
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('create', 'AdminOrders')")]
     public function getOrdersAction(int $customerId)
     {
         try {
@@ -889,7 +881,7 @@ class CustomerController extends AbstractAdminController
         }
 
         if (!$request->request->has('customer')
-            || isset($request->request->get('customer')['group_ids'])
+            || isset($request->request->all('customer')['group_ids'])
         ) {
             return;
         }
@@ -914,11 +906,18 @@ class CustomerController extends AbstractAdminController
                 'This customer does not exist.',
                 'Admin.Orderscustomers.Notification'
             ),
-            DuplicateCustomerEmailException::class => $this->trans(
-                'You can\'t update the email to "%s", because a registered customer with this email already exists.',
-                'Admin.Orderscustomers.Notification',
-                [$e instanceof DuplicateCustomerEmailException ? $e->getEmail()->getValue() : '']
-            ),
+            DuplicateCustomerEmailException::class => [
+                DuplicateCustomerEmailException::ADD => $this->trans(
+                    'You can\'t create a registered customer with email "%s", because a registered customer with this email already exists.',
+                    'Admin.Orderscustomers.Notification',
+                    [$e instanceof DuplicateCustomerEmailException ? $e->getEmail()->getValue() : '']
+                ),
+                DuplicateCustomerEmailException::EDIT => $this->trans(
+                    'You can\'t update the email to "%s", because a registered customer with this email already exists.',
+                    'Admin.Orderscustomers.Notification',
+                    [$e instanceof DuplicateCustomerEmailException ? $e->getEmail()->getValue() : '']
+                ),
+            ],
             CustomerDefaultGroupAccessException::class => $this->trans(
                 'A default customer group must be selected in group box.',
                 'Admin.Orderscustomers.Notification'
@@ -1007,7 +1006,7 @@ class CustomerController extends AbstractAdminController
     /**
      * @return array
      */
-    private function getCustomerToolbarButtons(): array
+    private function getCustomerIndexToolbarButtons(): array
     {
         $toolbarButtons = [];
 
@@ -1022,11 +1021,29 @@ class CustomerController extends AbstractAdminController
 
         if (!$isSingleShopContext) {
             $toolbarButtons['add']['help'] = $this->trans(
-                'You can use this feature in a single shop context only. Switch context to enable it.',
+                'You can use this feature in a single-store context only. Switch contexts to enable it.',
                 'Admin.Orderscustomers.Feature'
             );
             $toolbarButtons['add']['href'] = '#';
         }
+
+        return $toolbarButtons;
+    }
+
+    /**
+     * @param int $customerId
+     *
+     * @return array
+     */
+    private function getCustomerViewToolbarButtons(int $customerId): array
+    {
+        $toolbarButtons = [];
+
+        $toolbarButtons['edit'] = [
+            'href' => $this->generateUrl('admin_customers_edit', ['customerId' => $customerId]),
+            'desc' => $this->trans('Edit customer', 'Admin.Orderscustomers.Feature'),
+            'icon' => 'mode_edit',
+        ];
 
         return $toolbarButtons;
     }

@@ -1,23 +1,24 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 import {disableB2BTest, enableB2BTest} from '@commonTests/BO/shopParameters/b2b';
-import {createOrderByCustomerTest} from '@commonTests/FO/order';
+import {createOrderByCustomerTest} from '@commonTests/FO/classic/order';
 
 // Import pages
 import outstandingPage from '@pages/BO/customers/outstanding';
-import dashboardPage from '@pages/BO/dashboard';
-import ordersPage from '@pages/BO/orders';
 
-// Import data
-import Customers from '@data/demo/customers';
-import OrderStatuses from '@data/demo/orderStatuses';
-import PaymentMethods from '@data/demo/paymentMethods';
-import Products from '@data/demo/products';
-import OrderData from '@data/faker/order';
+import {
+  boDashboardPage,
+  boOrdersPage,
+  dataCustomers,
+  dataOrderStatuses,
+  dataPaymentMethods,
+  dataProducts,
+  FakerOrder,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -45,15 +46,15 @@ describe('BO - Customers - Outstanding : Pagination of the outstanding page', as
 
   // Const used to get the least number of outstanding to display pagination
   const numberOfOrdersToCreate: number = 11;
-  const orderByCustomerData: OrderData = new OrderData({
-    customer: Customers.johnDoe,
+  const orderByCustomerData: FakerOrder = new FakerOrder({
+    customer: dataCustomers.johnDoe,
     products: [
       {
-        product: Products.demo_1,
+        product: dataProducts.demo_1,
         quantity: 1,
       },
     ],
-    paymentMethod: PaymentMethods.wirePayment,
+    paymentMethod: dataPaymentMethods.wirePayment,
   });
 
   // Pre-Condition : Enable B2B
@@ -61,12 +62,12 @@ describe('BO - Customers - Outstanding : Pagination of the outstanding page', as
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
   describe('PRE-TEST: Create 11 orders on FO and change their status to payment accepted on BO', async () => {
     it('should login to BO', async function () {
@@ -82,28 +83,32 @@ describe('BO - Customers - Outstanding : Pagination of the outstanding page', as
         it('should go to Orders > Orders page', async function () {
           await testContext.addContextItem(this, 'testIdentifier', `goToOrdersPage_${index}`, baseContext);
 
-          await dashboardPage.goToSubMenu(
-            page,
-            dashboardPage.ordersParentLink,
-            dashboardPage.ordersLink,
-          );
+          if (index === 0) {
+            await boDashboardPage.goToSubMenu(
+              page,
+              boDashboardPage.ordersParentLink,
+              boDashboardPage.ordersLink,
+            );
+          } else {
+            await boOrdersPage.reloadPage(page);
+          }
 
-          const pageTitle = await ordersPage.getPageTitle(page);
-          await expect(pageTitle).to.contains(ordersPage.pageTitle);
+          const pageTitle = await boOrdersPage.getPageTitle(page);
+          expect(pageTitle).to.contains(boOrdersPage.pageTitle);
         });
 
         it('should update order status', async function () {
           await testContext.addContextItem(this, 'testIdentifier', `updateOrderStatus_${index}`, baseContext);
 
-          const textResult = await ordersPage.setOrderStatus(page, 1, OrderStatuses.paymentAccepted);
-          await expect(textResult).to.equal(ordersPage.successfulUpdateMessage);
+          const textResult = await boOrdersPage.setOrderStatus(page, 1, dataOrderStatuses.paymentAccepted);
+          expect(textResult).to.equal(boOrdersPage.successfulUpdateMessage);
         });
 
         it('should check that the status is updated successfully', async function () {
           await testContext.addContextItem(this, 'testIdentifier', `checkStatusBO_${index}`, baseContext);
 
-          const orderStatus = await ordersPage.getTextColumn(page, 'osname', 1);
-          await expect(orderStatus, 'Order status was not updated').to.equal(OrderStatuses.paymentAccepted.name);
+          const orderStatus = await boOrdersPage.getTextColumn(page, 'osname', 1);
+          expect(orderStatus, 'Order status was not updated').to.equal(dataOrderStatuses.paymentAccepted.name);
         });
       });
     });
@@ -112,14 +117,14 @@ describe('BO - Customers - Outstanding : Pagination of the outstanding page', as
     it('should go to BO > Customers > Outstanding page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToOutstandingPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.customersParentLink,
-        dashboardPage.outstandingLink,
+        boDashboardPage.customersParentLink,
+        boDashboardPage.outstandingLink,
       );
 
       const pageTitle = await outstandingPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(outstandingPage.pageTitle);
+      expect(pageTitle).to.contains(outstandingPage.pageTitle);
     });
 
     it('should reset all filters and get the number of outstanding', async function () {
@@ -128,7 +133,7 @@ describe('BO - Customers - Outstanding : Pagination of the outstanding page', as
       await outstandingPage.resetFilter(page);
 
       numberOutstanding = await outstandingPage.getNumberOutstanding(page);
-      await expect(numberOutstanding).to.be.above(numberOfOrdersToCreate);
+      expect(numberOutstanding).to.be.above(numberOfOrdersToCreate);
     });
 
     it('should change the items number to 10 per page', async function () {

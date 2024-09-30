@@ -59,14 +59,14 @@
 
           {% if message.attachmentFile %}
             <i class="material-icons font-16">attachment</i>
-            <a href="{{ message.attachmentFile }}" target="_blank">
+            <a href="{{ path('admin_common_secured_file_image_reader', { 'fileName': message.attachmentFile }) }}" target="_blank">
               {{ 'Attachment'|trans({}, 'Admin.Catalog.Feature') }}
             </a>
           {% endif %}
 
           {% if message.productId %}
             <i class="material-icons font-16">library_books</i>
-            <a href="{{ path('admin_product_form', {'id': message.productId}) }}">
+            <a href="{{ path('admin_products_edit', {'productId': message.productId}) }}">
               {{ 'Product'|trans({}, 'Admin.Global') }}
               {{ message.productName }}
             </a>

@@ -46,8 +46,8 @@ use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\Builder\FormBuilderInterf
 use PrestaShop\PrestaShop\Core\Form\IdentifiableObject\Handler\FormHandlerInterface;
 use PrestaShop\PrestaShop\Core\Search\Filters\StateFilters;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
-use PrestaShopBundle\Security\Annotation\DemoRestricted;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
+use PrestaShopBundle\Security\Attribute\DemoRestricted;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -90,13 +90,12 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Show states listing page
      *
-     * @AdminSecurity("is_granted('read', request.get('_legacy_controller'))")
-     *
      * @param Request $request
      * @param StateFilters $filters
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller'))")]
     public function indexAction(Request $request, StateFilters $filters): Response
     {
         $stateGrid = $this->get('prestashop.core.grid.grid_factory.state')->getGrid($filters);
@@ -112,13 +111,12 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Deletes state
      *
-     * @AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute="admin_states_index")
-     * @DemoRestricted(redirectRoute="admin_states_index")
-     *
      * @param int $stateId
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_states_index')]
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index')]
     public function deleteAction(int $stateId): RedirectResponse
     {
         try {
@@ -137,16 +135,12 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Handles edit form rendering and submission
      *
-     * @AdminSecurity(
-     *     "is_granted('update', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_states_index"
-     * )
-     *
      * @param int $stateId
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index')]
     public function editAction(int $stateId, Request $request): Response
     {
         try {
@@ -179,7 +173,7 @@ class StateController extends FrameworkBundleAdminController
 
         return $this->render('@PrestaShop/Admin/Improve/International/Locations/State/edit.html.twig', [
             'enableSidebar' => true,
-            'layoutTitle' => $this->trans('Edit: %value%', 'Admin.Actions', ['%value%' => $editableState->getName()]),
+            'layoutTitle' => $this->trans('Editing state %value%', 'Admin.Navigation.Menu', ['%value%' => $editableState->getName()]),
             'stateForm' => $stateForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
         ]);
@@ -188,16 +182,11 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Show "Add new" form and handle form submit.
      *
-     * @AdminSecurity(
-     *     "is_granted('create', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_states_index",
-     *     message="You do not have permission to create this."
-     * )
-     *
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('create', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index', message: 'You do not have permission to create this.')]
     public function createAction(Request $request): Response
     {
         $stateForm = $this->getFormBuilder()->getForm();
@@ -219,23 +208,23 @@ class StateController extends FrameworkBundleAdminController
             'stateForm' => $stateForm->createView(),
             'help_link' => $this->generateSidebarLink($request->attributes->get('_legacy_controller')),
             'multistoreInfoTip' => $this->trans(
-                'Note that this feature is available in all shops context only. It will be added to all your stores.',
+                'Note that this feature is only available in the "all stores" context. It will be added to all your stores.',
                 'Admin.Notifications.Info'
             ),
             'multistoreIsUsed' => $this->get('prestashop.adapter.multistore_feature')->isUsed(),
+            'layoutTitle' => $this->trans('New state', 'Admin.Navigation.Menu'),
         ]);
     }
 
     /**
      * Toggles state status
      *
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute="admin_states_index")
-     * @DemoRestricted(redirectRoute="admin_states_index")
-     *
      * @param int $stateId
      *
      * @return JsonResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_states_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index')]
     public function toggleStatusAction(int $stateId): JsonResponse
     {
         try {
@@ -262,16 +251,11 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Delete states in bulk action.
      *
-     * @AdminSecurity(
-     *     "is_granted('delete', request.get('_legacy_controller'))",
-     *     redirectRoute="admin_states_index",
-     *     message="You do not have permission to delete this."
-     * )
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index', message: 'You do not have permission to delete this.')]
     public function deleteBulkAction(Request $request): RedirectResponse
     {
         $stateIds = $this->getBulkStatesFromRequest($request);
@@ -292,13 +276,12 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Enables states on bulk action
      *
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute="admin_states_index")
-     * @DemoRestricted(redirectRoute="admin_states_index")
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_states_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index')]
     public function bulkEnableAction(Request $request): RedirectResponse
     {
         $stateIds = $this->getBulkStatesFromRequest($request);
@@ -320,13 +303,12 @@ class StateController extends FrameworkBundleAdminController
     /**
      * Disables states on bulk action
      *
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute="admin_states_index")
-     * @DemoRestricted(redirectRoute="admin_states_index")
-     *
      * @param Request $request
      *
      * @return RedirectResponse
      */
+    #[DemoRestricted(redirectRoute: 'admin_states_index')]
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller'))", redirectRoute: 'admin_states_index')]
     public function bulkDisableAction(Request $request): RedirectResponse
     {
         $stateIds = $this->getBulkStatesFromRequest($request);
@@ -368,11 +350,7 @@ class StateController extends FrameworkBundleAdminController
      */
     private function getBulkStatesFromRequest(Request $request): array
     {
-        $stateIds = $request->request->get('state_states_bulk');
-
-        if (!is_array($stateIds)) {
-            return [];
-        }
+        $stateIds = $request->request->all('state_states_bulk');
 
         foreach ($stateIds as $i => $stateId) {
             $stateIds[$i] = (int) $stateId;
@@ -390,7 +368,7 @@ class StateController extends FrameworkBundleAdminController
     {
         return [
             StateException::class => $this->trans(
-                'Unexpected error occurred.',
+                'An unexpected error occurred.',
                 'Admin.Notifications.Error'
             ),
             StateNotFoundException::class => $this->trans(

@@ -1,23 +1,24 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import {deleteCustomerTest} from '@commonTests/BO/customers/customer';
 import loginCommon from '@commonTests/BO/loginBO';
-import {createOrderByGuestTest} from '@commonTests/FO/order';
+import {createOrderByGuestTest} from '@commonTests/FO/classic/order';
 
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
-import ordersPage from '@pages/BO/orders';
 import orderPageCustomerBlock from '@pages/BO/orders/view/customerBlock';
 
-// Import data
-import PaymentMethods from '@data/demo/paymentMethods';
-import Products from '@data/demo/products';
-import AddressData from '@data/faker/address';
-import CustomerData from '@data/faker/customer';
-import OrderData from '@data/faker/order';
+import {
+  boDashboardPage,
+  boOrdersPage,
+  dataPaymentMethods,
+  dataProducts,
+  FakerAddress,
+  FakerCustomer,
+  FakerOrder,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -38,30 +39,30 @@ describe('BO - Orders : Bulk open on new tab', async () => {
   let browserContext: BrowserContext;
   let page: Page;
 
-  const firstCustomerData: CustomerData = new CustomerData();
-  const secondCustomerData: CustomerData = new CustomerData();
-  const addressData: AddressData = new AddressData({country: 'France'});
-  const firstOrderByGuestData: OrderData = new OrderData({
+  const firstCustomerData: FakerCustomer = new FakerCustomer();
+  const secondCustomerData: FakerCustomer = new FakerCustomer();
+  const addressData: FakerAddress = new FakerAddress({country: 'France'});
+  const firstOrderByGuestData: FakerOrder = new FakerOrder({
     customer: firstCustomerData,
     products: [
       {
-        product: Products.demo_1,
+        product: dataProducts.demo_1,
         quantity: 1,
       },
     ],
     deliveryAddress: addressData,
-    paymentMethod: PaymentMethods.wirePayment,
+    paymentMethod: dataPaymentMethods.wirePayment,
   });
-  const secondOrderByGuestData: OrderData = new OrderData({
+  const secondOrderByGuestData: FakerOrder = new FakerOrder({
     customer: secondCustomerData,
     products: [
       {
-        product: Products.demo_1,
+        product: dataProducts.demo_1,
         quantity: 1,
       },
     ],
     deliveryAddress: addressData,
-    paymentMethod: PaymentMethods.wirePayment,
+    paymentMethod: dataPaymentMethods.wirePayment,
   });
 
   // Pre-condition: Create first order in FO
@@ -72,12 +73,12 @@ describe('BO - Orders : Bulk open on new tab', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   describe('Open on new tab by bulk actions', async () => {
@@ -88,30 +89,30 @@ describe('BO - Orders : Bulk open on new tab', async () => {
     it('should go to \'Orders > Orders\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToOrdersPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.ordersParentLink,
-        dashboardPage.ordersLink,
+        boDashboardPage.ordersParentLink,
+        boDashboardPage.ordersLink,
       );
 
-      const pageTitle = await ordersPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(ordersPage.pageTitle);
+      const pageTitle = await boOrdersPage.getPageTitle(page);
+      expect(pageTitle).to.contains(boOrdersPage.pageTitle);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFiltersFirst', baseContext);
 
-      const numberOfOrders = await ordersPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfOrders).to.be.above(0);
+      const numberOfOrders = await boOrdersPage.resetAndGetNumberOfLines(page);
+      expect(numberOfOrders).to.be.above(0);
     });
 
     it('should click on \'Open in new tabs\' with bulk actions', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'bulkOpenInNewTabs', baseContext);
 
-      page = await ordersPage.bulkOpenInNewTabs(page, false, [1, 2]);
+      page = await boOrdersPage.bulkOpenInNewTabs(page, false, [1, 2]);
 
       const pageTitle = await orderPageCustomerBlock.getPageTitle(page);
-      await expect(pageTitle).to.contains(orderPageCustomerBlock.pageTitle);
+      expect(pageTitle).to.contains(orderPageCustomerBlock.pageTitle);
     });
 
     it('should check the first opened order page', async function () {
@@ -119,9 +120,9 @@ describe('BO - Orders : Bulk open on new tab', async () => {
 
       // Check second customer information
       const customerInfo = await orderPageCustomerBlock.getCustomerInfoBlock(page);
-      await expect(customerInfo).to.contains(secondCustomerData.socialTitle);
-      await expect(customerInfo).to.contains(secondCustomerData.firstName);
-      await expect(customerInfo).to.contains(secondCustomerData.lastName);
+      expect(customerInfo).to.contains(secondCustomerData.socialTitle);
+      expect(customerInfo).to.contains(secondCustomerData.firstName);
+      expect(customerInfo).to.contains(secondCustomerData.lastName);
     });
 
     it('should close the tab and check that the second order page is opened', async function () {
@@ -130,7 +131,7 @@ describe('BO - Orders : Bulk open on new tab', async () => {
       page = await orderPageCustomerBlock.closePage(browserContext, page, 1);
 
       const pageTitle = await orderPageCustomerBlock.getPageTitle(page);
-      await expect(pageTitle).to.contains(orderPageCustomerBlock.pageTitle);
+      expect(pageTitle).to.contains(orderPageCustomerBlock.pageTitle);
     });
 
     it('should check the second order page', async function () {
@@ -138,9 +139,9 @@ describe('BO - Orders : Bulk open on new tab', async () => {
 
       // Check second customer information
       const customerInfo = await orderPageCustomerBlock.getCustomerInfoBlock(page);
-      await expect(customerInfo).to.contains(firstCustomerData.socialTitle);
-      await expect(customerInfo).to.contains(firstCustomerData.firstName);
-      await expect(customerInfo).to.contains(firstCustomerData.lastName);
+      expect(customerInfo).to.contains(firstCustomerData.socialTitle);
+      expect(customerInfo).to.contains(firstCustomerData.firstName);
+      expect(customerInfo).to.contains(firstCustomerData.lastName);
     });
   });
 

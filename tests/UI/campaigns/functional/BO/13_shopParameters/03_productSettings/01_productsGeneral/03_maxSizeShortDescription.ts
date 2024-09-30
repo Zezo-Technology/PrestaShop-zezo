@@ -1,25 +1,22 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
-import {
-  disableNewProductPageTest,
-  resetNewProductPageAsDefault,
-} from '@commonTests/BO/advancedParameters/newFeatures';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import productSettingsPage from '@pages/BO/shopParameters/productSettings';
-import productsPage from '@pages/BO/catalog/products';
 import addProductPage from '@pages/BO/catalog/products/add';
-
-// Import data
-import ProductData from '@data/faker/product';
+import descriptionTab from '@pages/BO/catalog/products/add/descriptionTab';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  boProductsPage,
+  boProductSettingsPage,
+  FakerProduct,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_shopParameters_productSettings_productsGeneral_maxSizeShortDescription';
 
@@ -33,21 +30,18 @@ describe('BO - Shop Parameters - Product Settings : Update max size of short des
   let browserContext: BrowserContext;
   let page: Page;
 
-  const productData: ProductData = new ProductData({type: 'Standard product', status: false});
+  const productData: FakerProduct = new FakerProduct({type: 'standard', status: false});
   const maxSummarySizeValue: number = 5;
   const defaultSummarySizeValue: number = 800;
 
-  // Pre-condition: Disable new product page
-  disableNewProductPageTest(`${baseContext}_disableNewProduct`);
-
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   describe('Update max size of short description', async () => {
@@ -62,62 +56,70 @@ describe('BO - Shop Parameters - Product Settings : Update max size of short des
 
     tests.forEach((test, index: number) => {
       it('should go to \'Shop parameters > Product Settings\' page', async function () {
-        await testContext.addContextItem(this, 'testIdentifier', `goToProductSettingsPage${index + 1}`, baseContext);
+        await testContext.addContextItem(this, 'testIdentifier', `goToProductSettingsPage${index}`, baseContext);
 
-        await dashboardPage.goToSubMenu(
+        await boDashboardPage.goToSubMenu(
           page,
-          dashboardPage.shopParametersParentLink,
-          dashboardPage.productSettingsLink,
+          boDashboardPage.shopParametersParentLink,
+          boDashboardPage.productSettingsLink,
         );
-        await productSettingsPage.closeSfToolBar(page);
+        await boProductSettingsPage.closeSfToolBar(page);
 
-        const pageTitle = await productSettingsPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(productSettingsPage.pageTitle);
+        const pageTitle = await boProductSettingsPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boProductSettingsPage.pageTitle);
       });
 
       it(`should update max size of short description to ${test.args.descriptionSize}`, async function () {
-        await testContext.addContextItem(this, 'testIdentifier', `updateMaxSizeSummaryValue${index + 1}`, baseContext);
+        await testContext.addContextItem(this, 'testIdentifier', `updateMaxSizeSummaryValue${index}`, baseContext);
 
-        const result = await productSettingsPage.UpdateMaxSizeOfSummary(page, test.args.descriptionSize);
-        await expect(result).to.contains(productSettingsPage.successfulUpdateMessage);
+        const result = await boProductSettingsPage.setMaxSizeOfSummaryValue(page, test.args.descriptionSize);
+        expect(result).to.contains(boProductSettingsPage.successfulUpdateMessage);
       });
 
       it('should go to \'Catalog > Products\' page', async function () {
-        await testContext.addContextItem(this, 'testIdentifier', `goToCatalogProductsPage${index + 1}`, baseContext);
+        await testContext.addContextItem(this, 'testIdentifier', `goToCatalogProductsPage${index}`, baseContext);
 
-        await productSettingsPage.goToSubMenu(
+        await boProductSettingsPage.goToSubMenu(
           page,
-          productSettingsPage.catalogParentLink,
-          productSettingsPage.productsLink,
+          boProductSettingsPage.catalogParentLink,
+          boProductSettingsPage.productsLink,
         );
 
-        const pageTitle = await productsPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(productsPage.pageTitle);
+        const pageTitle = await boProductsPage.getPageTitle(page);
+        expect(pageTitle).to.contains(boProductsPage.pageTitle);
+      });
+
+      it('should click on new product button and go to new product page', async function () {
+        await testContext.addContextItem(this, 'testIdentifier', `clickOnNewProductPage${index}`, baseContext);
+
+        const isModalVisible = await boProductsPage.clickOnNewProductButton(page);
+        expect(isModalVisible).to.be.equal(true);
+
+        await boProductsPage.selectProductType(page, productData.type);
+        await boProductsPage.clickOnAddNewProduct(page);
+
+        const pageTitle = await addProductPage.getPageTitle(page);
+        expect(pageTitle).to.contains(addProductPage.pageTitle);
       });
 
       if (test.args.descriptionSize === maxSummarySizeValue) {
         it(`should create a product with a summary more than ${test.args.descriptionSize} characters
       and check the error message`, async function () {
-          await testContext.addContextItem(this, 'testIdentifier', `testSummarySize${index + 1}`, baseContext);
+          await testContext.addContextItem(this, 'testIdentifier', `testSummarySize${index}`, baseContext);
 
-          await productsPage.goToAddProductPage(page);
+          await descriptionTab.setProductDescription(page, productData);
 
-          let errorMessage = await addProductPage.createEditBasicProduct(page, productData);
-          await expect(errorMessage).to.equal(addProductPage.errorMessage);
-
-          errorMessage = await addProductPage.getErrorMessageWhenSummaryIsTooLong(page);
-          await expect(errorMessage).to.equal(
+          const errorMessage = await addProductPage.getErrorMessageWhenSummaryIsTooLong(page);
+          expect(errorMessage).to.contains(
             addProductPage.errorMessageWhenSummaryTooLong(maxSummarySizeValue),
           );
         });
       } else {
         it(`should create a product with a summary less than ${test.args.descriptionSize} characters`, async function () {
-          await testContext.addContextItem(this, 'testIdentifier', `testSummarySize${index + 1}`, baseContext);
+          await testContext.addContextItem(this, 'testIdentifier', `testSummarySize${index}`, baseContext);
 
-          await productsPage.goToAddProductPage(page);
-
-          const validationMessage = await addProductPage.createEditBasicProduct(page, productData);
-          await expect(validationMessage).to.equal(addProductPage.settingUpdatedMessage);
+          const successMessage = await addProductPage.setProduct(page, productData);
+          expect(successMessage).to.equal(addProductPage.successfulUpdateMessage);
         });
       }
     });
@@ -126,10 +128,7 @@ describe('BO - Shop Parameters - Product Settings : Update max size of short des
       await testContext.addContextItem(this, 'testIdentifier', 'deleteProduct', baseContext);
 
       const testResult = await addProductPage.deleteProduct(page);
-      await expect(testResult).to.equal(productsPage.productDeletedSuccessfulMessage);
+      expect(testResult).to.equal(boProductsPage.successfulDeleteMessage);
     });
   });
-
-  // Post-condition: Reset initial state
-  resetNewProductPageAsDefault(`${baseContext}_resetNewProduct`);
 });

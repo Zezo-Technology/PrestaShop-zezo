@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -7,16 +6,17 @@ import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
 import orderSettingsPage from '@pages/BO/shopParameters/orderSettings';
-// Import FO pages
-import productPage from '@pages/FO/product';
-import homePage from '@pages/FO/home';
-import cartPage from '@pages/FO/cart';
-import checkoutPage from '@pages/FO/checkout';
 
-// Import data
-import Customers from '@data/demo/customers';
+import {
+  boDashboardPage,
+  dataCustomers,
+  foClassicCartPage,
+  foClassicCheckoutPage,
+  foClassicHomePage,
+  foClassicProductPage,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -33,12 +33,12 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable terms of servic
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -48,15 +48,15 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable terms of servic
   it('should go to \'Shop Parameters > Order Settings\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToOrderSettingsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.shopParametersParentLink,
-      dashboardPage.orderSettingsLink,
+      boDashboardPage.shopParametersParentLink,
+      boDashboardPage.orderSettingsLink,
     );
     await orderSettingsPage.closeSfToolBar(page);
 
     const pageTitle = await orderSettingsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
+    expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
   });
 
   const tests = [
@@ -98,59 +98,82 @@ describe('BO - Shop Parameters - Order Settings : Enable/Disable terms of servic
       );
 
       const result = await orderSettingsPage.setTermsOfService(page, test.args.enable, test.args.pageName);
-      await expect(result).to.contains(orderSettingsPage.successfulUpdateMessage);
+      expect(result).to.contains(orderSettingsPage.successfulUpdateMessage);
+    });
+
+    it('should view my shop', async function () {
+      await testContext.addContextItem(this, 'testIdentifier', `viewMyShop_${index}`, baseContext);
+
+      // Click on view my shop
+      page = await orderSettingsPage.viewMyShop(page);
+      // Change FO language
+      await foClassicHomePage.changeLanguage(page, 'en');
+
+      const isHomePage = await foClassicHomePage.isHomePage(page);
+      expect(isHomePage, 'Home page is not displayed').to.eq(true);
+    });
+
+    it('should add product to cart', async function () {
+      await testContext.addContextItem(this, 'testIdentifier', `addProductToCart${index}`, baseContext);
+
+      // Go to the first product page
+      await foClassicHomePage.goToProductPage(page, 1);
+      // Add the product to the cart
+      await foClassicProductPage.addProductToTheCart(page);
+
+      const notificationsNumber = await foClassicCartPage.getCartNotificationsNumber(page);
+      expect(notificationsNumber).to.be.equal(index + 1);
+    });
+
+    it('should proceed to checkout and go to deliveryStep', async function () {
+      await testContext.addContextItem(this, 'testIdentifier', `proceedToCheckout${index}`, baseContext);
+
+      await foClassicCartPage.clickOnProceedToCheckout(page);
+
+      // Checkout the order
+      if (index === 0) {
+        // Personal information step - Login
+        await foClassicCheckoutPage.clickOnSignIn(page);
+        await foClassicCheckoutPage.customerLogin(page, dataCustomers.johnDoe);
+      }
+
+      // Address step - Go to delivery step
+      const isStepAddressComplete = await foClassicCheckoutPage.goToDeliveryStep(page);
+      expect(isStepAddressComplete, 'Step Address is not complete').to.eq(true);
+    });
+
+    it('should go to payment step', async function () {
+      await testContext.addContextItem(this, 'testIdentifier', `goToPaymentStep${index}`, baseContext);
+
+      // Delivery step - Go to payment step
+      const isStepDeliveryComplete = await foClassicCheckoutPage.goToPaymentStep(page);
+      expect(isStepDeliveryComplete, 'Step Address is not complete').to.eq(true);
     });
 
     it('should check terms of service checkbox', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `checkTermsOfService${index}`, baseContext);
 
-      // Click on view my shop
-      page = await orderSettingsPage.viewMyShop(page);
-      // Change FO language
-      await homePage.changeLanguage(page, 'en');
-      // Go to the first product page
-      await homePage.goToProductPage(page, 1);
-      // Add the product to the cart
-      await productPage.addProductToTheCart(page);
-      // Proceed to checkout the shopping cart
-      await cartPage.clickOnProceedToCheckout(page);
-
-      // Checkout the order
-      if (index === 0) {
-        // Personal information step - Login
-        await checkoutPage.clickOnSignIn(page);
-        await checkoutPage.customerLogin(page, Customers.johnDoe);
-      }
-
-      // Address step - Go to delivery step
-      const isStepAddressComplete = await checkoutPage.goToDeliveryStep(page);
-      await expect(isStepAddressComplete, 'Step Address is not complete').to.be.true;
-
-      // Delivery step - Go to payment step
-      const isStepDeliveryComplete = await checkoutPage.goToPaymentStep(page);
-      await expect(isStepDeliveryComplete, 'Step Address is not complete').to.be.true;
-
       // Check terms of service checkbox existence
-      const isVisible = await checkoutPage.isConditionToApproveCheckboxVisible(page);
-      await expect(isVisible).to.be.equal(test.args.enable);
+      const isVisible = await foClassicCheckoutPage.isConditionToApproveCheckboxVisible(page);
+      expect(isVisible).to.be.equal(test.args.enable);
     });
 
     if (test.args.enable) {
       it('should check the terms of service page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `checkTermsOfServicePage${index}`, baseContext);
 
-        const pageName = await checkoutPage.getTermsOfServicePageTitle(page);
-        await expect(pageName).to.contains(test.args.title);
+        const pageName = await foClassicCheckoutPage.getTermsOfServicePageTitle(page);
+        expect(pageName).to.contains(test.args.title);
       });
     }
 
     it('should go back to BO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `checkAndBackToBO${index}`, baseContext);
 
-      page = await checkoutPage.closePage(browserContext, page, 0);
+      page = await foClassicCheckoutPage.closePage(browserContext, page, 0);
 
       const pageTitle = await orderSettingsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
+      expect(pageTitle).to.contains(orderSettingsPage.pageTitle);
     });
   });
 });

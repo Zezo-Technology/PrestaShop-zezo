@@ -1,6 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -9,13 +7,15 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import orderMessagesPage from '@pages/BO/customerService/orderMessages';
 import addOrderMessagePage from '@pages/BO/customerService/orderMessages/add';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import OrderMessageData from '@data/faker/orderMessage';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerOrderMessage,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_customerService_orderMessages_paginationAndSortOrderMessages';
 
@@ -32,12 +32,12 @@ describe('BO - Customer Service - Order Messages : Pagination and sort order mes
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -47,28 +47,28 @@ describe('BO - Customer Service - Order Messages : Pagination and sort order mes
   it('should go to \'Customer Message > Order Messages\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToOrderMessagesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.customerServiceParentLink,
-      dashboardPage.orderMessagesLink,
+      boDashboardPage.customerServiceParentLink,
+      boDashboardPage.orderMessagesLink,
     );
-    await dashboardPage.closeSfToolBar(page);
+    await boDashboardPage.closeSfToolBar(page);
 
     const pageTitle = await orderMessagesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(orderMessagesPage.pageTitle);
+    expect(pageTitle).to.contains(orderMessagesPage.pageTitle);
   });
 
   it('should reset all filters and get number of order messages in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfOrderMessages = await orderMessagesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfOrderMessages).to.be.above(0);
+    expect(numberOfOrderMessages).to.be.above(0);
   });
 
   describe('Create 10 order messages in BO', async () => {
     const tests: number[] = new Array(10).fill(0, 0, 10);
     tests.forEach((test: number, index: number) => {
-      const createOrderMessageData: OrderMessageData = new OrderMessageData({
+      const createOrderMessageData: FakerOrderMessage = new FakerOrderMessage({
         name: `toSortAndPaginate${index}`,
       });
 
@@ -78,21 +78,21 @@ describe('BO - Customer Service - Order Messages : Pagination and sort order mes
         await orderMessagesPage.goToAddNewOrderMessagePage(page);
 
         const pageTitle = await addOrderMessagePage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addOrderMessagePage.pageTitle);
+        expect(pageTitle).to.contains(addOrderMessagePage.pageTitle);
       });
 
       it(`should create order message n°${index + 1}`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createOrderMessage${index}`, baseContext);
 
         const textResult = await addOrderMessagePage.addEditOrderMessage(page, createOrderMessageData);
-        await expect(textResult).to.equal(orderMessagesPage.successfulCreationMessage);
+        expect(textResult).to.equal(orderMessagesPage.successfulCreationMessage);
       });
 
       it('should check the order messages number', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `checkOrderMessageNumber${index}`, baseContext);
 
         const numberOfOrderMessagesAfterCreation = await orderMessagesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfOrderMessagesAfterCreation).to.be.equal(numberOfOrderMessages + 1 + index);
+        expect(numberOfOrderMessagesAfterCreation).to.be.equal(numberOfOrderMessages + 1 + index);
       });
     });
   });
@@ -159,20 +159,20 @@ describe('BO - Customer Service - Order Messages : Pagination and sort order mes
           const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -186,21 +186,21 @@ describe('BO - Customer Service - Order Messages : Pagination and sort order mes
       await orderMessagesPage.filterTable(page, 'name', 'toSortAndPaginate');
 
       const textResult = await orderMessagesPage.getTextColumnFromTable(page, 1, 'name');
-      await expect(textResult).to.contains('toSortAndPaginate');
+      expect(textResult).to.contains('toSortAndPaginate');
     });
 
     it('should delete order messages', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'BulkDelete', baseContext);
 
       const deleteTextResult = await orderMessagesPage.deleteWithBulkActions(page);
-      await expect(deleteTextResult).to.be.equal(orderMessagesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.equal(orderMessagesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterDelete', baseContext);
 
       const numberOfOrderMessagesAfterFilter = await orderMessagesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfOrderMessagesAfterFilter).to.be.equal(numberOfOrderMessages);
+      expect(numberOfOrderMessagesAfterFilter).to.be.equal(numberOfOrderMessages);
     });
   });
 });

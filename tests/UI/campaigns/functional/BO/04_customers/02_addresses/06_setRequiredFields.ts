@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -8,17 +7,19 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 // Import BO pages
 import addressesPage from '@pages/BO/customers/addresses';
-import dashboardPage from '@pages/BO/dashboard';
 // Import FO pages
-import foHomePage from '@pages/FO/home';
-import foLoginPage from '@pages/FO/login';
-import foMyAccountPage from '@pages/FO/myAccount';
-import foAddressesPage from '@pages/FO/myAccount/addresses';
-import foAddAddressesPage from '@pages/FO/myAccount/addAddress';
+import {addressesPage as foAddressesPage} from '@pages/FO/classic/myAccount/addresses';
+import {addAddressPage} from '@pages/FO/classic/myAccount/addAddress';
 
-// Import data
-import Customers from '@data/demo/customers';
-import AddressData from '@data/faker/address';
+import {
+  boDashboardPage,
+  dataCustomers,
+  FakerAddress,
+  foClassicHomePage,
+  foClassicLoginPage,
+  foClassicMyAccountPage,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -35,17 +36,17 @@ describe('BO - Customers - Addresses : Set required fields for addresses', async
   let browserContext: BrowserContext;
   let page: Page;
 
-  const addressDataWithVatNumber: AddressData = new AddressData({country: 'France', vatNumber: '0102030405'});
-  const addressDataWithoutVatNumber: AddressData = new AddressData({country: 'France'});
+  const addressDataWithVatNumber: FakerAddress = new FakerAddress({country: 'France', vatNumber: '0102030405'});
+  const addressDataWithoutVatNumber: FakerAddress = new FakerAddress({country: 'France'});
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -55,15 +56,15 @@ describe('BO - Customers - Addresses : Set required fields for addresses', async
   it('should go to \'Customers > Addresses\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToAddressesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.customersParentLink,
-      dashboardPage.addressesLink,
+      boDashboardPage.customersParentLink,
+      boDashboardPage.addressesLink,
     );
     await addressesPage.closeSfToolBar(page);
 
     const pageTitle = await addressesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(addressesPage.pageTitle);
+    expect(pageTitle).to.contains(addressesPage.pageTitle);
   });
 
   [
@@ -74,7 +75,7 @@ describe('BO - Customers - Addresses : Set required fields for addresses', async
       await testContext.addContextItem(this, 'testIdentifier', `${test.args.action}VatNumber`, baseContext);
 
       const textResult = await addressesPage.setRequiredFields(page, 6, test.args.exist);
-      await expect(textResult).to.equal(addressesPage.successfulUpdateMessage);
+      expect(textResult).to.equal(addressesPage.successfulUpdateMessage);
     });
 
     it('should view my shop and login', async function () {
@@ -83,31 +84,31 @@ describe('BO - Customers - Addresses : Set required fields for addresses', async
       // View shop
       page = await addressesPage.viewMyShop(page);
       // Change language in FO
-      await foHomePage.changeLanguage(page, 'en');
+      await foClassicHomePage.changeLanguage(page, 'en');
 
-      const isHomePage = await foHomePage.isHomePage(page);
-      await expect(isHomePage, 'Fail to open FO home page').to.be.true;
+      const isHomePage = await foClassicHomePage.isHomePage(page);
+      expect(isHomePage, 'Fail to open FO home page').to.eq(true);
     });
 
     it('should login in FO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `loginFO${index}`, baseContext);
 
       // Go to create account page
-      await foHomePage.goToLoginPage(page);
-      await foLoginPage.customerLogin(page, Customers.johnDoe);
+      await foClassicHomePage.goToLoginPage(page);
+      await foClassicLoginPage.customerLogin(page, dataCustomers.johnDoe);
 
-      const connected = await foHomePage.isCustomerConnected(page);
-      await expect(connected, 'Customer is not connected in FO').to.be.true;
+      const connected = await foClassicHomePage.isCustomerConnected(page);
+      expect(connected, 'Customer is not connected in FO').to.eq(true);
     });
 
     it('should go to \'Customers > Addresses\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `goToFOAddressesPage${index}`, baseContext);
 
-      await foHomePage.goToMyAccountPage(page);
-      await foMyAccountPage.goToAddressesPage(page);
+      await foClassicHomePage.goToMyAccountPage(page);
+      await foClassicMyAccountPage.goToAddressesPage(page);
 
       const pageHeaderTitle = await foAddressesPage.getPageTitle(page);
-      await expect(pageHeaderTitle).to.equal(foAddressesPage.pageTitle);
+      expect(pageHeaderTitle).to.equal(foAddressesPage.pageTitle);
     });
 
     it('should go to create address page', async function () {
@@ -115,34 +116,34 @@ describe('BO - Customers - Addresses : Set required fields for addresses', async
 
       await foAddressesPage.openNewAddressForm(page);
 
-      const pageHeaderTitle = await foAddAddressesPage.getHeaderTitle(page);
-      await expect(pageHeaderTitle).to.equal(foAddAddressesPage.creationFormTitle);
+      const pageHeaderTitle = await addAddressPage.getHeaderTitle(page);
+      expect(pageHeaderTitle).to.equal(addAddressPage.creationFormTitle);
     });
 
     it('should check if \'Vat number\' is required', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `checkOptionalLabel${index}`, baseContext);
 
-      const result = await foAddAddressesPage.isVatNumberRequired(page);
-      await expect(result).to.equal(test.args.exist);
+      const result = await addAddressPage.isVatNumberRequired(page);
+      expect(result).to.equal(test.args.exist);
     });
 
     it('should sign out from FO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `signOutFO${index}`, baseContext);
 
-      await foAddAddressesPage.logout(page);
+      await addAddressPage.logout(page);
 
-      const isCustomerConnected = await foAddAddressesPage.isCustomerConnected(page);
-      await expect(isCustomerConnected, 'Customer is connected').to.be.false;
+      const isCustomerConnected = await addAddressPage.isCustomerConnected(page);
+      expect(isCustomerConnected, 'Customer is connected').to.eq(false);
     });
 
     it('should go back to BO', async function () {
       await testContext.addContextItem(this, 'testIdentifier', `goBackToBO${index}`, baseContext);
 
       // Go back to BO
-      page = await foAddAddressesPage.closePage(browserContext, page, 0);
+      page = await addAddressPage.closePage(browserContext, page, 0);
 
       const pageTitle = await addressesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addressesPage.pageTitle);
+      expect(pageTitle).to.contains(addressesPage.pageTitle);
     });
   });
 });

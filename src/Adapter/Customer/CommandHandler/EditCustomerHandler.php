@@ -27,6 +27,7 @@
 namespace PrestaShop\PrestaShop\Adapter\Customer\CommandHandler;
 
 use Customer;
+use PrestaShop\PrestaShop\Core\CommandBus\Attributes\AsCommandHandler;
 use PrestaShop\PrestaShop\Core\Crypto\Hashing;
 use PrestaShop\PrestaShop\Core\Domain\Customer\Command\EditCustomerCommand;
 use PrestaShop\PrestaShop\Core\Domain\Customer\CommandHandler\EditCustomerHandlerInterface;
@@ -41,6 +42,7 @@ use PrestaShop\PrestaShop\Core\Domain\ValueObject\Email;
  *
  * @internal
  */
+#[AsCommandHandler]
 final class EditCustomerHandler extends AbstractCustomerHandler implements EditCustomerHandlerInterface
 {
     /**
@@ -110,6 +112,10 @@ final class EditCustomerHandler extends AbstractCustomerHandler implements EditC
         if (false === $customer->update()) {
             throw new CustomerException('Failed to update customer');
         }
+
+        if (null !== $command->getGroupIds()) {
+            $customer->updateGroup($command->getGroupIds());
+        }
     }
 
     /**
@@ -153,10 +159,6 @@ final class EditCustomerHandler extends AbstractCustomerHandler implements EditC
 
         if (null !== $command->isPartnerOffersSubscribed()) {
             $customer->optin = $command->isPartnerOffersSubscribed();
-        }
-
-        if (null !== $command->getGroupIds()) {
-            $customer->groupBox = $command->getGroupIds();
         }
 
         if (null !== $command->getDefaultGroupId()) {
@@ -227,7 +229,10 @@ final class EditCustomerHandler extends AbstractCustomerHandler implements EditC
         $customerByEmail->getByEmail($command->getEmail()->getValue());
 
         if ($customerByEmail->id) {
-            throw new DuplicateCustomerEmailException($command->getEmail(), sprintf('Customer with email "%s" already exists', $command->getEmail()->getValue()));
+            throw new DuplicateCustomerEmailException(
+                $command->getEmail(), sprintf('Registered customer with email "%s" already exists', $command->getEmail()->getValue()),
+                DuplicateCustomerEmailException::EDIT
+            );
         }
     }
 

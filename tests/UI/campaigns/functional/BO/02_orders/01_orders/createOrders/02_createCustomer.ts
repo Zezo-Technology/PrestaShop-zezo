@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -7,12 +6,14 @@ import {deleteCustomerTest} from '@commonTests/BO/customers/customer';
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
-import ordersPage from '@pages/BO/orders';
 import addOrderPage from '@pages/BO/orders/add';
 
-// Import data
-import CustomerData from '@data/faker/customer';
+import {
+  boDashboardPage,
+  boOrdersPage,
+  FakerCustomer,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -30,15 +31,15 @@ describe('BO - Orders - Create order : Create customer from new order page', asy
   let browserContext: BrowserContext;
   let page: Page;
 
-  const customerData: CustomerData = new CustomerData();
+  const customerData: FakerCustomer = new FakerCustomer();
 
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -48,30 +49,30 @@ describe('BO - Orders - Create order : Create customer from new order page', asy
   it('should go to \'Orders > Orders\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToOrdersPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.ordersParentLink,
-      dashboardPage.ordersLink,
+      boDashboardPage.ordersParentLink,
+      boDashboardPage.ordersLink,
     );
 
-    const pageTitle = await ordersPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(ordersPage.pageTitle);
+    const pageTitle = await boOrdersPage.getPageTitle(page);
+    expect(pageTitle).to.contains(boOrdersPage.pageTitle);
   });
 
   it('should go to create order page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToCreateOrderPage', baseContext);
 
-    await ordersPage.goToCreateOrderPage(page);
+    await boOrdersPage.goToCreateOrderPage(page);
 
     const pageTitle = await addOrderPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(addOrderPage.pageTitle);
+    expect(pageTitle).to.contains(addOrderPage.pageTitle);
   });
 
   it('should create customer and check result', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'createCustomer', baseContext);
 
     const customerName = await addOrderPage.addNewCustomer(page, customerData);
-    await expect(customerName).to.contains(`${customerData.firstName} ${customerData.lastName}`);
+    expect(customerName).to.contains(`${customerData.firstName} ${customerData.lastName}`);
   });
 
   it('should search for the new customer and check result', async function () {
@@ -80,7 +81,7 @@ describe('BO - Orders - Create order : Create customer from new order page', asy
     await addOrderPage.searchCustomer(page, customerData.email);
 
     const customerName = await addOrderPage.getCustomerNameFromResult(page, 1);
-    await expect(customerName).to.contains(`${customerData.firstName} ${customerData.lastName}`);
+    expect(customerName).to.contains(`${customerData.firstName} ${customerData.lastName}`);
   });
 
   // Post-condition: Delete created customer

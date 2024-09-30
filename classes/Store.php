@@ -32,6 +32,9 @@ class StoreCore extends ObjectModel
     /** @var int Store id */
     public $id;
 
+    /** @var int|bool Store id */
+    public $id_image;
+
     /** @var int Country id */
     public $id_country;
 
@@ -108,8 +111,8 @@ class StoreCore extends ObjectModel
             'name' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isGenericName', 'required' => true, 'size' => 255],
             'address1' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isAddress', 'required' => true, 'size' => 255],
             'address2' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isAddress', 'size' => 255],
-            'hours' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isJson', 'size' => 65000],
-            'note' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 65000],
+            'hours' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isJson', 'size' => 4194303],
+            'note' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 4194303],
         ],
     ];
 
@@ -198,5 +201,15 @@ class StoreCore extends ObjectModel
         );
 
         return isset($row['id_store']);
+    }
+
+    /**
+     * This method checks if at least one store is configured
+     *
+     * @return bool
+     */
+    public static function atLeastOneStoreExists()
+    {
+        return (bool) Db::getInstance()->getValue('SELECT `id_store` FROM ' . _DB_PREFIX_ . 'store', false);
     }
 }

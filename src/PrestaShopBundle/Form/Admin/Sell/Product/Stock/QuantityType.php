@@ -35,7 +35,7 @@ use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Routing\RouterInterface;
-use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\Positive;
 use Symfony\Component\Validator\Constraints\Type;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -89,6 +89,10 @@ class QuantityType extends TranslatorAwareType
                     'label_tag_name' => 'h4',
                     'layout' => 'table',
                     'entry_type' => StockMovementType::class,
+                    'entry_options' => [
+                        'product_type' => $options['product_type'],
+                        'block_prefix' => 'entity_item',
+                    ],
                     // No search input
                     'allow_search' => false,
                     // No delete button
@@ -108,15 +112,21 @@ class QuantityType extends TranslatorAwareType
             ->add('minimal_quantity', NumberType::class, [
                 'label' => $this->trans('Minimum quantity for sale', 'Admin.Catalog.Feature'),
                 'constraints' => [
-                    new NotBlank(),
+                    new Positive(),
                     new Type(['type' => 'numeric']),
                 ],
                 'required' => false,
-                'default_empty_data' => 0,
+                'default_empty_data' => 1,
                 'modify_all_shops' => true,
                 'attr' => [
                     'class' => 'small-input',
+                    'min' => 1,
                 ],
+                'html5' => true,
+                'label_help_box' => $this->trans(
+                    'The minimum quantity required to buy this product (set to 1 to disable this feature). E.g.: if set to 3, customers will be able to purchase the product only if they take at least 3 in quantity.',
+                    'Admin.Catalog.Help'
+                ),
             ])
         ;
     }
@@ -135,8 +145,10 @@ class QuantityType extends TranslatorAwareType
             ])
             ->setRequired([
                 'product_id',
+                'product_type',
             ])
             ->setAllowedTypes('product_id', 'int')
+            ->setAllowedTypes('product_type', 'string')
         ;
     }
 }

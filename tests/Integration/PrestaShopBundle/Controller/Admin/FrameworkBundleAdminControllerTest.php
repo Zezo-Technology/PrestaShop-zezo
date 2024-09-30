@@ -26,32 +26,18 @@
 
 namespace Tests\Integration\PrestaShopBundle\Controller\Admin;
 
-use Context;
-use Cookie;
-use Country;
-use Currency;
-use Employee;
-use Language;
-use Link;
-use PrestaShop\PrestaShop\Adapter\Currency\CurrencyDataProvider;
-use PrestaShop\PrestaShop\Adapter\LegacyContext;
-use PrestaShop\PrestaShop\Core\Addon\Theme\Theme;
-use PrestaShop\PrestaShop\Core\Kpi\Row\KpiRowPresenterInterface;
-use PrestaShopBundle\Entity\Repository\FeatureFlagRepository;
-use Psr\Log\NullLogger;
-use Shop;
-use Symfony\Bundle\FrameworkBundle\Client;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Routing\Router;
 use Symfony\Component\Translation\Translator;
-use Tests\Integration\Utility\ContextMockerTrait;
+use Tests\Integration\Utility\LoginTrait;
+use Tests\TestCase\SymfonyIntegrationTestCase;
 
-class FrameworkBundleAdminControllerTest extends WebTestCase
+class FrameworkBundleAdminControllerTest extends SymfonyIntegrationTestCase
 {
-    use ContextMockerTrait;
+    use LoginTrait;
 
     /**
-     * @var Client
+     * @var KernelBrowser
      */
     protected $client;
 
@@ -68,153 +54,9 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        self::mockContext();
-
-        // Symfony
-        self::bootKernel();
-        global $kernel;
-        $kernel = self::$kernel;
-
-        $this->client = self::createClient();
-        $this->router = self::$kernel->getContainer()->get('router');
-        $this->translator = self::$kernel->getContainer()->get('translator');
-
-        // Currency
-        $currencyMock = $this->getMockBuilder(Currency::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        // Country
-        $countryMock = $this->getMockBuilder(Country::class)->getMock();
-        $countryMock->iso_code = 'en';
-        $countryMock->id = 1;
-        // Employee
-        $employeeMock = $this->getMockBuilder(Employee::class)->getMock();
-        $employeeMock->id_profile = 1;
-        $employeeMock->id_lang = 1;
-        // Language
-        $languageFixture = new Language(1);
-        // Link
-        $linkMock = $this
-            ->getMockBuilder(Link::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-        // If getCMSLink() is not mocked,
-        // it returns null, thus breaking code that expects it to return string,
-        // as string is the only valid return type for this method.
-        $linkMock->method('getCMSLink')->willReturn('');
-        // Shop
-        $shopMock = $this->getMockBuilder(Shop::class)
-            ->setMethods(['getBaseURL'])
-            ->disableOriginalConstructor()
-            ->getMock();
-        $shopMock->id = 1;
-        $shopMock->id_category = 1;
-        $shopMock->theme = new Theme([
-            'name' => 'classic',
-            'directory' => _PS_ROOT_DIR_ . '/themes/',
-        ]);
-        $shopMock->method('getBaseURL')->willReturn('my-awesome-url.com');
-
-        $contextMock = $this->getMockBuilder(Context::class)
-            ->setMethods(['getTranslator', 'getContext'])
-            ->disableOriginalConstructor()
-            ->getMock();
-        $contextMock->method('getTranslator')->will($this->returnValue($this->translator));
-        $contextMock->method('getContext')->will($this->returnValue($contextMock));
-
-        $contextMock->country = $countryMock;
-        $contextMock->currency = $currencyMock;
-        $contextMock->employee = $employeeMock;
-        $contextMock->language = $languageFixture;
-        $contextMock->link = $linkMock;
-        $contextMock->shop = $shopMock;
-
-        $currencyDataProviderMock = $this->getMockBuilder(CurrencyDataProvider::class)
-            ->disableOriginalConstructor()
-            ->setMethods(['getDefaultCurrencyIsoCode', 'getDefaultCurrency'])
-            ->getMock();
-        $currencyDataProviderMock->method('getDefaultCurrencyIsoCode')->will($this->returnValue('en'));
-        $currencyDataProviderMock->method('getDefaultCurrency')->will($this->returnValue($currencyMock));
-
-        $kpiRowPresenterMock = $this->getMockBuilder(KpiRowPresenterInterface::class)
-            ->disableOriginalConstructor()
-            ->setMethods(['present'])
-            ->getMock();
-        $kpiRowPresenterMock->method('present')->will($this->returnValue([
-            'allowRefresh' => false,
-            'kpis' => ['a', 'b', 'c'],
-        ]));
-
-        $smartyMock = $this
-            ->getMockBuilder(\Smarty::class)
-            ->disableOriginalConstructor()
-            ->getMock()
-        ;
-
-        $legacyContextMock = $this->getMockBuilder(LegacyContext::class)
-            ->setMethods([
-                'getContext',
-                'getEmployeeLanguageIso',
-                'getEmployeeCurrency',
-                'getRootUrl',
-                'getLanguages',
-                'getLanguage',
-                'getAdminLink',
-                'getAvailableLanguages',
-                'getSmarty',
-            ])
-            ->disableAutoload()
-            ->disableOriginalConstructor()
-            ->getMock();
-        $legacyContextMock->method('getSmarty')->willReturn($smartyMock);
-        $legacyContextMock->method('getContext')->willReturn($contextMock);
-        $legacyContextMock->method('getLanguages')->willReturn([
-            [
-                'id_lang' => '1',
-                'name' => 'English (English)',
-                'iso_code' => 'en',
-                'language_code' => 'en-us',
-                'locale' => 'en-US',
-            ],
-            [
-                'id_lang' => '2',
-                'name' => 'Français (French)',
-                'iso_code' => 'fr',
-                'language_code' => 'fr',
-                'locale' => 'fr-FR',
-            ],
-        ]);
-        $legacyContextMock->method('getLanguage')->willReturn($languageFixture);
-        $legacyContextMock->method('getAvailableLanguages')->willReturn([
-            [
-                'id_lang' => '1',
-                'name' => 'English (English)',
-                'iso_code' => 'en',
-                'language_code' => 'en-us',
-                'locale' => 'en-US',
-                'active' => true,
-            ],
-            [
-                'id_lang' => '2',
-                'name' => 'Français (French)',
-                'iso_code' => 'fr',
-                'language_code' => 'fr',
-                'locale' => 'fr-FR',
-                'active' => false,
-            ],
-        ]);
-
-        $mockFeatureFlagRepository = $this->getMockBuilder(FeatureFlagRepository::class)
-            ->disableOriginalConstructor()
-            ->getMock();
-
-        $mockFeatureFlagRepository->method('isEnabled')->willReturn(false);
-
-        self::$kernel->getContainer()->set(FeatureFlagRepository::class, $mockFeatureFlagRepository);
-        self::$kernel->getContainer()->set('prestashop.adapter.data_provider.currency', $currencyDataProviderMock);
-        self::$kernel->getContainer()->set('prestashop.adapter.legacy.context', $legacyContextMock);
-        self::$kernel->getContainer()->set('prestashop.core.kpi_row.presenter', $kpiRowPresenterMock);
-        self::$kernel->getContainer()->set('logger', new NullLogger());
+        $this->loginUser($this->client);
+        $this->router = $this->client->getContainer()->get('router');
+        $this->translator = $this->client->getContainer()->get('translator');
     }
 
     /**
@@ -225,8 +67,6 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
      */
     public function testPagesAreAvailable(string $pageName, string $route): void
     {
-        $this->logIn();
-
         $uri = $this->router->generate($route);
 
         $this->client->catchExceptions(false);
@@ -262,7 +102,7 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
     {
         return [
             // @todo: something is missing for Vuejs application in translations page.
-            //'admin_international_translation_overview' => ['Translations', 'admin_international_translation_overview'],
+            // 'admin_international_translation_overview' => ['Translations', 'admin_international_translation_overview'],
             'admin_administration' => ['Administration', 'admin_administration'],
             'admin_attachments_create' => ['Add new', 'admin_attachments_create'],
             'admin_attachments_index' => ['Files', 'admin_attachments_index'],
@@ -305,16 +145,20 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
             'admin_order_messages_create' => ['Add new', 'admin_order_messages_create'],
             'admin_order_messages_index' => ['Order messages', 'admin_order_messages_index'],
             'admin_order_preferences' => ['Order Preferences', 'admin_order_preferences'],
+            'admin_order_return_states_create' => ['Add new', 'admin_order_states'],
+            'admin_order_states' => ['Order States', 'admin_order_states'],
+            'admin_order_states_create' => ['Add new', 'admin_order_states'],
             'admin_orders_create' => ['Add new', 'admin_orders_create'],
             'admin_orders_index' => ['Orders', 'admin_orders_index'],
+            'admin_outstanding_index' => ['Outstanding', 'admin_outstanding_index'],
             'admin_payment_methods' => ['Payment Methods', 'admin_payment_methods'],
             'admin_payment_preferences' => ['Payment preferences', 'admin_payment_preferences'],
             'admin_performance' => ['Performance', 'admin_performance'],
             'admin_permissions_index' => ['Permissions', 'admin_permissions_index'],
             'admin_preferences' => ['Preferences', 'admin_preferences'],
             'admin_product_preferences' => ['Product Preferences', 'admin_product_preferences'],
-            'admin_profiles_create' => ['Add new profile', 'admin_profiles_create'],
-            'admin_profiles_index' => ['Profiles', 'admin_profiles_index'],
+            'admin_profiles_create' => ['Add new role', 'admin_profiles_create'],
+            'admin_profiles_index' => ['Roles', 'admin_profiles_index'],
             'admin_search_engines_create' => ['Add new', 'admin_search_engines_create'],
             'admin_search_engines_index' => ['Search Engines', 'admin_search_engines_index'],
             'admin_shipping_preferences' => ['Shipping Preferences', 'admin_shipping_preferences'],
@@ -330,16 +174,5 @@ class FrameworkBundleAdminControllerTest extends WebTestCase
             'admin_webservice_keys_create' => ['Webservice', 'admin_webservice_keys_create'],
             'admin_webservice_keys_index' => ['Webservice', 'admin_webservice_keys_index'],
         ];
-    }
-
-    /**
-     * Emulates a real employee logged to the Back Office.
-     * For survival tests only.
-     */
-    private function logIn(): void
-    {
-        $container = self::$kernel->getContainer();
-        $cookie = new Cookie('psAdmin', '', 3600);
-        $container->get('prestashop.adapter.legacy.context')->getContext()->cookie = $cookie;
     }
 }

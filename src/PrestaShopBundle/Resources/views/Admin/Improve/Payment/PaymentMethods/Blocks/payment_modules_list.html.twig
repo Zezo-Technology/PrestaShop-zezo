@@ -28,7 +28,7 @@
   {% if paymentModules|length > 0 %}
   <div class="module-item-list">
   {% for module in paymentModules %}
-    <div class="row module-item-wrapper-list border-bottom mb-sm-3">
+    <div class="row module-item-wrapper-list border-bottom mb-sm-3" data-name="{{ module.attributes.name }}">
       <div class="col-sm-2 col-md-1 col-lg-1">
         <div class="module-logo-thumb-list text-center">
           <img src="{{ module.attributes.img }}" alt="{{ module.attributes.displayName }}"/>
@@ -49,7 +49,7 @@
       <div class="col-sm-4 col-md-3 col-lg-2 mb-3">
         <div class="text-center">
           <a href="{{ path('admin_module_configure_action', {'module_name': module.attributes.name}) }}"
-             class="btn btn-primary-reverse btn-outline-primary light-button"
+             class="btn btn-outline-secondary"
           >
             {{ 'Configure'|trans({}, 'Admin.Global') }}
           </a>

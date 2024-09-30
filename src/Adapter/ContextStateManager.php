@@ -30,10 +30,15 @@ namespace PrestaShop\PrestaShop\Adapter;
 
 use Cart;
 use Context;
+use Controller;
 use Country;
 use Currency;
 use Customer;
+use Employee;
 use Language;
+use PrestaShop\PrestaShop\Core\Context\LegacyControllerContext;
+use PrestaShop\PrestaShop\Core\Localization\LocaleInterface;
+use PrestaShopException;
 use Shop;
 
 /**
@@ -44,13 +49,16 @@ use Shop;
  *  Legacy requires Context properties (currency, country etc.) instead of using cart properties
  *  so some context props must be changed for a while and then restored to previous state.
  */
-final class ContextStateManager
+class ContextStateManager
 {
     private const MANAGED_FIELDS = [
         'cart',
+        'controller',
         'country',
         'currency',
+        'employee',
         'language',
+        'currentLocale',
         'customer',
         'shop',
         'shopContext',
@@ -93,6 +101,19 @@ final class ContextStateManager
     {
         $this->saveContextField('cart');
         $this->getContext()->cart = $cart;
+
+        return $this;
+    }
+
+    /**
+     * Sets context controller and saves previous value
+     *
+     * @return $this
+     */
+    public function setController(LegacyControllerContext|Controller|null $legacyController): self
+    {
+        $this->saveContextField('controller');
+        $this->getContext()->controller = $legacyController;
 
         return $this;
     }
@@ -146,6 +167,21 @@ final class ContextStateManager
     }
 
     /**
+     * Sets context localization locale and saves previous value
+     *
+     * @param LocaleInterface|null $locale
+     *
+     * @return $this
+     */
+    public function setCurrentLocale(?LocaleInterface $locale): self
+    {
+        $this->saveContextField('currentLocale');
+        $this->getContext()->currentLocale = $locale;
+
+        return $this;
+    }
+
+    /**
      * Sets context customer and saves previous value
      *
      * @param Customer|null $customer
@@ -161,13 +197,28 @@ final class ContextStateManager
     }
 
     /**
+     * Sets context employee and saves previous value
+     *
+     * @param Employee|null $employee
+     *
+     * @return $this
+     */
+    public function setEmployee(?Employee $employee): self
+    {
+        $this->saveContextField('employee');
+        $this->getContext()->employee = $employee;
+
+        return $this;
+    }
+
+    /**
      * Sets context shop and saves previous value
      *
      * @param Shop $shop
      *
      * @return $this
      *
-     * @throws \PrestaShopException
+     * @throws PrestaShopException
      */
     public function setShop(Shop $shop): self
     {
@@ -186,7 +237,7 @@ final class ContextStateManager
      *
      * @return $this
      *
-     * @throws \PrestaShopException
+     * @throws PrestaShopException
      */
     public function setShopContext(int $shopContext, ?int $shopContextId = null): self
     {

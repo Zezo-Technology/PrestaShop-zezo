@@ -32,8 +32,8 @@ use PrestaShop\PrestaShop\Adapter\Attribute\Repository\AttributeRepository;
 use PrestaShop\PrestaShop\Adapter\AttributeGroup\Repository\AttributeGroupRepository;
 use PrestaShop\PrestaShop\Adapter\Product\Combination\Repository\CombinationRepository;
 use PrestaShop\PrestaShop\Adapter\Product\Combination\Update\DefaultCombinationUpdater;
-use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductMultiShopRepository;
-use PrestaShop\PrestaShop\Adapter\Product\Stock\Repository\StockAvailableMultiShopRepository;
+use PrestaShop\PrestaShop\Adapter\Product\Repository\ProductRepository;
+use PrestaShop\PrestaShop\Adapter\Product\Stock\Repository\StockAvailableRepository;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\Exception\CannotGenerateCombinationException;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\ValueObject\CombinationId;
 use PrestaShop\PrestaShop\Core\Domain\Product\Combination\ValueObject\GroupedAttributeIds;
@@ -62,7 +62,7 @@ class CombinationCreator
     private $combinationGenerator;
 
     /**
-     * @var ProductMultiShopRepository
+     * @var ProductRepository
      */
     private $productRepository;
 
@@ -72,9 +72,9 @@ class CombinationCreator
     private $combinationRepository;
 
     /**
-     * @var StockAvailableMultiShopRepository
+     * @var StockAvailableRepository
      */
-    private $stockAvailableMultiShopRepository;
+    private $stockAvailableRepository;
 
     /**
      * @var AttributeGroupRepository
@@ -94,15 +94,15 @@ class CombinationCreator
     /**
      * @param CombinationGeneratorInterface $combinationGenerator
      * @param CombinationRepository $combinationRepository
-     * @param ProductMultiShopRepository $productRepository
-     * @param StockAvailableMultiShopRepository $stockAvailableMultiShopRepository
+     * @param ProductRepository $productRepository
+     * @param StockAvailableRepository $stockAvailableRepository
      * @param DefaultCombinationUpdater $defaultCombinationUpdater
      */
     public function __construct(
         CombinationGeneratorInterface $combinationGenerator,
         CombinationRepository $combinationRepository,
-        ProductMultiShopRepository $productRepository,
-        StockAvailableMultiShopRepository $stockAvailableMultiShopRepository,
+        ProductRepository $productRepository,
+        StockAvailableRepository $stockAvailableRepository,
         AttributeGroupRepository $attributeGroupRepository,
         AttributeRepository $attributeRepository,
         DefaultCombinationUpdater $defaultCombinationUpdater
@@ -110,7 +110,7 @@ class CombinationCreator
         $this->combinationGenerator = $combinationGenerator;
         $this->combinationRepository = $combinationRepository;
         $this->productRepository = $productRepository;
-        $this->stockAvailableMultiShopRepository = $stockAvailableMultiShopRepository;
+        $this->stockAvailableRepository = $stockAvailableRepository;
         $this->defaultCombinationUpdater = $defaultCombinationUpdater;
         $this->attributeGroupRepository = $attributeGroupRepository;
         $this->attributeRepository = $attributeRepository;
@@ -163,7 +163,7 @@ class CombinationCreator
         array $shopIdsByConstraint
     ): void {
         $productId = new ProductId((int) $product->id);
-        $productStockAvailable = $this->stockAvailableMultiShopRepository->getForProduct($productId, new ShopId($product->getShopId()));
+        $productStockAvailable = $this->stockAvailableRepository->getForProduct($productId, new ShopId($product->getShopId()));
         $outOfStockType = new OutOfStockType((int) $productStockAvailable->out_of_stock);
 
         if ($shopConstraint->forAllShops()) {
@@ -222,7 +222,7 @@ class CombinationCreator
                 // when combination already exists in product_attribute, then we add it to related product_attribute_shop
                 $this->combinationRepository->addToShop($matchingCombinationId, $shopId);
                 // create dedicated stock_available for combination in related shop
-                $this->stockAvailableMultiShopRepository->createStockAvailable($productId, $shopId, $matchingCombinationId);
+                $this->stockAvailableRepository->createStockAvailable($productId, $shopId, $matchingCombinationId);
             }
         }
 

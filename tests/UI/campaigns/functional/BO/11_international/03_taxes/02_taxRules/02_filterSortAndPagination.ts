@@ -1,20 +1,21 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import taxesPage from '@pages/BO/international/taxes';
 import taxRulesPage from '@pages/BO/international/taxes/taxRules';
 import addTaxRulesPage from '@pages/BO/international/taxes/taxRules/add';
 
-// Import data
-import TaxRules from '@data/demo/taxRule';
-import TaxRulesGroupData from '@data/faker/taxRulesGroup';
+import {
+  boDashboardPage,
+  dataTaxRules,
+  FakerTaxRulesGroup,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
@@ -35,12 +36,12 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -50,14 +51,14 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
   it('should go to \'International > Taxes\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToTaxesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.internationalParentLink,
-      dashboardPage.taxesLink,
+      boDashboardPage.internationalParentLink,
+      boDashboardPage.taxesLink,
     );
 
     const pageTitle = await taxesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(taxesPage.pageTitle);
+    expect(pageTitle).to.contains(taxesPage.pageTitle);
   });
 
   it('should go to \'Tax Rules\' page', async function () {
@@ -66,14 +67,14 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
     await taxesPage.goToTaxRulesPage(page);
 
     const pageTitle = await taxRulesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(taxRulesPage.pageTitle);
+    expect(pageTitle).to.contains(taxRulesPage.pageTitle);
   });
 
   it('should reset all filters and get number of Tax rules in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfTaxRules = await taxRulesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfTaxRules).to.be.above(0);
+    expect(numberOfTaxRules).to.be.above(0);
   });
 
   // 1 - Filter tax rules
@@ -85,7 +86,7 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
             testIdentifier: 'filterById',
             filterType: 'input',
             filterBy: 'id_tax_rules_group',
-            filterValue: TaxRules[3].id.toString(),
+            filterValue: dataTaxRules[3].id.toString(),
           },
       },
       {
@@ -94,7 +95,7 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
             testIdentifier: 'filterByName',
             filterType: 'input',
             filterBy: 'name',
-            filterValue: TaxRules[1].name,
+            filterValue: dataTaxRules[1].name,
           },
       },
       {
@@ -121,15 +122,15 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
         );
 
         const numberOfLinesAfterFilter = await taxRulesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfLinesAfterFilter).to.be.at.most(numberOfTaxRules);
+        expect(numberOfLinesAfterFilter).to.be.at.most(numberOfTaxRules);
 
         for (let row = 1; row <= numberOfLinesAfterFilter; row++) {
           const textColumn = await taxRulesPage.getTextColumnFromTable(page, row, test.args.filterBy);
 
           if (test.expected !== undefined) {
-            await expect(textColumn).to.contains(test.expected);
+            expect(textColumn).to.contains(test.expected);
           } else {
-            await expect(textColumn).to.contains(test.args.filterValue);
+            expect(textColumn).to.contains(test.args.filterValue);
           }
         }
       });
@@ -138,7 +139,7 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.testIdentifier}Reset`, baseContext);
 
         const numberOfLinesAfterReset = await taxRulesPage.resetAndGetNumberOfLines(page);
-        await expect(numberOfLinesAfterReset).to.equal(numberOfTaxRules);
+        expect(numberOfLinesAfterReset).to.equal(numberOfTaxRules);
       });
     });
   });
@@ -182,20 +183,20 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
           const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'up') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -207,7 +208,7 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
 
   creationTests.forEach((test: number, index: number) => {
     describe(`Create tax rule n°${index + 1} in BO`, async () => {
-      const taxRuleData = new TaxRulesGroupData({name: `todelete${index}`});
+      const taxRuleData: FakerTaxRulesGroup = new FakerTaxRulesGroup({name: `todelete${index}`});
 
       it('should go to add new tax rule group page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToAddTaxRuleGroupPage${index}`, baseContext);
@@ -215,19 +216,19 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
         await taxRulesPage.goToAddNewTaxRulesGroupPage(page);
 
         const pageTitle = await addTaxRulesPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addTaxRulesPage.pageTitleCreate);
+        expect(pageTitle).to.contains(addTaxRulesPage.pageTitleCreate);
       });
 
       it('should create tax rule group and check result', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createTaxRule${index}`, baseContext);
 
         const textResult = await addTaxRulesPage.createEditTaxRulesGroup(page, taxRuleData);
-        await expect(textResult).to.contains(addTaxRulesPage.successfulCreationMessage);
+        expect(textResult).to.contains(addTaxRulesPage.successfulCreationMessage);
 
         await taxesPage.goToTaxRulesPage(page);
 
         const numberOfLinesAfterCreation = await taxRulesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfLinesAfterCreation).to.be.equal(numberOfTaxRules + 1 + index);
+        expect(numberOfLinesAfterCreation).to.be.equal(numberOfTaxRules + 1 + index);
       });
     });
   });
@@ -283,7 +284,7 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
           i,
           'name',
         );
-        await expect(textColumn).to.contains('todelete');
+        expect(textColumn).to.contains('todelete');
       }
     });
 
@@ -291,14 +292,14 @@ describe('BO - International - Tax rules : Filter, sort and pagination', async (
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteCarriers', baseContext);
 
       const deleteTextResult = await taxRulesPage.bulkDeleteTaxRules(page);
-      await expect(deleteTextResult).to.be.contains(taxRulesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.contains(taxRulesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterDelete', baseContext);
 
       const numberOfLinesAfterReset = await taxRulesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfLinesAfterReset).to.be.equal(numberOfTaxRules);
+      expect(numberOfLinesAfterReset).to.be.equal(numberOfTaxRules);
     });
   });
 });

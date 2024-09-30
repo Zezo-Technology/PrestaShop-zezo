@@ -127,7 +127,7 @@ class ImageTypeCore extends ObjectModel
     }
 
     /**
-     * Check if type already is already registered in database.
+     * Check if type is already registered in database.
      *
      * @param string $typeName Name
      *
@@ -136,7 +136,7 @@ class ImageTypeCore extends ObjectModel
     public static function typeAlreadyExists($typeName)
     {
         if (!Validate::isImageTypeName($typeName)) {
-            die(Tools::displayError());
+            die(Tools::displayError(sprintf('"%s" is not valid image type name.', $typeName)));
         }
 
         Db::getInstance()->executeS('
@@ -194,7 +194,7 @@ class ImageTypeCore extends ObjectModel
         $themeName = Context::getContext()->shop->theme_name;
         $nameWithoutThemeName = str_replace(['_' . $themeName, $themeName . '_'], '', $name);
 
-        //check if the theme name is already in $name if yes only return $name
+        // check if the theme name is already in $name if yes only return $name
         if ($themeName !== null && strstr($name, $themeName) && self::getByNameNType($name)) {
             return $name;
         }

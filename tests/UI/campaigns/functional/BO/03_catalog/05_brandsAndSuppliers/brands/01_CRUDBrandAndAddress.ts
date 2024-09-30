@@ -1,6 +1,4 @@
 // Import utils
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -11,14 +9,16 @@ import brandsPage from '@pages/BO/catalog/brands';
 import addBrandPage from '@pages/BO/catalog/brands/add';
 import addBrandAddressPage from '@pages/BO/catalog/brands/addAddress';
 import viewBrandPage from '@pages/BO/catalog/brands/view';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import BrandData from '@data/faker/brand';
-import BrandAddressData from '@data/faker/brandAddress';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerBrand,
+  FakerBrandAddress,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_brandsAndSuppliers_brands_CRUDBrandAndAddress';
 
@@ -31,29 +31,29 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
 
   const brandsTable: string = 'manufacturer';
   const addressesTable: string = 'manufacturer_address';
-  const createBrandData: BrandData = new BrandData();
-  const editBrandData: BrandData = new BrandData();
-  const createBrandAddressData: BrandAddressData = new BrandAddressData({brandName: createBrandData.name});
-  const editBrandAddressData: BrandAddressData = new BrandAddressData({brandName: editBrandData.name});
+  const createBrandData: FakerBrand = new FakerBrand();
+  const editBrandData: FakerBrand = new FakerBrand();
+  const createBrandAddressData: FakerBrandAddress = new FakerBrandAddress({brandName: createBrandData.name});
+  const editBrandAddressData: FakerBrandAddress = new FakerBrandAddress({brandName: editBrandData.name});
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
 
     // Create logos
     await Promise.all([
-      files.generateImage(createBrandData.logo),
-      files.generateImage(editBrandData.logo),
+      utilsFile.generateImage(createBrandData.logo),
+      utilsFile.generateImage(editBrandData.logo),
     ]);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
 
     await Promise.all([
-      files.deleteFile(createBrandData.logo),
-      files.deleteFile(editBrandData.logo),
+      utilsFile.deleteFile(createBrandData.logo),
+      utilsFile.deleteFile(editBrandData.logo),
     ]);
   });
 
@@ -65,25 +65,25 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
   it('should go to \'Catalog > Brands & Suppliers\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToBrandsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.brandsAndSuppliersLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.brandsAndSuppliersLink,
     );
     await brandsPage.closeSfToolBar(page);
 
     const pageTitle = await brandsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(brandsPage.pageTitle);
+    expect(pageTitle).to.contains(brandsPage.pageTitle);
   });
 
   it('should reset all filters', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFiltersFirst', baseContext);
 
     numberOfBrands = await brandsPage.resetAndGetNumberOfLines(page, brandsTable);
-    await expect(numberOfBrands).to.be.above(0);
+    expect(numberOfBrands).to.be.above(0);
 
     numberOfBrandsAddresses = await brandsPage.resetAndGetNumberOfLines(page, addressesTable);
-    await expect(numberOfBrandsAddresses).to.be.above(0);
+    expect(numberOfBrandsAddresses).to.be.above(0);
   });
 
   // 1: Create Brand
@@ -94,17 +94,17 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.goToAddNewBrandPage(page);
 
       const pageTitle = await addBrandPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addBrandPage.pageTitle);
+      expect(pageTitle).to.contains(addBrandPage.pageTitle);
     });
 
     it('should create brand', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'createBrand', baseContext);
 
       const result = await addBrandPage.createEditBrand(page, createBrandData);
-      await expect(result).to.equal(brandsPage.successfulCreationMessage);
+      expect(result).to.equal(brandsPage.successfulCreationMessage);
 
       const numberOfBrandsAfterCreation = await brandsPage.getNumberOfElementInGrid(page, brandsTable);
-      await expect(numberOfBrandsAfterCreation).to.be.equal(numberOfBrands + 1);
+      expect(numberOfBrandsAfterCreation).to.be.equal(numberOfBrands + 1);
     });
   });
 
@@ -116,19 +116,19 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.goToAddNewBrandAddressPage(page);
 
       const pageTitle = await addBrandAddressPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addBrandAddressPage.pageTitle);
+      expect(pageTitle).to.contains(addBrandAddressPage.pageTitle);
     });
 
     it('should create brand address', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'createAddress', baseContext);
 
       const result = await addBrandAddressPage.createEditBrandAddress(page, createBrandAddressData);
-      await expect(result).to.equal(brandsPage.successfulCreationMessage);
+      expect(result).to.equal(brandsPage.successfulCreationMessage);
 
       const numberOfBrandsAddressesAfterCreation = await brandsPage.getNumberOfElementInGrid(page, addressesTable);
 
       createBrandData.addresses += 1;
-      await expect(numberOfBrandsAddressesAfterCreation).to.be.equal(numberOfBrandsAddresses + 1);
+      expect(numberOfBrandsAddressesAfterCreation).to.be.equal(numberOfBrandsAddresses + 1);
     });
   });
 
@@ -140,10 +140,10 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterBrands(page, 'input', 'name', createBrandData.name);
 
       const numberOfBrandsAfterFilter = await brandsPage.getNumberOfElementInGrid(page, brandsTable);
-      await expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
+      expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
 
       const textColumn = await brandsPage.getTextColumnFromTableBrands(page, 1, 'name');
-      await expect(textColumn).to.contains(createBrandData.name);
+      expect(textColumn).to.contains(createBrandData.name);
     });
 
     it('should view brand', async function () {
@@ -152,20 +152,17 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.viewBrand(page, 1);
 
       const pageTitle = await viewBrandPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(createBrandData.name);
+      expect(pageTitle).to.contains(createBrandData.name);
     });
 
     it('should check existence of the associated address', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkAddressOnCreatedBrand', baseContext);
 
-      const numberOfAddressesInGrid = await viewBrandPage.getNumberFromText(
-        page,
-        viewBrandPage.addressesGridHeader,
-      );
-      await expect(numberOfAddressesInGrid).to.equal(createBrandData.addresses);
+      const numberOfAddressesInGrid = await viewBrandPage.getNumberOfAddressesInGrid(page);
+      expect(numberOfAddressesInGrid).to.equal(createBrandData.addresses);
 
       const textColumn = await viewBrandPage.getTextColumnFromTableAddresses(page, 1, 1);
-      await expect(textColumn).to.contains(`${createBrandAddressData.firstName} ${createBrandAddressData.lastName}`);
+      expect(textColumn).to.contains(`${createBrandAddressData.firstName} ${createBrandAddressData.lastName}`);
     });
 
     it('should return brands Page', async function () {
@@ -174,14 +171,14 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await viewBrandPage.goToPreviousPage(page);
 
       const pageTitle = await brandsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(brandsPage.pageTitle);
+      expect(pageTitle).to.contains(brandsPage.pageTitle);
     });
 
     it('should reset brands filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterViewCreatedBrand', baseContext);
 
       const numberOfBrandsAfterReset = await brandsPage.resetAndGetNumberOfLines(page, brandsTable);
-      await expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands + 1);
+      expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands + 1);
     });
   });
 
@@ -193,10 +190,10 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterBrands(page, 'input', 'name', createBrandData.name);
 
       const numberOfBrandsAfterFilter = await brandsPage.getNumberOfElementInGrid(page, brandsTable);
-      await expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
+      expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
 
       const textColumn = await brandsPage.getTextColumnFromTableBrands(page, 1, 'name');
-      await expect(textColumn).to.contains(createBrandData.name);
+      expect(textColumn).to.contains(createBrandData.name);
     });
 
     it('should go to edit brand page', async function () {
@@ -205,14 +202,14 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.goToEditBrandPage(page, 1);
 
       const pageTitle = await addBrandPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addBrandPage.pageTitleEdit);
+      expect(pageTitle).to.contains(addBrandPage.pageTitleEdit);
     });
 
     it('should edit brand', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'updateBrand', baseContext);
 
       const result = await addBrandPage.createEditBrand(page, editBrandData);
-      await expect(result).to.equal(brandsPage.successfulUpdateMessage);
+      expect(result).to.equal(brandsPage.successfulUpdateMessage);
 
       editBrandData.addresses += 1;
     });
@@ -223,7 +220,7 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterAddresses(page, 'input', 'name', editBrandData.name);
 
       const textColumn = await brandsPage.getTextColumnFromTableAddresses(page, 1, 'name');
-      await expect(textColumn).to.contains(editBrandData.name);
+      expect(textColumn).to.contains(editBrandData.name);
     });
 
     it('should reset all filters', async function () {
@@ -231,11 +228,11 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
 
       // Reset Filter Brands
       const numberOfBrandsAfterReset = await brandsPage.resetAndGetNumberOfLines(page, brandsTable);
-      await expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands + 1);
+      expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands + 1);
 
       // Reset Filter Brand Address
       const numberOfBrandsAddressesAfterReset = await brandsPage.resetAndGetNumberOfLines(page, addressesTable);
-      await expect(numberOfBrandsAddressesAfterReset).to.be.equal(numberOfBrandsAddresses + 1);
+      expect(numberOfBrandsAddressesAfterReset).to.be.equal(numberOfBrandsAddresses + 1);
     });
   });
 
@@ -247,7 +244,7 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterAddresses(page, 'input', 'name', editBrandData.name);
 
       const textColumn = await brandsPage.getTextColumnFromTableAddresses(page, 1, 'name');
-      await expect(textColumn).to.contains(editBrandData.name);
+      expect(textColumn).to.contains(editBrandData.name);
     });
 
     it('should go to edit brand address page', async function () {
@@ -256,21 +253,21 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.goToEditBrandAddressPage(page, 1);
 
       const pageTitle = await addBrandPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(brandsPage.pageTitle);
+      expect(pageTitle).to.contains(addBrandPage.pageTitleEdit);
     });
 
     it('should edit brand address', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'updateAddress', baseContext);
 
       const result = await addBrandAddressPage.createEditBrandAddress(page, editBrandAddressData);
-      await expect(result).to.equal(brandsPage.successfulUpdateMessage);
+      expect(result).to.equal(brandsPage.successfulUpdateMessage);
     });
 
     it('should reset Brand Addresses filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterUpdateAddress', baseContext);
 
       const numberOfBrandsAddressesAfterReset = await brandsPage.resetAndGetNumberOfLines(page, addressesTable);
-      await expect(numberOfBrandsAddressesAfterReset).to.be.equal(numberOfBrandsAddresses + 1);
+      expect(numberOfBrandsAddressesAfterReset).to.be.equal(numberOfBrandsAddresses + 1);
     });
   });
   // 6 : View Brand and check Address Value in list
@@ -281,10 +278,10 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterBrands(page, 'input', 'name', editBrandData.name);
 
       const numberOfBrandsAfterFilter = await brandsPage.getNumberOfElementInGrid(page, brandsTable);
-      await expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
+      expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
 
       const textColumn = await brandsPage.getTextColumnFromTableBrands(page, 1, 'name');
-      await expect(textColumn).to.contains(editBrandData.name);
+      expect(textColumn).to.contains(editBrandData.name);
     });
 
     it('should view brand', async function () {
@@ -293,17 +290,17 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.viewBrand(page, 1);
 
       const pageTitle = await viewBrandPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(editBrandData.name);
+      expect(pageTitle).to.contains(editBrandData.name);
     });
 
     it('should check existence of the associated address', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkAddressOnUpdatedBrand', baseContext);
 
       const numberOfAddressesInGrid = await viewBrandPage.getNumberOfAddressesInGrid(page);
-      await expect(numberOfAddressesInGrid).to.equal(editBrandData.addresses);
+      expect(numberOfAddressesInGrid).to.equal(editBrandData.addresses);
 
       const textColumn = await viewBrandPage.getTextColumnFromTableAddresses(page, 1, 1);
-      await expect(textColumn).to.contains(`${editBrandAddressData.firstName} ${editBrandAddressData.lastName}`);
+      expect(textColumn).to.contains(`${editBrandAddressData.firstName} ${editBrandAddressData.lastName}`);
     });
 
     it('should go back to brands Page', async function () {
@@ -312,14 +309,14 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await viewBrandPage.goToPreviousPage(page);
 
       const pageTitle = await brandsPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(brandsPage.pageTitle);
+      expect(pageTitle).to.contains(brandsPage.pageTitle);
     });
 
     it('should reset filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterViewUpdatedBrand', baseContext);
 
       const numberOfBrandsAfterReset = await brandsPage.resetAndGetNumberOfLines(page, brandsTable);
-      await expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands + 1);
+      expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands + 1);
     });
   });
 
@@ -331,17 +328,17 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterBrands(page, 'input', 'name', editBrandData.name);
 
       const numberOfBrandsAfterFilter = await brandsPage.getNumberOfElementInGrid(page, brandsTable);
-      await expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
+      expect(numberOfBrandsAfterFilter).to.be.at.most(numberOfBrands);
 
       const textColumn = await brandsPage.getTextColumnFromTableBrands(page, 1, 'name');
-      await expect(textColumn).to.contains(editBrandData.name);
+      expect(textColumn).to.contains(editBrandData.name);
     });
 
     it('should delete brand', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'deleteBrand', baseContext);
 
       const result = await brandsPage.deleteBrand(page, 1);
-      await expect(result).to.be.equal(brandsPage.successfulDeleteMessage);
+      expect(result).to.be.equal(brandsPage.successfulDeleteMessage);
     });
 
     it('should check that the Brand Address is deleted successfully', async function () {
@@ -351,14 +348,14 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterAddresses(page, 'input', 'lastname', editBrandAddressData.lastName);
 
       const textColumn = await brandsPage.getTextColumnFromTableAddresses(page, 1, 'name');
-      await expect(textColumn).to.contains('--');
+      expect(textColumn).to.contains('--');
     });
 
     it('should reset filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetBrandsListAfterDelete', baseContext);
 
       const numberOfBrandsAfterReset = await brandsPage.resetAndGetNumberOfLines(page, brandsTable);
-      await expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands);
+      expect(numberOfBrandsAfterReset).to.be.equal(numberOfBrands);
     });
   });
 
@@ -371,24 +368,24 @@ describe('BO - Catalog - Brands & suppliers : CRUD Brand and Address', async () 
       await brandsPage.filterAddresses(page, 'input', 'lastname', editBrandAddressData.lastName);
 
       const textColumnFirstName = await brandsPage.getTextColumnFromTableAddresses(page, 1, 'firstname');
-      await expect(textColumnFirstName).to.contains(editBrandAddressData.firstName);
+      expect(textColumnFirstName).to.contains(editBrandAddressData.firstName);
 
       const textColumnLastName = await brandsPage.getTextColumnFromTableAddresses(page, 1, 'lastname');
-      await expect(textColumnLastName).to.contains(editBrandAddressData.lastName);
+      expect(textColumnLastName).to.contains(editBrandAddressData.lastName);
     });
 
     it('should delete Brand Address', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'deleteAddress', baseContext);
 
       const result = await brandsPage.deleteBrandAddress(page, 1);
-      await expect(result).to.be.equal(brandsPage.successfulDeleteMessage);
+      expect(result).to.be.equal(brandsPage.successfulDeleteMessage);
     });
 
     it('should reset filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAddressesListAfterDelete', baseContext);
 
       const numberOfBrandsAddressesAfterReset = await brandsPage.resetAndGetNumberOfLines(page, addressesTable);
-      await expect(numberOfBrandsAddressesAfterReset).to.be.equal(numberOfBrandsAddresses);
+      expect(numberOfBrandsAddressesAfterReset).to.be.equal(numberOfBrandsAddresses);
     });
   });
 });

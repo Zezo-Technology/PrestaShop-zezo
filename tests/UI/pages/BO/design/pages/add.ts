@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type CMSPageData from '@data/faker/CMSpage';
-
 import type {Page} from 'playwright';
+import {
+  type FakerCMSPage,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add page page, contains functions that can be used on the page
@@ -11,6 +12,8 @@ import type {Page} from 'playwright';
  */
 class AddPage extends BOBasePage {
   public readonly pageTitleCreate: string;
+
+  public readonly editPageTitle: (pageTitle: string) => string;
 
   private readonly titleInput: string;
 
@@ -39,7 +42,8 @@ class AddPage extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitleCreate = 'Pages';
+    this.pageTitleCreate = `New page • ${global.INSTALL.SHOP_NAME}`;
+    this.editPageTitle = (pageTitle: string) => `Editing page ${pageTitle} • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.titleInput = '#cms_page_title_1';
@@ -61,10 +65,10 @@ class AddPage extends BOBasePage {
   /**
    * Fill form for add/edit page category
    * @param page {Page} Browser tab
-   * @param pageData {CMSPageData} Data to set on new/edit page form
+   * @param pageData {FakerCMSPage} Data to set on new/edit page form
    * @return {Promise<string>}
    */
-  async createEditPage(page: Page, pageData: CMSPageData): Promise<string> {
+  async createEditPage(page: Page, pageData: FakerCMSPage): Promise<string> {
     // Fill form
     await this.setValue(page, this.titleInput, pageData.title);
     await this.setValue(page, this.metaTitleInput, pageData.metaTitle);
@@ -75,7 +79,7 @@ class AddPage extends BOBasePage {
     await this.setChecked(page, this.displayedToggleInput(pageData.displayed ? 1 : 0));
 
     // Save form
-    await this.clickAndWaitForNavigation(page, this.savePageButton);
+    await this.clickAndWaitForURL(page, this.savePageButton);
 
     // Return successful message
     return this.getAlertSuccessBlockParagraphContent(page);
@@ -96,7 +100,8 @@ class AddPage extends BOBasePage {
    * @return {Promise<void>}
    */
   async cancelPage(page: Page): Promise<void> {
-    await this.clickAndWaitForNavigation(page, this.cancelButton);
+    await this.clickAndWaitForURL(page, this.cancelButton);
   }
 }
+
 export default new AddPage();

@@ -31,10 +31,10 @@ class ViewSQLQuery extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'SQL Manager';
+    this.pageTitle = `Result of SQL query • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
-    this.sqlQueryResultTitle = '#card-title';
+    this.sqlQueryResultTitle = '.card-header';
     this.resultsTable = '#grid-table';
     this.tableColumnName = (column: number) => `${this.resultsTable} th:nth-child(${column})`;
     this.tableBody = `${this.resultsTable} tbody`;
@@ -51,7 +51,7 @@ class ViewSQLQuery extends BOBasePage {
    * @param page {Page} Browser tab
    * @returns {Promise<number>}
    */
-  getSQLQueryResultNumber(page: Page): Promise<number> {
+  async getSQLQueryResultNumber(page: Page): Promise<number> {
     return this.getNumberFromText(page, this.sqlQueryResultTitle);
   }
 
@@ -61,7 +61,7 @@ class ViewSQLQuery extends BOBasePage {
    * @param column {number} Id of column to get column name
    * @returns {Promise<string>}
    */
-  getColumnName(page: Page, column: number = 1): Promise<string> {
+  async getColumnName(page: Page, column: number = 1): Promise<string> {
     return this.getTextContent(page, this.tableColumnName(column));
   }
 
@@ -72,7 +72,7 @@ class ViewSQLQuery extends BOBasePage {
    * @param column {string} Name of the column
    * @return {Promise<string>}
    */
-  getTextColumn(page: Page, row: number, column: string): Promise<string> {
+  async getTextColumn(page: Page, row: number, column: string): Promise<string> {
     return this.getTextContent(page, this.tableColumn(row, column));
   }
 }

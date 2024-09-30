@@ -1,21 +1,21 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import BO pages
-import dashboardPage from '@pages/BO/dashboard';
 import featuresPage from '@pages/BO/catalog/features';
 import addFeaturePage from '@pages/BO/catalog/features/addFeature';
 import attributesPage from '@pages/BO/catalog/attributes';
 
-// Import data
-import FeatureData from '@data/faker/feature';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  type FakerFeature,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 let browserContext: BrowserContext;
 let page: Page;
@@ -24,19 +24,19 @@ let numberOfFeaturesToDelete: number;
 
 /**
  * Function to create feature
- * @param createFeatureData {FeatureData} Data to set to create feature
+ * @param createFeatureData {FakerFeature} Data to set to create feature
  * @param baseContext {string} String to identify the test
  */
-function createFeatureTest(createFeatureData: FeatureData, baseContext: string = 'commonTests-createFeatureTest'): void {
+function createFeatureTest(createFeatureData: FakerFeature, baseContext: string = 'commonTests-createFeatureTest'): void {
   describe(`PRE-TEST: Create feature '${createFeatureData.name}'`, async () => {
     // before and after functions
     before(async function () {
-      browserContext = await helper.createBrowserContext(this.browser);
-      page = await helper.newTab(browserContext);
+      browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+      page = await utilsPlaywright.newTab(browserContext);
     });
 
     after(async () => {
-      await helper.closeBrowserContext(browserContext);
+      await utilsPlaywright.closeBrowserContext(browserContext);
     });
 
     it('should login in BO', async function () {
@@ -46,15 +46,15 @@ function createFeatureTest(createFeatureData: FeatureData, baseContext: string =
     it('should go to \'Catalog > Attributes & Features\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToAttributesPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.catalogParentLink,
-        dashboardPage.attributesAndFeaturesLink,
+        boDashboardPage.catalogParentLink,
+        boDashboardPage.attributesAndFeaturesLink,
       );
       await attributesPage.closeSfToolBar(page);
 
       const pageTitle = await attributesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(attributesPage.pageTitle);
+      expect(pageTitle).to.contains(attributesPage.pageTitle);
     });
 
     it('should go to Features page', async function () {
@@ -63,10 +63,10 @@ function createFeatureTest(createFeatureData: FeatureData, baseContext: string =
       await attributesPage.goToFeaturesPage(page);
 
       const pageTitle = await featuresPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(featuresPage.pageTitle);
+      expect(pageTitle).to.contains(featuresPage.pageTitle);
 
       numberOfFeatures = await featuresPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfFeatures).to.be.above(0);
+      expect(numberOfFeatures).to.be.above(0);
     });
 
     it('should go to add new feature page', async function () {
@@ -75,14 +75,14 @@ function createFeatureTest(createFeatureData: FeatureData, baseContext: string =
       await featuresPage.goToAddFeaturePage(page);
 
       const pageTitle = await addFeaturePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addFeaturePage.createPageTitle);
+      expect(pageTitle).to.contains(addFeaturePage.createPageTitle);
     });
 
     it('should create feature', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'createNewFeature', baseContext);
 
       const textResult = await addFeaturePage.setFeature(page, createFeatureData);
-      await expect(textResult).to.contains(featuresPage.successfulCreationMessage);
+      expect(textResult).to.contains(featuresPage.successfulCreationMessage);
     });
   });
 }
@@ -96,12 +96,12 @@ function bulkDeleteFeaturesTest(featureName: string, baseContext: string = 'comm
   describe('POST-TEST: Bulk delete features', async () => {
     // before and after functions
     before(async function () {
-      browserContext = await helper.createBrowserContext(this.browser);
-      page = await helper.newTab(browserContext);
+      browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+      page = await utilsPlaywright.newTab(browserContext);
     });
 
     after(async () => {
-      await helper.closeBrowserContext(browserContext);
+      await utilsPlaywright.closeBrowserContext(browserContext);
     });
 
     it('should login in BO', async function () {
@@ -111,15 +111,15 @@ function bulkDeleteFeaturesTest(featureName: string, baseContext: string = 'comm
     it('should go to \'Catalog > Attributes & Features\' page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'goToAttributesPage', baseContext);
 
-      await dashboardPage.goToSubMenu(
+      await boDashboardPage.goToSubMenu(
         page,
-        dashboardPage.catalogParentLink,
-        dashboardPage.attributesAndFeaturesLink,
+        boDashboardPage.catalogParentLink,
+        boDashboardPage.attributesAndFeaturesLink,
       );
       await attributesPage.closeSfToolBar(page);
 
       const pageTitle = await attributesPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(attributesPage.pageTitle);
+      expect(pageTitle).to.contains(attributesPage.pageTitle);
     });
 
     it('should go to Features page', async function () {
@@ -128,40 +128,40 @@ function bulkDeleteFeaturesTest(featureName: string, baseContext: string = 'comm
       await attributesPage.goToFeaturesPage(page);
 
       const pageTitle = await featuresPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(featuresPage.pageTitle);
+      expect(pageTitle).to.contains(featuresPage.pageTitle);
 
       numberOfFeatures = await featuresPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfFeatures).to.be.above(0);
+      expect(numberOfFeatures).to.be.above(0);
     });
 
     it(`should filter by feature name '${featureName}'`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterToBulkDelete', baseContext);
 
-      await featuresPage.filterTable(page, 'b!name', featureName);
+      await featuresPage.filterTable(page, 'name', featureName);
 
       const numberOfFeaturesAfterFilter = await featuresPage.getNumberOfElementInGrid(page);
-      await expect(numberOfFeaturesAfterFilter).to.be.equal(19);
+      expect(numberOfFeaturesAfterFilter).to.be.equal(19);
     });
 
     it('should get the number of features to delete', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'getNumberToDelete', baseContext);
 
       numberOfFeaturesToDelete = await featuresPage.getNumberOfElementInGrid(page);
-      await expect(numberOfFeaturesToDelete).to.be.above(0);
+      expect(numberOfFeaturesToDelete).to.be.above(0);
     });
 
     it('should delete features by Bulk Actions and check result', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteFeatures', baseContext);
 
       const deleteTextResult = await featuresPage.bulkDeleteFeatures(page);
-      await expect(deleteTextResult).to.be.contains(featuresPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.contains(featuresPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilter', baseContext);
 
       const numberOfFeaturesAfterDelete = await featuresPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfFeaturesAfterDelete).to.equal(numberOfFeatures - numberOfFeaturesToDelete);
+      expect(numberOfFeaturesAfterDelete).to.equal(numberOfFeatures - numberOfFeaturesToDelete);
     });
   });
 }

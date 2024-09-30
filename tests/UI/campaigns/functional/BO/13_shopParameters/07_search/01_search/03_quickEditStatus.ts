@@ -1,19 +1,17 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import common tests
 import loginCommon from '@commonTests/BO/loginBO';
 
-// Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import searchPage from '@pages/BO/shopParameters/search';
-
-// Import data
-import Aliases from '@data/demo/search';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  boSearchPage,
+  dataSearchAliases,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_shopParameters_search_search_quickEditStatus';
 
@@ -27,12 +25,12 @@ describe('BO - Shop Parameters - Search : Quick edit status', async () => {
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -42,31 +40,31 @@ describe('BO - Shop Parameters - Search : Quick edit status', async () => {
   it('should go to \'Shop Parameters > Search\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToSearchPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.shopParametersParentLink,
-      dashboardPage.searchLink,
+      boDashboardPage.shopParametersParentLink,
+      boDashboardPage.searchLink,
     );
 
-    const pageTitle = await searchPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(searchPage.pageTitle);
+    const pageTitle = await boSearchPage.getPageTitle(page);
+    expect(pageTitle).to.contains(boSearchPage.pageTitle);
   });
 
   it('should reset all filters and get number of aliases in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
-    numberOfSearch = await searchPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfSearch).to.be.above(0);
+    numberOfSearch = await boSearchPage.resetAndGetNumberOfLines(page);
+    expect(numberOfSearch).to.be.above(0);
   });
 
   it('should filter list by name', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'filterToQuickEdit', baseContext);
 
-    await searchPage.resetFilter(page);
-    await searchPage.filterTable(page, 'input', 'alias', Aliases.bloose.alias);
+    await boSearchPage.resetFilter(page);
+    await boSearchPage.filterTable(page, 'input', 'alias', dataSearchAliases.bloose.alias);
 
-    const textAlias = await searchPage.getTextColumn(page, 1, 'alias');
-    await expect(textAlias).to.contains(Aliases.bloose.alias);
+    const textAlias = await boSearchPage.getTextColumn(page, 1, 'alias');
+    expect(textAlias).to.contains(dataSearchAliases.bloose.alias);
   });
 
   const statuses = [
@@ -78,22 +76,22 @@ describe('BO - Shop Parameters - Search : Quick edit status', async () => {
     it(`should ${aliasStatus.args.status} status`, async function () {
       await testContext.addContextItem(this, 'testIdentifier', `${aliasStatus.args.status}Status`, baseContext);
 
-      const isActionPerformed = await searchPage.setStatus(page, 1, aliasStatus.args.enable);
+      const isActionPerformed = await boSearchPage.setStatus(page, 1, aliasStatus.args.enable);
 
       if (isActionPerformed) {
-        const resultMessage = await searchPage.getAlertSuccessBlockContent(page);
-        await expect(resultMessage).to.contains(searchPage.successfulUpdateStatusMessage);
+        const resultMessage = await boSearchPage.getAlertSuccessBlockContent(page);
+        expect(resultMessage).to.contains(boSearchPage.successfulUpdateStatusMessage);
       }
 
-      const currentStatus = await searchPage.getStatus(page, 1);
-      await expect(currentStatus).to.be.equal(aliasStatus.args.enable);
+      const currentStatus = await boSearchPage.getStatus(page, 1);
+      expect(currentStatus).to.be.equal(aliasStatus.args.enable);
     });
   });
 
   it('should reset all filters and get number of aliases in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilter', baseContext);
 
-    const numberOfSearchAfterReset = await searchPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfSearchAfterReset).to.be.equal(numberOfSearch);
+    const numberOfSearchAfterReset = await boSearchPage.resetAndGetNumberOfLines(page);
+    expect(numberOfSearchAfterReset).to.be.equal(numberOfSearch);
   });
 });

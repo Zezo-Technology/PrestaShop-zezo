@@ -29,10 +29,14 @@ declare(strict_types=1);
 namespace PrestaShopBundle\Form\Admin\Configure\AdvancedParameters\FeatureFlag;
 
 use Doctrine\ORM\EntityManagerInterface;
+use PrestaShop\PrestaShop\Core\Cache\Clearer\CacheClearerInterface;
+use PrestaShop\PrestaShop\Core\ConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Exception\InvalidArgumentException;
+use PrestaShop\PrestaShop\Core\Feature\FeatureInterface;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagManager;
+use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
 use PrestaShop\PrestaShop\Core\Form\FormDataProviderInterface;
 use PrestaShopBundle\Entity\FeatureFlag;
-use PrestaShopBundle\Routing\Converter\CacheCleanerInterface;
 
 /**
  * Passes data between the application layer in charge of the feature flags form
@@ -40,38 +44,14 @@ use PrestaShopBundle\Routing\Converter\CacheCleanerInterface;
  */
 class FeatureFlagsFormDataProvider implements FormDataProviderInterface
 {
-    /** @var EntityManagerInterface */
-    protected $doctrineEntityManager;
-
-    /** @var string */
-    protected $stability;
-
-    /**
-     * @var bool
-     */
-    protected $isMultiShopUsed;
-
-    /**
-     * @var CacheCleanerInterface
-     */
-    private $cacheCleaner;
-
-    /**
-     * @param EntityManagerInterface $doctrineEntityManager
-     * @param string $stability
-     * @param bool $isMultiShopUsed
-     * @param CacheCleanerInterface $cacheCleaner
-     */
     public function __construct(
-        EntityManagerInterface $doctrineEntityManager,
-        string $stability,
-        bool $isMultiShopUsed,
-        CacheCleanerInterface $cacheCleaner
+        protected EntityManagerInterface $doctrineEntityManager,
+        protected readonly string $stability,
+        private CacheClearerInterface $cacheClearer,
+        private FeatureFlagManager $featureFlagManager,
+        private readonly FeatureInterface $multiStoreFeature,
+        private readonly ConfigurationInterface $configuration,
     ) {
-        $this->doctrineEntityManager = $doctrineEntityManager;
-        $this->stability = $stability;
-        $this->isMultiShopUsed = $isMultiShopUsed;
-        $this->cacheCleaner = $cacheCleaner;
     }
 
     public function getData()
@@ -80,21 +60,22 @@ class FeatureFlagsFormDataProvider implements FormDataProviderInterface
 
         $featureFlagsData = [];
         foreach ($featureFlags as $featureFlag) {
-            // We disable product v2 switch based on multishop state and feature name, someday we will need
-            // to implement a more generic feature for any feature flag
-            $isDisabled = strpos($featureFlag->getName(), '_multi_shop') !== false && !$this->isMultiShopUsed
-                || strpos($featureFlag->getName(), '_multi_shop') === false && $this->isMultiShopUsed
-            ;
-            $featureFlagsData[$featureFlag->getName()] = [
-                'enabled' => $featureFlag->isEnabled(),
+            $flagName = $featureFlag->getName();
+            $featureFlagsData[$flagName] = [
+                'enabled' => $this->featureFlagManager->isEnabled($flagName),
                 'name' => $featureFlag->getName(),
                 'label' => $featureFlag->getLabelWording(),
                 'label_domain' => $featureFlag->getLabelDomain(),
                 'description' => $featureFlag->getDescriptionWording(),
                 'description_domain' => $featureFlag->getDescriptionDomain(),
-                'disabled' => $isDisabled,
+                'type' => $featureFlag->getOrderedTypes(),
+                'type_used' => $this->featureFlagManager->getUsedType($flagName),
+                'disabled' => $this->featureFlagManager->isReadOnly($flagName),
+                'forced_by_env' => $this->featureFlagManager->getUsedType($flagName) === FeatureFlagSettings::TYPE_ENV,
             ];
         }
+
+        $featureFlagsData = $this->checkAdminAPIMultistore($featureFlagsData);
 
         return ['feature_flags' => $featureFlagsData];
     }
@@ -113,18 +94,21 @@ class FeatureFlagsFormDataProvider implements FormDataProviderInterface
                 throw new InvalidArgumentException(sprintf('Invalid feature flag configuration submitted, flag %s does not exist', $flagName));
             }
 
+            if ($this->featureFlagManager->isReadonly($flagName)) {
+                continue;
+            }
+
             $flagState = $flagData['enabled'] ?? false;
             if ($flagState) {
-                $featureFlag->enable();
+                $this->featureFlagManager->enable($flagName);
             } else {
-                $featureFlag->disable();
+                $this->featureFlagManager->disable($flagName);
             }
         }
 
-        $this->doctrineEntityManager->flush();
-        // Clear cache of legacy routes since they can depend on an associated feature flag
-        // when the attribute _legacy_feature_flag is used
-        $this->cacheCleaner->clearCache();
+        // Clear cache (feature flags can have impact on routing, filtering services, resources, ...) so a full
+        // cache clear is safer when they are modified.
+        $this->cacheClearer->clear();
 
         return [];
     }
@@ -147,5 +131,21 @@ class FeatureFlagsFormDataProvider implements FormDataProviderInterface
     protected function getOneFeatureFlagByName(string $featureFlagName): ?FeatureFlag
     {
         return $this->doctrineEntityManager->getRepository(FeatureFlag::class)->findOneBy(['name' => $featureFlagName]);
+    }
+
+    // conditions the display of the AdminAPIMultistore feature fag only if Admin API is activated, regardless of its stability
+    private function checkAdminAPIMultistore(array $featureFlagsData): array
+    {
+        $adminApiEnabled = (bool) $this->configuration->get('PS_ENABLE_ADMIN_API');
+        $adminAPIMultistoreKey = FeatureFlagSettings::FEATURE_FLAG_ADMIN_API_MULTISTORE;
+        $isMultistoreActive = $this->multiStoreFeature->isActive();
+
+        if (array_key_exists($adminAPIMultistoreKey, $featureFlagsData)) {
+            if (!$isMultistoreActive || !$adminApiEnabled) {
+                unset($featureFlagsData[$adminAPIMultistoreKey]);
+            }
+        }
+
+        return $featureFlagsData;
     }
 }

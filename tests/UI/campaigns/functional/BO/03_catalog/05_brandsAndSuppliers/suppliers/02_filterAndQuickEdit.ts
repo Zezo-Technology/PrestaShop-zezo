@@ -1,5 +1,4 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -8,13 +7,14 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import brandsPage from '@pages/BO/catalog/brands';
 import suppliersPage from '@pages/BO/catalog/suppliers';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import Suppliers from '@data/demo/suppliers';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  dataSuppliers,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_brandsAndSuppliers_suppliers_filterAndQuickEdit';
 
@@ -26,12 +26,12 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -42,15 +42,15 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
   it('should go to \'Catalog > Brands & Suppliers\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToBrandsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.brandsAndSuppliersLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.brandsAndSuppliersLink,
     );
     await brandsPage.closeSfToolBar(page);
 
     const pageTitle = await brandsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(brandsPage.pageTitle);
+    expect(pageTitle).to.contains(brandsPage.pageTitle);
   });
 
   it('should go to Suppliers page', async function () {
@@ -59,14 +59,14 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
     await brandsPage.goToSubTabSuppliers(page);
 
     const pageTitle = await suppliersPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(suppliersPage.pageTitle);
+    expect(pageTitle).to.contains(suppliersPage.pageTitle);
   });
 
   it('should reset filter', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'firstReset', baseContext);
 
     numberOfSuppliers = await suppliersPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfSuppliers).to.be.at.least(0);
+    expect(numberOfSuppliers).to.be.at.least(0);
   });
 
   // 2: Filter Suppliers
@@ -78,7 +78,7 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
             testIdentifier: 'filterName',
             filterType: 'input',
             filterBy: 'name',
-            filterValue: Suppliers.fashionSupplier.name,
+            filterValue: dataSuppliers.fashion.name,
           },
       },
       {
@@ -87,7 +87,7 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
             testIdentifier: 'filterProductsCount',
             filterType: 'input',
             filterBy: 'products_count',
-            filterValue: Suppliers.fashionSupplier.products.toString(),
+            filterValue: dataSuppliers.fashion.products.toString(),
           },
       },
       {
@@ -96,7 +96,7 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
             testIdentifier: 'filterActive',
             filterType: 'select',
             filterBy: 'active',
-            filterValue: Suppliers.accessoriesSupplier.enabled ? '1' : '0',
+            filterValue: dataSuppliers.accessories.enabled ? '1' : '0',
           },
       },
     ];
@@ -121,16 +121,16 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
 
         // Check number of suppliers
         const numberOfSuppliersAfterFilter = await suppliersPage.getNumberOfElementInGrid(page);
-        await expect(numberOfSuppliersAfterFilter).to.be.at.most(numberOfSuppliers);
+        expect(numberOfSuppliersAfterFilter).to.be.at.most(numberOfSuppliers);
 
         // Check text column or status in all rows after filter
         for (let i = 1; i <= numberOfSuppliersAfterFilter; i++) {
           if (test.args.filterBy === 'active') {
             const supplierStatus = await suppliersPage.getStatus(page, i);
-            await expect(supplierStatus).to.equal(test.args.filterValue === '1');
+            expect(supplierStatus).to.equal(test.args.filterValue === '1');
           } else {
             const textColumn = await suppliersPage.getTextColumnFromTableSupplier(page, i, test.args.filterBy);
-            await expect(textColumn).to.contains(test.args.filterValue);
+            expect(textColumn).to.contains(test.args.filterValue);
           }
         }
       });
@@ -139,7 +139,7 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.testIdentifier}Reset`, baseContext);
 
         const numberOfSuppliersAfterReset = await suppliersPage.resetAndGetNumberOfLines(page);
-        await expect(numberOfSuppliersAfterReset).to.be.equal(numberOfSuppliers);
+        expect(numberOfSuppliersAfterReset).to.be.equal(numberOfSuppliers);
       });
     });
   });
@@ -149,15 +149,15 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
     it('should filter supplier by name', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterToQuickEdit', baseContext);
 
-      await suppliersPage.filterTable(page, 'input', 'name', Suppliers.fashionSupplier.name);
+      await suppliersPage.filterTable(page, 'input', 'name', dataSuppliers.fashion.name);
 
       // Check number od suppliers
       const numberOfSuppliersAfterFilter = await suppliersPage.getNumberOfElementInGrid(page);
-      await expect(numberOfSuppliersAfterFilter).to.be.at.most(numberOfSuppliers);
+      expect(numberOfSuppliersAfterFilter).to.be.at.most(numberOfSuppliers);
 
       // check text column of first row after filter
       const textColumn = await suppliersPage.getTextColumnFromTableSupplier(page, 1, 'name');
-      await expect(textColumn).to.contains(Suppliers.fashionSupplier.name);
+      expect(textColumn).to.contains(dataSuppliers.fashion.name);
     });
 
     [
@@ -171,11 +171,11 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
 
         if (isActionPerformed) {
           const resultMessage = await suppliersPage.getAlertSuccessBlockParagraphContent(page);
-          await expect(resultMessage).to.contains(suppliersPage.successfulUpdateStatusMessage);
+          expect(resultMessage).to.contains(suppliersPage.successfulUpdateStatusMessage);
         }
 
         const supplierStatus = await suppliersPage.getStatus(page, 1);
-        await expect(supplierStatus).to.be.equal(test.args.enabledValue);
+        expect(supplierStatus).to.be.equal(test.args.enabledValue);
       });
     });
 
@@ -183,7 +183,7 @@ describe('BO - Catalog - Brands & Suppliers : Filter and quick edit suppliers', 
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterQuickEdit', baseContext);
 
       const numberOfSuppliersAfterReset = await suppliersPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfSuppliersAfterReset).to.be.equal(numberOfSuppliers);
+      expect(numberOfSuppliersAfterReset).to.be.equal(numberOfSuppliers);
     });
   });
 });

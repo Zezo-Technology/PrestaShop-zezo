@@ -1,21 +1,21 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
 import employeesPage from '@pages/BO/advancedParameters/team';
 import addEmployeePage from '@pages/BO/advancedParameters/team/add';
 
-// Import data
-import EmployeeData from '@data/faker/employee';
-
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  FakerEmployee,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_advancedParameters_team_employees_sortAndPagination';
 
@@ -26,7 +26,7 @@ Pagination
 Delete created employees
  */
 describe('BO - Advanced Parameters - Team : Sort and pagination employees', async () => {
-  const employeeData: EmployeeData = new EmployeeData();
+  const employeeData: FakerEmployee = new FakerEmployee();
 
   let browserContext: BrowserContext;
   let page: Page;
@@ -34,12 +34,12 @@ describe('BO - Advanced Parameters - Team : Sort and pagination employees', asyn
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -49,29 +49,29 @@ describe('BO - Advanced Parameters - Team : Sort and pagination employees', asyn
   it('should go to \'Advanced parameters > Team\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToAdvancedParamsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.advancedParametersLink,
-      dashboardPage.teamLink,
+      boDashboardPage.advancedParametersLink,
+      boDashboardPage.teamLink,
     );
     await employeesPage.closeSfToolBar(page);
 
     const pageTitle = await employeesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(employeesPage.pageTitle);
+    expect(pageTitle).to.contains(employeesPage.pageTitle);
   });
 
   it('should reset all filters and get number of employees', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfEmployees = await employeesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfEmployees).to.be.above(0);
+    expect(numberOfEmployees).to.be.above(0);
   });
 
   // 1 : Create 10 employees
   const tests = new Array(10).fill(0, 0, 10);
   describe('Create 10 employees in BO', async () => {
     tests.forEach((test: number, index: number) => {
-      const employeeToCreate = new EmployeeData({email: `${employeeData.email}${index}`});
+      const employeeToCreate: FakerEmployee = new FakerEmployee({email: `${employeeData.email}${index}`});
 
       it('should go to add new employee page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToNewEmployeePage${index + 1}`, baseContext);
@@ -79,17 +79,17 @@ describe('BO - Advanced Parameters - Team : Sort and pagination employees', asyn
         await employeesPage.goToAddNewEmployeePage(page);
 
         const pageTitle = await addEmployeePage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addEmployeePage.pageTitleCreate);
+        expect(pageTitle).to.contains(addEmployeePage.pageTitleCreate);
       });
 
       it(`should create employee n°${index + 1}`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createEmployee${index + 1}`, baseContext);
 
         const textResult = await addEmployeePage.createEditEmployee(page, employeeToCreate);
-        await expect(textResult).to.equal(employeesPage.successfulCreationMessage);
+        expect(textResult).to.equal(employeesPage.successfulCreationMessage);
 
         const numberOfEmployeesAfterCreation = await employeesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfEmployeesAfterCreation).to.be.equal(numberOfEmployees + index + 1);
+        expect(numberOfEmployeesAfterCreation).to.be.equal(numberOfEmployees + index + 1);
       });
     });
   });
@@ -131,20 +131,20 @@ describe('BO - Advanced Parameters - Team : Sort and pagination employees', asyn
           const nonSortedTableFloat = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult = await utilsCore.sortArray(nonSortedTable);
 
           if (test.args.sortDirection === 'asc') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -190,21 +190,21 @@ describe('BO - Advanced Parameters - Team : Sort and pagination employees', asyn
       await employeesPage.filterEmployees(page, 'input', 'email', employeeData.email);
 
       const textEmail = await employeesPage.getTextColumnFromTable(page, 1, 'email');
-      await expect(textEmail).to.contains(employeeData.email);
+      expect(textEmail).to.contains(employeeData.email);
     });
 
     it('should delete employees with Bulk Actions and check result', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteEmployee', baseContext);
 
       const deleteTextResult = await employeesPage.deleteBulkActions(page);
-      await expect(deleteTextResult).to.be.equal(employeesPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.equal(employeesPage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetAfterDelete', baseContext);
 
       const numberOfEmployeesAfterDelete = await employeesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfEmployeesAfterDelete).to.be.equal(numberOfEmployees);
+      expect(numberOfEmployeesAfterDelete).to.be.equal(numberOfEmployees);
     });
   });
 });

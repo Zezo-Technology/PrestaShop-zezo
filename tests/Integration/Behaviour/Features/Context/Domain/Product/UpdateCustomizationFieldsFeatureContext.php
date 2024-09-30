@@ -261,6 +261,21 @@ class UpdateCustomizationFieldsFeatureContext extends AbstractProductFeatureCont
         $actualFields = $this->getProductCustomizationFields($productReference, $shopConstraint);
         $notFoundExpectedFields = [];
 
+        // Assign new references if defined
+        foreach ($data as $index => $expectedField) {
+            if (!isset($expectedField['new reference'])) {
+                break;
+            }
+
+            // If a new reference is being set we match it with the same order as the returned data
+            if (!$this->getSharedStorage()->exists($expectedField['new reference'])) {
+                $actualField = $actualFields[$index];
+                $this->getSharedStorage()->set($expectedField['new reference'], $actualField->getCustomizationFieldId());
+                // New reference becomes the expected reference for the second loop
+                $data[$index]['reference'] = $expectedField['new reference'];
+            }
+        }
+
         foreach ($data as $expectedField) {
             $expectedId = $this->getSharedStorage()->get($expectedField['reference']);
             $foundExpectedField = false;
@@ -299,7 +314,7 @@ class UpdateCustomizationFieldsFeatureContext extends AbstractProductFeatureCont
                             );
                         }
                     }
-                    //unset this asserted customization field so we can check if there any left after loop
+                    // unset this asserted customization field so we can check if there any left after loop
                     unset($actualFields[$key]);
 
                     continue;
@@ -315,7 +330,7 @@ class UpdateCustomizationFieldsFeatureContext extends AbstractProductFeatureCont
             throw new RuntimeException(sprintf(
                 'Following customization fields were not found for product %s: %s',
                 $productReference,
-                var_export($notFoundExpectedFields)
+                var_export($notFoundExpectedFields, true)
             ));
         }
 
@@ -323,7 +338,7 @@ class UpdateCustomizationFieldsFeatureContext extends AbstractProductFeatureCont
             throw new RuntimeException(sprintf(
                 'Product "%s" contains unexpected customization fields: %s',
                 $productReference,
-                var_export($actualFields)
+                var_export($actualFields, true)
             ));
         }
     }

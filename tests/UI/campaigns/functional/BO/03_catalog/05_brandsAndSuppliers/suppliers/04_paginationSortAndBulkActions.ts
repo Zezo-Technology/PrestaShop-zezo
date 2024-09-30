@@ -1,7 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -10,14 +7,17 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import brandsPage from '@pages/BO/catalog/brands';
 import suppliersPage from '@pages/BO/catalog/suppliers';
-import addSupplierPage from '@pages/BO/catalog/suppliers/add';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import SupplierData from '@data/faker/supplier';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  boSuppliersCreate,
+  FakerSupplier,
+  utilsCore,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_brandsAndSuppliers_suppliers_paginationSortAndBulkActions';
 
@@ -35,12 +35,12 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -51,15 +51,15 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
   it('should go to \'Catalog > Brands & Suppliers\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToBrandsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.brandsAndSuppliersLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.brandsAndSuppliersLink,
     );
-    await dashboardPage.closeSfToolBar(page);
+    await boDashboardPage.closeSfToolBar(page);
 
     const pageTitle = await brandsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(brandsPage.pageTitle);
+    expect(pageTitle).to.contains(brandsPage.pageTitle);
   });
 
   // Go to suppliers page
@@ -69,7 +69,7 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
     await brandsPage.goToSubTabSuppliers(page);
 
     const pageTitle = await suppliersPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(suppliersPage.pageTitle);
+    expect(pageTitle).to.contains(suppliersPage.pageTitle);
 
     numberOfSuppliers = await suppliersPage.resetAndGetNumberOfLines(page);
   });
@@ -78,29 +78,29 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
   describe('Create 11 suppliers in BO', async () => {
     const creationTests: number[] = new Array(11).fill(0, 0, 11);
     creationTests.forEach((test: number, index: number) => {
-      const createSupplierData: SupplierData = new SupplierData({name: `todelete${index}`});
-      before(() => files.generateImage(createSupplierData.logo));
+      const createSupplierData: FakerSupplier = new FakerSupplier({name: `todelete${index}`});
+      before(() => utilsFile.generateImage(createSupplierData.logo));
 
       it('should go to add new supplier page', async function () {
         await testContext.addContextItem(this, 'testIdentifier', `goToAddNewSupplierPage${index}`, baseContext);
 
         await suppliersPage.goToAddNewSupplierPage(page);
 
-        const pageTitle = await addSupplierPage.getPageTitle(page);
-        await expect(pageTitle).to.contains(addSupplierPage.pageTitle);
+        const pageTitle = await boSuppliersCreate.getPageTitle(page);
+        expect(pageTitle).to.contains(boSuppliersCreate.pageTitle);
       });
 
       it(`should create supplier n°${index + 1} and check result`, async function () {
         await testContext.addContextItem(this, 'testIdentifier', `createSupplier${index}`, baseContext);
 
-        const result = await addSupplierPage.createEditSupplier(page, createSupplierData);
-        await expect(result).to.equal(suppliersPage.successfulCreationMessage);
+        const result = await boSuppliersCreate.createEditSupplier(page, createSupplierData);
+        expect(result).to.equal(suppliersPage.successfulCreationMessage);
 
         const numberOfSuppliersAfterCreation = await suppliersPage.getNumberOfElementInGrid(page);
-        await expect(numberOfSuppliersAfterCreation).to.be.equal(numberOfSuppliers + 1 + index);
+        expect(numberOfSuppliersAfterCreation).to.be.equal(numberOfSuppliers + 1 + index);
       });
 
-      after(() => files.deleteFile(createSupplierData.logo));
+      after(() => utilsFile.deleteFile(createSupplierData.logo));
     });
   });
 
@@ -180,20 +180,20 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
             const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
             const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-            const expectedResult: number[] = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+            const expectedResult: number[] = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
             if (test.args.sortDirection === 'asc') {
-              await expect(sortedTableFloat).to.deep.equal(expectedResult);
+              expect(sortedTableFloat).to.deep.equal(expectedResult);
             } else {
-              await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+              expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
             }
           } else {
-            const expectedResult: string[] = await basicHelper.sortArray(nonSortedTable);
+            const expectedResult: string[] = await utilsCore.sortArray(nonSortedTable);
 
             if (test.args.sortDirection === 'asc') {
-              await expect(sortedTable).to.deep.equal(expectedResult);
+              expect(sortedTable).to.deep.equal(expectedResult);
             } else {
-              await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+              expect(sortedTable).to.deep.equal(expectedResult.reverse());
             }
           }
         },
@@ -214,7 +214,7 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
       );
 
       const textColumn = await suppliersPage.getTextColumnFromTableSupplier(page, 1, 'name');
-      await expect(textColumn).to.contains('todelete');
+      expect(textColumn).to.contains('todelete');
     });
 
     [
@@ -226,15 +226,15 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
 
         const disableTextResult = await suppliersPage.bulkSetStatus(page, test.args.enabledValue);
 
-        await expect(disableTextResult).to.be.equal(suppliersPage.successfulUpdateStatusMessage);
+        expect(disableTextResult).to.be.equal(suppliersPage.successfulUpdateStatusMessage);
 
         // Check that element in grid are disabled
         const numberOfSuppliersInGrid = await suppliersPage.getNumberOfElementInGrid(page);
-        await expect(numberOfSuppliersInGrid).to.be.at.most(11);
+        expect(numberOfSuppliersInGrid).to.be.at.most(11);
 
         for (let i = 1; i <= numberOfSuppliersInGrid; i++) {
           const supplierStatus = await suppliersPage.getStatus(page, i);
-          await expect(supplierStatus).to.equal(test.args.enabledValue);
+          expect(supplierStatus).to.equal(test.args.enabledValue);
         }
       });
     });
@@ -243,14 +243,14 @@ describe('BO - Catalog - Brands & Suppliers : Pagination and sort suppliers', as
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteSuppliers', baseContext);
 
       const deleteTextResult = await suppliersPage.deleteWithBulkActions(page);
-      await expect(deleteTextResult).to.be.equal(suppliersPage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.equal(suppliersPage.successfulMultiDeleteMessage);
     });
 
     it('should reset filter', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilterAfterBulkDelete', baseContext);
 
       const numberOfSuppliersAfterReset = await suppliersPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfSuppliersAfterReset).to.be.equal(numberOfSuppliers);
+      expect(numberOfSuppliersAfterReset).to.be.equal(numberOfSuppliers);
     });
   });
 });

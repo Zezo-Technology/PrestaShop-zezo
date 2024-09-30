@@ -26,6 +26,8 @@ class Outstanding extends BOBasePage {
 
   private readonly tableBody: string;
 
+  private readonly tableRows: string;
+
   private readonly tableRow: (row: number) => string;
 
   private readonly tableColumn: (row: number, column: string) => string;
@@ -64,7 +66,8 @@ class Outstanding extends BOBasePage {
 
     // Table rows and columns
     this.tableBody = `${this.gridTable} tbody`;
-    this.tableRow = (row: number) => `${this.tableBody} tr:nth-child(${row})`;
+    this.tableRows = `${this.tableBody} tr`;
+    this.tableRow = (row: number) => `${this.tableRows}:nth-child(${row})`;
     this.tableColumn = (row: number, column: string) => `${this.tableRow(row)} td.column-${column}`;
     this.tableColumnActionType = (row: number, column: string) => `${this.tableColumn(row, column)} a`;
 
@@ -83,7 +86,7 @@ class Outstanding extends BOBasePage {
    */
   async resetFilter(page: Page): Promise<void> {
     if (!(await this.elementNotVisible(page, this.filterResetButton, 2000))) {
-      await this.clickAndWaitForNavigation(page, this.filterResetButton);
+      await this.clickAndWaitForURL(page, this.filterResetButton);
     }
   }
 
@@ -92,11 +95,11 @@ class Outstanding extends BOBasePage {
    * @param page {Page} Browser tab
    * @param columnName {string} Column name on table
    * @param row {number} Outstanding row in table
-   * @returns {Promise<string|number>}
+   * @returns {Promise<string>}
    */
   async getTextColumn(page: Page, columnName: string, row: number): Promise<string> {
     if (columnName === 'id_invoice') {
-      return this.getNumberFromText(page, this.tableColumn(row, 'id_invoice'));
+      return (await this.getNumberFromText(page, this.tableColumn(row, 'id_invoice'))).toString();
     }
 
     return this.getTextContent(page, this.tableColumn(row, columnName));
@@ -150,9 +153,11 @@ class Outstanding extends BOBasePage {
    * @returns {Promise<string>}
    */
   async selectPaginationLimit(page: Page, number: number): Promise<string> {
+    const currentUrl: string = page.url();
+
     await Promise.all([
       this.selectByVisibleText(page, this.paginationLimitSelect, number),
-      page.waitForNavigation({waitUntil: 'networkidle'}),
+      page.waitForURL((url: URL): boolean => url.toString() !== currentUrl, {waitUntil: 'networkidle'}),
     ]);
 
     return this.getPaginationLabel(page);
@@ -164,7 +169,7 @@ class Outstanding extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationNext(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationNextLink);
+    await this.clickAndWaitForURL(page, this.paginationNextLink);
 
     return this.getPaginationLabel(page);
   }
@@ -175,7 +180,7 @@ class Outstanding extends BOBasePage {
    * @returns {Promise<string>}
    */
   async paginationPrevious(page: Page): Promise<string> {
-    await this.clickAndWaitForNavigation(page, this.paginationPreviousLink);
+    await this.clickAndWaitForURL(page, this.paginationPreviousLink);
 
     return this.getPaginationLabel(page);
   }
@@ -194,7 +199,7 @@ class Outstanding extends BOBasePage {
 
     let i: number = 0;
     while (await this.elementNotVisible(page, sortColumnDiv, 2000) && i < 2) {
-      await this.clickAndWaitForNavigation(page, sortColumnSpanButton);
+      await this.clickAndWaitForURL(page, sortColumnSpanButton);
       i += 1;
     }
 
@@ -207,7 +212,7 @@ class Outstanding extends BOBasePage {
    * @returns {Promise<number>}
    */
   async getNumberOfOutstandingInPage(page: Page): Promise<number> {
-    return (await page.$$(`${this.tableBody} tr`)).length;
+    return page.locator(this.tableRows).count();
   }
 
   /**
@@ -234,7 +239,7 @@ class Outstanding extends BOBasePage {
 
     for (let i = 1; i <= rowsNumber; i++) {
       if (column === 'outstanding_allow_amount') {
-        rowContent = await this.getOutstandingAllowancePrice(page, i);
+        rowContent = (await this.getOutstandingAllowancePrice(page, i)).toString();
       } else {
         rowContent = await this.getTextColumn(page, column, i);
       }
@@ -269,7 +274,7 @@ class Outstanding extends BOBasePage {
       // Do nothing
     }
 
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 
   /**
@@ -280,10 +285,10 @@ class Outstanding extends BOBasePage {
    * @returns {Promise<void>}
    */
   async filterOutstandingByDate(page: Page, dateFrom: string, dateTo: string): Promise<void> {
-    await page.type(this.outstandingFilterColumnInput('date_add_from'), dateFrom);
-    await page.type(this.outstandingFilterColumnInput('date_add_to'), dateTo);
+    await page.locator(this.outstandingFilterColumnInput('date_add_from')).fill(dateFrom);
+    await page.locator(this.outstandingFilterColumnInput('date_add_to')).fill(dateTo);
     // click on search
-    await this.clickAndWaitForNavigation(page, this.filterSearchButton);
+    await this.clickAndWaitForURL(page, this.filterSearchButton);
   }
 }
 

@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type SqlQueryData from '@data/faker/sqlQuery';
-
 import type {Page} from 'playwright';
+import {
+  type FakerSqlQuery,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add sql query page, contains functions that can be used on the page
@@ -11,6 +12,8 @@ import type {Page} from 'playwright';
  */
 class AddSQLQuery extends BOBasePage {
   public readonly pageTitle: string;
+
+  public readonly editPageTitle: string;
 
   private readonly sqlQueryNameInput: string;
 
@@ -25,7 +28,8 @@ class AddSQLQuery extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'SQL Manager';
+    this.pageTitle = `New SQL query • ${global.INSTALL.SHOP_NAME}`;
+    this.editPageTitle = 'Editing SQL query';
 
     // Selectors
     this.sqlQueryNameInput = '#sql_request_name';
@@ -40,13 +44,13 @@ class AddSQLQuery extends BOBasePage {
   /**
    * Fill form for add/edit sql query
    * @param page {Page} Browser tab
-   * @param sqlQueryData {sqlQueryData} Data to set on create/edit sql query
+   * @param sqlQueryData {FakerSqlQuery} Data to set on create/edit sql query
    * @returns {Promise<string>}
    */
-  async createEditSQLQuery(page: Page, sqlQueryData: SqlQueryData): Promise<string> {
+  async createEditSQLQuery(page: Page, sqlQueryData: FakerSqlQuery): Promise<string> {
     await this.setValue(page, this.sqlQueryNameInput, sqlQueryData.name);
     await this.setValue(page, this.sqlQueryTextArea, sqlQueryData.sqlQuery);
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 }

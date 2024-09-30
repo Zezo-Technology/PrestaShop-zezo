@@ -30,8 +30,8 @@ use PrestaShop\PrestaShop\Adapter\Configuration as ShopConfiguration;
 use PrestaShop\PrestaShop\Adapter\Shop\Context as ShopContext;
 use PrestaShop\PrestaShop\Core\Feature\FeatureInterface;
 use PrestaShopBundle\Controller\Admin\MultistoreController;
-use PrestaShopBundle\Form\Admin\Extension\MultistoreExtension;
 use PrestaShopBundle\Form\Admin\Type\SwitchType;
+use PrestaShopBundle\Form\Extension\MultistoreExtension;
 use PrestaShopBundle\Form\FormCloner;
 use PrestaShopBundle\Service\Form\MultistoreCheckboxEnabler;
 use Symfony\Component\Form\FormInterface;
@@ -82,7 +82,7 @@ class MultistoreCheckboxEnablerTest extends TypeTestCase
     }
 
     /**
-     * @throws \PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopException
+     * @throws PrestaShop\PrestaShop\Core\Domain\Shop\Exception\ShopException
      */
     public function testAddMultistoreElements(): void
     {

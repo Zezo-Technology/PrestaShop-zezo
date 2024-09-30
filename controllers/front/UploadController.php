@@ -30,6 +30,11 @@ class UploadControllerCore extends GetFileController
 {
     private $filename;
 
+    /**
+     * Initialize the controller.
+     *
+     * @see FrontController::init()
+     */
     public function init()
     {
         FrontController::init();
@@ -75,6 +80,6 @@ class UploadControllerCore extends GetFileController
 
     private function getPath(): string
     {
-        return _PS_UPLOAD_DIR_ . $this->filename;
+        return _PS_UPLOAD_DIR_ . basename($this->filename);
     }
 }

@@ -1,8 +1,9 @@
 import LocalizationBasePage from '@pages/BO/international/localization/localizationBasePage';
 
-import type LanguageData from '@data/faker/language';
-
 import type {Page} from 'playwright';
+import {
+  type FakerLanguage,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add language page, contains functions that can be used on the page
@@ -41,8 +42,8 @@ class AddLanguage extends LocalizationBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Add new •';
-    this.pageEditTitle = 'Edit:';
+    this.pageTitle = `New language • ${global.INSTALL.SHOP_NAME}`;
+    this.pageEditTitle = 'Editing language';
 
     // Selectors
     this.nameInput = '#language_name';
@@ -62,10 +63,10 @@ class AddLanguage extends LocalizationBasePage {
   /**
    * Create or edit language
    * @param page {Page} Browser tab
-   * @param languageData {LanguageData} Data to set on add/edit language form
+   * @param languageData {FakerLanguage} Data to set on add/edit language form
    * @return {Promise<string>}
    */
-  async createEditLanguage(page: Page, languageData: LanguageData): Promise<string> {
+  async createEditLanguage(page: Page, languageData: FakerLanguage): Promise<string> {
     // Set input text
     await this.setValue(page, this.nameInput, languageData.name);
     await this.setValue(page, this.isoCodeInput, languageData.isoCode);
@@ -82,9 +83,17 @@ class AddLanguage extends LocalizationBasePage {
     await this.setChecked(page, this.statusToggleInput(languageData.enabled ? 1 : 0));
 
     // Save and return result
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
 
     return this.getAlertSuccessBlockParagraphContent(page);
+  }
+
+  /**
+   * Return true if language is RTL
+   * @param page {Page}
+   */
+  async isRTL(page: Page): Promise<boolean> {
+    return this.isChecked(page, this.isRtlToggleInput(1));
   }
 }
 

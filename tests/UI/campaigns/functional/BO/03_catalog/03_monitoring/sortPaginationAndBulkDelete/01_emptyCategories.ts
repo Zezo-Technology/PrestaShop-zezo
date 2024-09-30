@@ -1,7 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import common tests
@@ -12,13 +9,19 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import categoriesPage from '@pages/BO/catalog/categories';
 import monitoringPage from '@pages/BO/catalog/monitoring';
-import dashboardPage from '@pages/BO/dashboard';
 
 // Import data
 import ImportCategories from '@data/import/categories';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  type CategoryFilter,
+  utilsCore,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_monitoring_sortPaginationAndBulkDelete_emptyCategories';
 
@@ -40,23 +43,23 @@ describe('BO - Catalog - Monitoring : Sort and pagination list of empty categori
   // Variable used to create empty categories csv file
   const fileName: string = 'categories.csv';
   // Object used to delete imported categories
-  const categoryData: object = {filterBy: 'name', value: 'category'};
+  const categoryData: CategoryFilter = {filterBy: 'name', value: 'category'};
 
   // Pre-condition: Import empty category list
   importFileTest(fileName, ImportCategories.entity, baseContext);
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
     // Create csv file with all data
-    await files.createCSVFile('.', fileName, ImportCategories);
+    await utilsFile.createCSVFile('.', fileName, ImportCategories);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
     // Delete file
-    await files.deleteFile(fileName);
+    await utilsFile.deleteFile(fileName);
   });
 
   // 1 - Sort list of empty categories
@@ -70,19 +73,19 @@ describe('BO - Catalog - Monitoring : Sort and pagination list of empty categori
 
       await categoriesPage.goToSubMenu(
         page,
-        dashboardPage.catalogParentLink,
-        dashboardPage.monitoringLink,
+        boDashboardPage.catalogParentLink,
+        boDashboardPage.monitoringLink,
       );
 
       const pageTitle = await monitoringPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(monitoringPage.pageTitle);
+      expect(pageTitle).to.contains(monitoringPage.pageTitle);
     });
 
     it('should check that the number of imported categories is greater than 10', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'checkNumberOfCategories', baseContext);
 
       const numberOfEmptyCategories = await monitoringPage.resetAndGetNumberOfLines(page, 'empty_category');
-      await expect(numberOfEmptyCategories).to.be.at.least(10);
+      expect(numberOfEmptyCategories).to.be.at.least(10);
     });
 
     const sortTests = [
@@ -128,20 +131,20 @@ describe('BO - Catalog - Monitoring : Sort and pagination list of empty categori
             const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
             const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-            const expectedResult: number[] = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+            const expectedResult: number[] = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
             if (test.args.sortDirection === 'asc') {
-              await expect(sortedTableFloat).to.deep.equal(expectedResult);
+              expect(sortedTableFloat).to.deep.equal(expectedResult);
             } else {
-              await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+              expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
             }
           } else {
-            const expectedResult: string[] = await basicHelper.sortArray(nonSortedTable);
+            const expectedResult: string[] = await utilsCore.sortArray(nonSortedTable);
 
             if (test.args.sortDirection === 'asc') {
-              await expect(sortedTable).to.deep.equal(expectedResult);
+              expect(sortedTable).to.deep.equal(expectedResult);
             } else {
-              await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+              expect(sortedTable).to.deep.equal(expectedResult.reverse());
             }
           }
         },

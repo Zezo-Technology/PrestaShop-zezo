@@ -25,6 +25,7 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
+use PrestaShopBundle\Install\Database;
 use PrestaShopBundle\Install\Install;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Tests\Resources\DatabaseDump;
@@ -33,34 +34,30 @@ use Tests\Resources\ResourceResetter;
 define('_PS_ROOT_DIR_', dirname(__DIR__, 2));
 const _PS_IN_TEST_ = true;
 const __PS_BASE_URI__ = '/';
-const _PS_MODULE_DIR_ = _PS_ROOT_DIR_ . '/modules/';
-
+const _PS_MODULE_DIR_ = _PS_ROOT_DIR_ . '/tests/Resources/modules/';
+const _PS_ALL_THEMES_DIR_ = _PS_ROOT_DIR_ . '/tests/Resources/themes/';
 require_once _PS_ROOT_DIR_ . '/install-dev/init.php';
 
 $output = new ConsoleOutput();
 $logger = new SymfonyConsoleLogger($output, PrestaShopLoggerInterface::DEBUG);
 
+$translator = Context::getContext()->getTranslatorFromLocale('en');
 $install = new Install(null, null, $logger);
-$install->setTranslator(Context::getContext()->getTranslatorFromLocale('en'));
-$logger->log(sprintf('Creating database %s', _DB_NAME_));
-DbPDOCore::createDatabase(_DB_SERVER_, _DB_USER_, _DB_PASSWD_, _DB_NAME_);
-$logger->log('Clearing database');
+$install->setTranslator($translator);
+
+$modelDatabase = new Database($logger);
+$modelDatabase->setTranslator($translator);
+$modelDatabase->testDatabaseSettings(_DB_SERVER_, _DB_NAME_, _DB_USER_, _DB_PASSWD_, _DB_PREFIX_);
+$modelDatabase->createDatabase(_DB_SERVER_, _DB_NAME_, _DB_USER_, _DB_PASSWD_);
+
 $install->clearDatabase(false);
-$logger->log('Installing database');
 if (!$install->installDatabase(true)) {
-    // Something went wrong during installation
-    $logger->logError('Database installation failed');
     exit(1);
 }
 
-$logger->log('Initializing test context');
 $install->initializeTestContext();
-$logger->log('Installing default data');
 $install->installDefaultData('test_shop', false, false, false);
-$logger->log('Populating database');
 $install->populateDatabase();
-
-$logger->log('Configuring shop');
 $install->configureShop([
     'admin_firstname' => 'puff',
     'admin_lastname' => 'daddy',
@@ -77,17 +74,18 @@ if (!Language::translationPackIsInCache('fr-FR')) {
 }
 Language::installSfLanguagePack('fr-FR');
 
-$logger->log('Installing fixtures');
 $install->installFixtures();
 
 Category::regenerateEntireNtree();
 Tab::resetStaticCache();
 
-$logger->log('Installing default theme');
 $install->installTheme();
-
-$logger->log('Installing modules on disk');
 $install->installModules(array_keys($install->getModulesOnDisk()));
+
+$logger->log('Configure SMTP server for maildev');
+Configuration::updateGlobalValue('PS_MAIL_METHOD', Mail::METHOD_SMTP);
+Configuration::updateGlobalValue('PS_MAIL_SERVER', 'localhost');
+Configuration::updateGlobalValue('PS_MAIL_SMTP_PORT', '1025');
 
 $logger->log('Creating database dump');
 DatabaseDump::create();

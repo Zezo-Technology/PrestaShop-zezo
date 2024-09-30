@@ -24,9 +24,9 @@
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
 
+use PrestaShop\PrestaShop\Adapter\ServiceLocator;
 use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\PrestaShop\Core\Exception\InvalidArgumentException;
-use PrestaShop\PrestaShop\Core\FeatureFlag\FeatureFlagSettings;
 use PrestaShop\PrestaShop\Core\Image\ImageFormatConfiguration;
 
 /**
@@ -53,9 +53,6 @@ class ImageCore extends ObjectModel
 
     /** @var string image extension */
     public $image_format = 'jpg';
-
-    /** @var string path to index.php file to be copied to new image folders */
-    public $source_index;
 
     /** @var string image folder */
     protected $folder;
@@ -101,7 +98,6 @@ class ImageCore extends ObjectModel
     {
         parent::__construct($id, $idLang, $id_shop, $translator);
         $this->image_dir = _PS_PRODUCT_IMG_DIR_;
-        $this->source_index = _PS_PRODUCT_IMG_DIR_ . 'index.php';
     }
 
     /**
@@ -136,7 +132,7 @@ class ImageCore extends ObjectModel
      *
      * {@inheritDoc}
      */
-    public function associateTo($id_shops, int $productId = null)
+    public function associateTo($id_shops, ?int $productId = null)
     {
         if (!$this->id) {
             return;
@@ -231,7 +227,7 @@ class ImageCore extends ObjectModel
      */
     public static function getBestImageAttribute($idShop, $idLang, $idProduct, $idProductAttribute)
     {
-        $cacheId = 'Image::getBestImageAttribute' . '-' . (int) $idProduct . '-' . (int) $idProductAttribute . '-' . (int) $idLang . '-' . (int) $idShop;
+        $cacheId = 'Image::getBestImageAttribute-' . (int) $idProduct . '-' . (int) $idProductAttribute . '-' . (int) $idLang . '-' . (int) $idShop;
 
         if (!Cache::isStored($cacheId)) {
             $row = Db::getInstance()->getRow('
@@ -367,7 +363,7 @@ class ImageCore extends ObjectModel
     public static function deleteCover($idProduct)
     {
         if (!Validate::isUnsignedId($idProduct)) {
-            die(Tools::displayError());
+            die(Tools::displayError('Product ID is invalid.'));
         }
 
         if (file_exists(_PS_TMP_IMG_DIR_ . 'product_' . $idProduct . '.jpg')) {
@@ -379,8 +375,8 @@ class ImageCore extends ObjectModel
 			UPDATE `' . _DB_PREFIX_ . 'image`
 			SET `cover` = NULL
 			WHERE `id_product` = ' . (int) $idProduct
-        ) &&
-        Db::getInstance()->execute(
+        )
+        && Db::getInstance()->execute(
             '
 			UPDATE `' . _DB_PREFIX_ . 'image_shop` image_shop
 			SET image_shop.`cover` = NULL
@@ -389,11 +385,11 @@ class ImageCore extends ObjectModel
     }
 
     /**
-     *Get product cover.
+     * Get product cover.
      *
      * @param int $idProduct Product ID
      *
-     * @return bool result
+     * @return mixed result
      */
     public static function getCover($idProduct)
     {
@@ -404,11 +400,11 @@ class ImageCore extends ObjectModel
     }
 
     /**
-     *Get global product cover.
+     * Get global product cover.
      *
      * @param int $idProduct Product ID
      *
-     * @return bool result
+     * @return mixed result
      */
     public static function getGlobalCover($idProduct)
     {
@@ -442,12 +438,10 @@ class ImageCore extends ObjectModel
                 $newPath = $imageNew->getPathForCreation();
                 foreach ($imagesTypes as $imageType) {
                     if (file_exists(_PS_PRODUCT_IMG_DIR_ . $imageOld->getExistingImgPath() . '-' . $imageType['name'] . '.jpg')) {
-                        if (!Configuration::get('PS_LEGACY_IMAGES')) {
-                            $imageNew->createImgFolder();
-                        }
+                        $imageNew->createImgFolder();
                         copy(
                             _PS_PRODUCT_IMG_DIR_ . $imageOld->getExistingImgPath() . '-' . $imageType['name'] . '.jpg',
-                        $newPath . '-' . $imageType['name'] . '.jpg'
+                            $newPath . '-' . $imageType['name'] . '.jpg'
                         );
                         if (Configuration::get('WATERMARK_HASH')) {
                             $oldImagePath = _PS_PRODUCT_IMG_DIR_ . $imageOld->getExistingImgPath() . '-' . $imageType['name'] . '-' . Configuration::get('WATERMARK_HASH') . '.jpg';
@@ -638,26 +632,29 @@ class ImageCore extends ObjectModel
 
         // Delete auto-generated images
         $image_types = ImageType::getImagesTypes();
-        $sfContainer = SymfonyContainer::getInstance();
-        $isMultipleImageFormatFeatureEnabled = $sfContainer->get('prestashop.core.admin.feature_flag.repository')->isEnabled(FeatureFlagSettings::FEATURE_FLAG_MULTIPLE_IMAGE_FORMAT);
+
+        // Get image formats we will be deleting. It would probably be easier to use ImageFormatConfiguration::SUPPORTED_FORMATS,
+        // but we want to avoid any behavior change in minor/patch version.
+        $configuredImageFormats = ServiceLocator::get(ImageFormatConfiguration::class)->getGenerationFormats();
 
         foreach ($image_types as $imageType) {
-            $filesToDelete = $this->deleteAutoGeneratedImage($imageType, $this->image_format, $filesToDelete);
-
-            if ($isMultipleImageFormatFeatureEnabled) {
-                foreach (ImageFormatConfiguration::SUPPORTED_FORMATS as $imageFormat) {
-                    $filesToDelete = $this->deleteAutoGeneratedImage($imageType, $imageFormat, $filesToDelete);
-                }
+            foreach ($configuredImageFormats as $imageFormat) {
+                $filesToDelete = $this->deleteAutoGeneratedImage($imageType, $imageFormat, $filesToDelete);
             }
         }
 
         // Delete watermark image
         $filesToDelete[] = $this->image_dir . $this->getExistingImgPath() . '-watermark.' . $this->image_format;
+
+        // Delete old 2x watermark image, if present
         $filesToDelete[] = $this->image_dir . $this->getExistingImgPath() . '-watermark2x.' . $this->image_format;
-        // delete index.php
+
+        // Delete index.php
         $filesToDelete[] = $this->image_dir . $this->getImgFolder() . 'index.php';
-        // delete fileType
+
+        // Delete fileType
         $filesToDelete[] = $this->image_dir . $this->getImgFolder() . 'fileType';
+
         // Delete tmp images
         $filesToDelete[] = _PS_TMP_IMG_DIR_ . 'product_' . $this->id_product . '.' . $this->image_format;
         $filesToDelete[] = _PS_TMP_IMG_DIR_ . 'product_mini_' . $this->id_product . '.' . $this->image_format;
@@ -672,7 +669,7 @@ class ImageCore extends ObjectModel
         if (is_dir($this->image_dir . $this->getImgFolder())) {
             $deleteFolder = true;
             foreach (scandir($this->image_dir . $this->getImgFolder(), SCANDIR_SORT_NONE) as $file) {
-                if (($file != '.' && $file != '..')) {
+                if ($file != '.' && $file != '..') {
                     $deleteFolder = false;
 
                     break;
@@ -702,7 +699,7 @@ class ImageCore extends ObjectModel
         foreach (scandir($path, SCANDIR_SORT_NONE) as $file) {
             if (preg_match('/^[0-9]+(\-(.*))?\.' . $format . '$/', $file)) {
                 unlink($path . $file);
-            } elseif (is_dir($path . $file) && (preg_match('/^[0-9]$/', $file))) {
+            } elseif (is_dir($path . $file) && preg_match('/^[0-9]$/', $file)) {
                 Image::deleteAllImages($path . $file . '/', $format);
             }
         }
@@ -711,7 +708,7 @@ class ImageCore extends ObjectModel
         if (is_numeric(basename($path))) {
             $removeFolder = true;
             foreach (scandir($path, SCANDIR_SORT_NONE) as $file) {
-                if (($file != '.' && $file != '..' && $file != 'index.php')) {
+                if ($file != '.' && $file != '..' && $file != 'index.php') {
                     $removeFolder = false;
 
                     break;
@@ -742,11 +739,7 @@ class ImageCore extends ObjectModel
         }
 
         if (!$this->existing_path) {
-            if (Configuration::get('PS_LEGACY_IMAGES') && file_exists(_PS_PRODUCT_IMG_DIR_ . $this->id_product . '-' . $this->id . '.' . $this->image_format)) {
-                $this->existing_path = $this->id_product . '-' . $this->id;
-            } else {
-                $this->existing_path = $this->getImgPath();
-            }
+            $this->existing_path = $this->getImgPath();
         }
 
         return $this->existing_path;
@@ -785,13 +778,6 @@ class ImageCore extends ObjectModel
             // Apparently sometimes mkdir cannot set the rights, and sometimes chmod can't. Trying both.
             $success = @mkdir(_PS_PRODUCT_IMG_DIR_ . $this->getImgFolder(), self::$access_rights, true);
             $chmod = @chmod(_PS_PRODUCT_IMG_DIR_ . $this->getImgFolder(), self::$access_rights);
-
-            // Create an index.php file in the new folder
-            if (($success || $chmod)
-                && !file_exists(_PS_PRODUCT_IMG_DIR_ . $this->getImgFolder() . 'index.php')
-                && file_exists($this->source_index)) {
-                return @copy($this->source_index, _PS_PRODUCT_IMG_DIR_ . $this->getImgFolder() . 'index.php');
-            }
         }
 
         return true;
@@ -926,15 +912,8 @@ class ImageCore extends ObjectModel
         if (!$this->id) {
             return false;
         }
-        if (Configuration::get('PS_LEGACY_IMAGES')) {
-            if (!$this->id_product) {
-                return false;
-            }
-            $path = $this->id_product . '-' . $this->id;
-        } else {
-            $path = $this->getImgPath();
-            $this->createImgFolder();
-        }
+        $path = $this->getImgPath();
+        $this->createImgFolder();
 
         return _PS_PRODUCT_IMG_DIR_ . $path;
     }
@@ -949,8 +928,14 @@ class ImageCore extends ObjectModel
     private function deleteAutoGeneratedImage(array $imageType, string $imageFormat, array $filesToDelete): array
     {
         $configuration = SymfonyContainer::getInstance()->get('prestashop.adapter.legacy.configuration');
+
+        // Regular thumbnail
         $filesToDelete[] = $this->image_dir . $this->getExistingImgPath() . '-' . $imageType['name'] . '.' . $imageFormat;
+
+        // Old 2x thumbnail, if present
         $filesToDelete[] = $this->image_dir . $this->getExistingImgPath() . '-' . $imageType['name'] . '2x.' . $imageFormat;
+
+        // Watermarked thumbnail, if present
         if ($configuration->get('WATERMARK_HASH')) {
             $filesToDelete[] = $this->image_dir . $this->getExistingImgPath() . '-' . $imageType['name'] . '-' . $configuration->get('WATERMARK_HASH') . '.' . $imageFormat;
         }

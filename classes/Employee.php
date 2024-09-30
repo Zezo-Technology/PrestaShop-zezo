@@ -25,6 +25,7 @@
  */
 use PrestaShop\PrestaShop\Adapter\CoreException;
 use PrestaShop\PrestaShop\Adapter\ServiceLocator;
+use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShop\PrestaShop\Core\Crypto\Hashing;
 
 /**
@@ -142,11 +143,11 @@ class EmployeeCore extends ObjectModel
     protected $webserviceParameters = [
         'fields' => [
             'id_lang' => ['xlink_resource' => 'languages'],
-            'last_passwd_gen' => ['setter' => null],
-            'stats_date_from' => ['setter' => null],
-            'stats_date_to' => ['setter' => null],
-            'stats_compare_from' => ['setter' => null],
-            'stats_compare_to' => ['setter' => null],
+            'last_passwd_gen' => ['setter' => false],
+            'stats_date_from' => ['setter' => false],
+            'stats_date_to' => ['setter' => false],
+            'stats_compare_from' => ['setter' => false],
+            'stats_compare_to' => ['setter' => false],
             'passwd' => ['setter' => 'setWsPasswd'],
         ],
     ];
@@ -304,7 +305,7 @@ class EmployeeCore extends ObjectModel
     public function getByEmail($email, $plaintextPassword = null, $activeOnly = true)
     {
         if (!Validate::isEmail($email)) {
-            die(Tools::displayError());
+            die(Tools::displayError('Email address is invalid.'));
         }
 
         $sql = new DbQuery();
@@ -317,7 +318,8 @@ class EmployeeCore extends ObjectModel
 
         $result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
         if (!$result) {
-            return false;
+            // Create fake result to make sure computing time does not allow password enumeration
+            $result = ['passwd' => '123456'];
         }
 
         /** @var Hashing $crypto */
@@ -329,8 +331,8 @@ class EmployeeCore extends ObjectModel
             return false;
         }
 
-        $this->id = $result['id_employee'];
-        $this->id_profile = $result['id_profile'];
+        $this->id = (int) $result['id_employee'];
+        $this->id_profile = (int) $result['id_profile'];
         foreach ($result as $key => $value) {
             if (property_exists($this, $key)) {
                 $this->{$key} = $value;
@@ -356,7 +358,7 @@ class EmployeeCore extends ObjectModel
     public static function employeeExists($email)
     {
         if (!Validate::isEmail($email)) {
-            die(Tools::displayError());
+            die(Tools::displayError('Email address is invalid.'));
         }
 
         return (bool) Db::getInstance()->getValue('
@@ -376,7 +378,7 @@ class EmployeeCore extends ObjectModel
     public static function checkPassword($idEmployee, $passwordHash)
     {
         if (!Validate::isUnsignedId($idEmployee)) {
-            die(Tools::displayError());
+            die(Tools::displayError('Employee ID is invalid.'));
         }
 
         $sql = new DbQuery();
@@ -432,7 +434,7 @@ class EmployeeCore extends ObjectModel
     public function setWsPasswd($passwd)
     {
         try {
-            /** @var \PrestaShop\PrestaShop\Core\Crypto\Hashing $crypto */
+            /** @var Hashing $crypto */
             $crypto = ServiceLocator::get('\\PrestaShop\\PrestaShop\\Core\\Crypto\\Hashing');
         } catch (CoreException $e) {
             return false;
@@ -456,26 +458,13 @@ class EmployeeCore extends ObjectModel
      */
     public function isLoggedBack()
     {
-        if (!Cache::isStored('isLoggedBack' . $this->id)) {
-            /* Employee is valid only if it can be load and if cookie password is the same as database one */
-            $result = (
-                $this->id
-                && Validate::isUnsignedId($this->id)
-                && Context::getContext()->cookie
-                && Context::getContext()->cookie->isSessionAlive()
-                && Employee::checkPassword($this->id, Context::getContext()->cookie->passwd)
-                && (
-                    !isset(Context::getContext()->cookie->remote_addr)
-                    || Context::getContext()->cookie->remote_addr == ip2long(Tools::getRemoteAddr())
-                    || !Configuration::get('PS_COOKIE_CHECKIP')
-                )
-            );
-            Cache::store('isLoggedBack' . $this->id, $result);
-
-            return $result;
+        $container = SymfonyContainer::getInstance();
+        if (!$container) {
+            return false;
         }
+        $userProvider = $container->get('prestashop.user_provider');
 
-        return Cache::retrieve('isLoggedBack' . $this->id);
+        return $userProvider->getUser() !== null;
     }
 
     /**
@@ -486,6 +475,11 @@ class EmployeeCore extends ObjectModel
         if (isset(Context::getContext()->cookie)) {
             Context::getContext()->cookie->logout();
             Context::getContext()->cookie->write();
+        }
+
+        $sfContainer = SymfonyContainer::getInstance();
+        if ($sfContainer !== null) {
+            $sfContainer->get('prestashop.user_provider')->logout();
         }
 
         $this->id = null;
@@ -752,5 +746,29 @@ class EmployeeCore extends ObjectModel
         }
 
         return null;
+    }
+
+    public function getAssociatedShopIds(): array
+    {
+        return $this->associated_shops;
+    }
+
+    public function getAssociatedShopGroupIds(): array
+    {
+        $associatedShopGroupIds = [];
+        foreach ($this->associated_shops as $shopId) {
+            /** @var int $groupFromShop */
+            $groupFromShop = Shop::getGroupFromShop($shopId, true);
+            if (!empty($groupFromShop) && !in_array($groupFromShop, $associatedShopGroupIds)) {
+                $associatedShopGroupIds[] = (int) $groupFromShop;
+            }
+        }
+
+        return $this->associated_shops;
+    }
+
+    public function getImageUrl(): string
+    {
+        return $this->getImage();
     }
 }

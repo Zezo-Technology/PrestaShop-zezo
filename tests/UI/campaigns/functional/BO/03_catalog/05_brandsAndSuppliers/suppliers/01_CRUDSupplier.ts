@@ -1,6 +1,4 @@
 // Import utils
-import files from '@utils/files';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -9,15 +7,17 @@ import loginCommon from '@commonTests/BO/loginBO';
 // Import pages
 import brandsPage from '@pages/BO/catalog/brands';
 import suppliersPage from '@pages/BO/catalog/suppliers';
-import addSupplierPage from '@pages/BO/catalog/suppliers/add';
 import viewSupplierPage from '@pages/BO/catalog/suppliers/view';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import SupplierData from '@data/faker/supplier';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  boSuppliersCreate,
+  FakerSupplier,
+  utilsFile,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_brandsAndSuppliers_suppliers_CRUDSupplier';
 
@@ -26,27 +26,27 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
   let browserContext: BrowserContext;
   let page: Page;
 
-  const createSupplierData: SupplierData = new SupplierData();
-  const editSupplierData: SupplierData = new SupplierData();
+  const createSupplierData: FakerSupplier = new FakerSupplier();
+  const editSupplierData: FakerSupplier = new FakerSupplier();
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
 
     // Generate logos
     await Promise.all([
-      files.generateImage(createSupplierData.logo),
-      files.generateImage(editSupplierData.logo),
+      utilsFile.generateImage(createSupplierData.logo),
+      utilsFile.generateImage(editSupplierData.logo),
     ]);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
 
     await Promise.all([
-      files.deleteFile(createSupplierData.logo),
-      files.deleteFile(editSupplierData.logo),
+      utilsFile.deleteFile(createSupplierData.logo),
+      utilsFile.deleteFile(editSupplierData.logo),
     ]);
   });
 
@@ -58,15 +58,15 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
   it('should go to \'Catalog > Brands & Suppliers\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToBrandsPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.brandsAndSuppliersLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.brandsAndSuppliersLink,
     );
     await brandsPage.closeSfToolBar(page);
 
     const pageTitle = await brandsPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(brandsPage.pageTitle);
+    expect(pageTitle).to.contains(brandsPage.pageTitle);
   });
 
   // Go to suppliers page
@@ -76,7 +76,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
     await brandsPage.goToSubTabSuppliers(page);
 
     const pageTitle = await suppliersPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(suppliersPage.pageTitle);
+    expect(pageTitle).to.contains(suppliersPage.pageTitle);
   });
 
   // 1: Create supplier
@@ -86,15 +86,15 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
 
       await suppliersPage.goToAddNewSupplierPage(page);
 
-      const pageTitle = await addSupplierPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addSupplierPage.pageTitle);
+      const pageTitle = await boSuppliersCreate.getPageTitle(page);
+      expect(pageTitle).to.contains(boSuppliersCreate.pageTitle);
     });
 
     it('should create supplier', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'createSupplier', baseContext);
 
-      const result = await addSupplierPage.createEditSupplier(page, createSupplierData);
-      await expect(result).to.equal(suppliersPage.successfulCreationMessage);
+      const result = await boSuppliersCreate.createEditSupplier(page, createSupplierData);
+      expect(result).to.equal(suppliersPage.successfulCreationMessage);
     });
   });
 
@@ -106,7 +106,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await suppliersPage.filterTable(page, 'input', 'name', createSupplierData.name);
 
       const textColumn = await suppliersPage.getTextColumnFromTableSupplier(page, 1, 'name');
-      await expect(textColumn).to.contain(createSupplierData.name);
+      expect(textColumn).to.contain(createSupplierData.name);
     });
 
     it('should view supplier', async function () {
@@ -116,7 +116,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await suppliersPage.viewSupplier(page, 1);
 
       const pageTitle = await viewSupplierPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(createSupplierData.name);
+      expect(pageTitle).to.contains(createSupplierData.name);
     });
 
     it('should return suppliers page', async function () {
@@ -125,7 +125,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await viewSupplierPage.goToPreviousPage(page);
 
       const pageTitle = await suppliersPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(suppliersPage.pageTitle);
+      expect(pageTitle).to.contains(suppliersPage.pageTitle);
     });
   });
 
@@ -136,15 +136,15 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
 
       await suppliersPage.goToEditSupplierPage(page, 1);
 
-      const pageTitle = await addSupplierPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addSupplierPage.pageTitleEdit);
+      const pageTitle = await boSuppliersCreate.getPageTitle(page);
+      expect(pageTitle).to.contains(boSuppliersCreate.pageTitleEdit);
     });
 
     it('should edit supplier', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'updateSupplier', baseContext);
 
-      const result = await addSupplierPage.createEditSupplier(page, editSupplierData);
-      await expect(result).to.equal(suppliersPage.successfulUpdateMessage);
+      const result = await boSuppliersCreate.createEditSupplier(page, editSupplierData);
+      expect(result).to.equal(suppliersPage.successfulUpdateMessage);
     });
   });
 
@@ -157,7 +157,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await suppliersPage.filterTable(page, 'input', 'name', editSupplierData.name);
 
       const textColumn = await suppliersPage.getTextColumnFromTableSupplier(page, 1, 'name');
-      await expect(textColumn).to.contain(editSupplierData.name);
+      expect(textColumn).to.contain(editSupplierData.name);
     });
 
     it('should view supplier', async function () {
@@ -167,7 +167,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await suppliersPage.viewSupplier(page, 1);
 
       const pageTitle = await viewSupplierPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(editSupplierData.name);
+      expect(pageTitle).to.contains(editSupplierData.name);
     });
 
     it('should return to suppliers page', async function () {
@@ -176,7 +176,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await viewSupplierPage.goToPreviousPage(page);
 
       const pageTitle = await suppliersPage.getPageTitle(page);
-      await expect(pageTitle).to.contains(suppliersPage.pageTitle);
+      expect(pageTitle).to.contains(suppliersPage.pageTitle);
     });
   });
 
@@ -189,7 +189,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
       await suppliersPage.filterTable(page, 'input', 'name', editSupplierData.name);
 
       const textColumn = await suppliersPage.getTextColumnFromTableSupplier(page, 1, 'name');
-      await expect(textColumn).to.contain(editSupplierData.name);
+      expect(textColumn).to.contain(editSupplierData.name);
     });
 
     it('should delete supplier', async function () {
@@ -197,7 +197,7 @@ describe('BO - Catalog - Brands & Suppliers : CRUD supplier', async () => {
 
       // delete supplier in first row
       const result = await suppliersPage.deleteSupplier(page, 1);
-      await expect(result).to.be.equal(suppliersPage.successfulDeleteMessage);
+      expect(result).to.be.equal(suppliersPage.successfulDeleteMessage);
     });
   });
 });

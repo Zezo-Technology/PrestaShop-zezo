@@ -1,6 +1,4 @@
 // Import utils
-import basicHelper from '@utils/basicHelper';
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
@@ -11,13 +9,16 @@ import attributesPage from '@pages/BO/catalog/attributes';
 import featuresPage from '@pages/BO/catalog/features';
 import addValuePage from '@pages/BO/catalog/features/addValue';
 import viewFeaturePage from '@pages/BO/catalog/features/view';
-import dashboardPage from '@pages/BO/dashboard';
-
-// Import data
-import FeatureValueData from '@data/faker/featureValue';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  dataFeatures,
+  FakerFeatureValue,
+  utilsCore,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_catalog_attributesAndFeatures_features_values_sortPaginationAndBulkDelete';
 
@@ -38,12 +39,12 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -53,15 +54,15 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
   it('should go to \'Catalog > Attributes & Features\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToAttributesPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.catalogParentLink,
-      dashboardPage.attributesAndFeaturesLink,
+      boDashboardPage.catalogParentLink,
+      boDashboardPage.attributesAndFeaturesLink,
     );
     await attributesPage.closeSfToolBar(page);
 
     const pageTitle = await attributesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(attributesPage.pageTitle);
+    expect(pageTitle).to.contains(attributesPage.pageTitle);
   });
 
   it('should go to Features page', async function () {
@@ -70,16 +71,16 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
     await attributesPage.goToFeaturesPage(page);
 
     const pageTitle = await featuresPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(featuresPage.pageTitle);
+    expect(pageTitle).to.contains(featuresPage.pageTitle);
   });
 
   it('should filter list of features by name \'Composition\'', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'filterToBulkDeleteAttributes', baseContext);
 
-    await featuresPage.filterTable(page, 'b!name', 'Composition');
+    await featuresPage.filterTable(page, 'name', dataFeatures.composition.name);
 
-    const textColumn = await featuresPage.getTextColumn(page, 1, 'b!name');
-    await expect(textColumn).to.contains('Composition');
+    const textColumn = await featuresPage.getTextColumn(page, 1, 'name', 'id_feature');
+    expect(textColumn).to.contains('Composition');
   });
 
   it('should view feature \'Composition\'', async function () {
@@ -88,10 +89,10 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
     await featuresPage.viewFeature(page, 1);
 
     const pageTitle = await viewFeaturePage.getPageTitle(page);
-    await expect(pageTitle).to.contains(`${viewFeaturePage.pageTitle} Composition`);
+    expect(pageTitle).to.contains(`${dataFeatures.composition.name} • ${global.INSTALL.SHOP_NAME}`);
 
     numberOfValues = await viewFeaturePage.resetAndGetNumberOfLines(page);
-    await expect(numberOfValues).to.be.above(0);
+    expect(numberOfValues).to.be.above(0);
   });
 
   // 1 : Create 15 new values
@@ -103,11 +104,11 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
       await viewFeaturePage.goToAddNewValuePage(page);
 
       const pageTitle = await addValuePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(addValuePage.createPageTitle);
+      expect(pageTitle).to.contains(addValuePage.createPageTitle);
     });
 
     creationTests.forEach((test: number, index: number) => {
-      const createFeatureValueData: FeatureValueData = new FeatureValueData({
+      const createFeatureValueData: FakerFeatureValue = new FakerFeatureValue({
         featureName: 'Composition',
         value: `todelete${index}`,
       });
@@ -116,7 +117,7 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
 
         if (index === 14) {
           const textResult = await addValuePage.addEditValue(page, createFeatureValueData, false);
-          await expect(textResult).to.contains(viewFeaturePage.successfulCreationMessage);
+          expect(textResult).to.contains(viewFeaturePage.successfulCreationMessage);
         } else {
           await addValuePage.addEditValue(page, createFeatureValueData, true);
         }
@@ -126,13 +127,11 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
     it('should view feature \'Composition\' and check number of values after creation', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'viewFeatureComposition2', baseContext);
 
-      await featuresPage.viewFeature(page, 1);
-
       const pageTitle = await viewFeaturePage.getPageTitle(page);
-      await expect(pageTitle).to.contains(`${viewFeaturePage.pageTitle} Composition`);
+      expect(pageTitle).to.contains(`${dataFeatures.composition.name} • ${global.INSTALL.SHOP_NAME}`);
 
       const numberOfValuesAfterCreation = await viewFeaturePage.resetAndGetNumberOfLines(page);
-      await expect(numberOfValuesAfterCreation).to.equal(numberOfValues + 15);
+      expect(numberOfValuesAfterCreation).to.equal(numberOfValues + 15);
     });
   });
 
@@ -142,28 +141,28 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
       await testContext.addContextItem(this, 'testIdentifier', 'changeItemsNumberTo20', baseContext);
 
       const paginationNumber = await viewFeaturePage.selectPaginationLimit(page, 20);
-      expect(paginationNumber).to.equal('1');
+      expect(paginationNumber).to.equal(1);
     });
 
     it('should click on next', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'clickOnNext', baseContext);
 
       const paginationNumber = await viewFeaturePage.paginationNext(page);
-      expect(paginationNumber).to.equal('2');
+      expect(paginationNumber).to.equal(2);
     });
 
     it('should click on previous', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'clickOnPrevious', baseContext);
 
       const paginationNumber = await viewFeaturePage.paginationPrevious(page);
-      expect(paginationNumber).to.equal('1');
+      expect(paginationNumber).to.equal(1);
     });
 
     it('should change the items number to 50 per page', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'changeItemsNumberTo50', baseContext);
 
       const paginationNumber = await viewFeaturePage.selectPaginationLimit(page, 50);
-      expect(paginationNumber).to.equal('1');
+      expect(paginationNumber).to.equal(1);
     });
   });
 
@@ -172,22 +171,22 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
     const sortTests = [
       {
         args: {
-          testIdentifier: 'sortByIdDesc', sortBy: 'id_feature_value', sortDirection: 'down', isFloat: true,
+          testIdentifier: 'sortByIdDesc', sortBy: 'id_feature_value', sortDirection: 'desc', isFloat: true,
         },
       },
       {
         args: {
-          testIdentifier: 'sortByNameAsc', sortBy: 'value', sortDirection: 'up',
+          testIdentifier: 'sortByNameAsc', sortBy: 'value', sortDirection: 'asc',
         },
       },
       {
         args: {
-          testIdentifier: 'sortByNameDesc', sortBy: 'value', sortDirection: 'down',
+          testIdentifier: 'sortByNameDesc', sortBy: 'value', sortDirection: 'desc',
         },
       },
       {
         args: {
-          testIdentifier: 'sortByIdAsc', sortBy: 'id_feature_value', sortDirection: 'up', isFloat: true,
+          testIdentifier: 'sortByIdAsc', sortBy: 'id_feature_value', sortDirection: 'asc', isFloat: true,
         },
       },
     ];
@@ -206,20 +205,20 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
           const nonSortedTableFloat: number[] = nonSortedTable.map((text: string): number => parseFloat(text));
           const sortedTableFloat: number[] = sortedTable.map((text: string): number => parseFloat(text));
 
-          const expectedResult: number[] = await basicHelper.sortArrayNumber(nonSortedTableFloat);
+          const expectedResult: number[] = await utilsCore.sortArrayNumber(nonSortedTableFloat);
 
-          if (test.args.sortDirection === 'up') {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult);
+          if (test.args.sortDirection === 'asc') {
+            expect(sortedTableFloat).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
+            expect(sortedTableFloat).to.deep.equal(expectedResult.reverse());
           }
         } else {
-          const expectedResult: string[] = await basicHelper.sortArray(nonSortedTable);
+          const expectedResult: string[] = await utilsCore.sortArray(nonSortedTable);
 
-          if (test.args.sortDirection === 'up') {
-            await expect(sortedTable).to.deep.equal(expectedResult);
+          if (test.args.sortDirection === 'asc') {
+            expect(sortedTable).to.deep.equal(expectedResult);
           } else {
-            await expect(sortedTable).to.deep.equal(expectedResult.reverse());
+            expect(sortedTable).to.deep.equal(expectedResult.reverse());
           }
         }
       });
@@ -234,21 +233,21 @@ describe('BO - Catalog - Catalog > Attributes & Features : Sort, pagination and 
       await viewFeaturePage.filterTable(page, 'value', 'toDelete');
 
       const numberOfValuesAfterFilter = await viewFeaturePage.getNumberOfElementInGrid(page);
-      await expect(numberOfValuesAfterFilter).to.be.equal(15);
+      expect(numberOfValuesAfterFilter).to.be.equal(15);
     });
 
     it('should delete values with Bulk Actions and check result', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'bulkDeleteFeatures', baseContext);
 
       const deleteTextResult = await viewFeaturePage.bulkDeleteValues(page);
-      await expect(deleteTextResult).to.be.contains(viewFeaturePage.successfulMultiDeleteMessage);
+      expect(deleteTextResult).to.be.contains(viewFeaturePage.successfulMultiDeleteMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'resetFilter', baseContext);
 
       const numberOfValuesAfterReset = await viewFeaturePage.resetAndGetNumberOfLines(page);
-      await expect(numberOfValuesAfterReset).to.equal(numberOfValues);
+      expect(numberOfValuesAfterReset).to.equal(numberOfValues);
     });
   });
 });

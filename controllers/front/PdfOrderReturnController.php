@@ -23,6 +23,8 @@
  * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/OSL-3.0 Open Software License (OSL 3.0)
  */
+use PrestaShopBundle\Security\Admin\LegacyAdminTokenValidator;
+
 class PdfOrderReturnControllerCore extends FrontController
 {
     /** @var string */
@@ -39,10 +41,21 @@ class PdfOrderReturnControllerCore extends FrontController
 
     public function postProcess()
     {
-        $from_admin = (Tools::getValue('adtoken') == Tools::getAdminToken('AdminReturn' . (int) Tab::getIdFromClassName('AdminReturn') . (int) Tools::getValue('id_employee')));
+        $adminToken = Tools::getValue('adtoken');
+        if (!empty($adminToken)) {
+            $adminTokenValidator = $this->getContainer()->get(LegacyAdminTokenValidator::class);
+            $from_admin = $adminTokenValidator->isTokenValid((int) Tools::getValue('id_employee'), $adminToken);
+        } else {
+            $from_admin = false;
+        }
 
         if (!$from_admin && !$this->context->customer->isLogged()) {
-            Tools::redirect('index.php?controller=authentication&back=order-follow');
+            Tools::redirect($this->context->link->getPageLink(
+                'authentication',
+                null,
+                null,
+                ['back' => 'order-follow']
+            ));
         }
 
         if (Tools::getValue('id_order_return') && Validate::isUnsignedId(Tools::getValue('id_order_return'))) {

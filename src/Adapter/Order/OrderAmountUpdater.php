@@ -39,7 +39,7 @@ use Order;
 use OrderCarrier;
 use OrderCartRule;
 use OrderDetail;
-use PrestaShop\Decimal\Number;
+use PrestaShop\Decimal\DecimalNumber;
 use PrestaShop\PrestaShop\Adapter\Cart\Comparator\CartProductsComparator;
 use PrestaShop\PrestaShop\Adapter\Cart\Comparator\CartProductUpdate;
 use PrestaShop\PrestaShop\Adapter\ContextStateManager;
@@ -195,8 +195,8 @@ class OrderAmountUpdater
                 $this->orderDetailUpdater->updateOrderDetail(
                     $orderDetail,
                     $order,
-                    new Number((string) $cartProduct['price_with_reduction_without_tax']),
-                    new Number((string) $cartProduct['price_with_reduction'])
+                    new DecimalNumber((string) $cartProduct['price_with_reduction_without_tax']),
+                    new DecimalNumber((string) $cartProduct['price_with_reduction'])
                 );
             }
         }
@@ -371,13 +371,13 @@ class OrderAmountUpdater
         $cartProducts = $cart->getProducts(true, false, null, true, $this->keepOrderPrices);
         foreach ($order->getCartProducts() as $orderProduct) {
             $orderDetail = new OrderDetail($orderProduct['id_order_detail'], null, $this->contextStateManager->getContext());
-            $cartProduct = $this->getProductFromCart($cartProducts, (int) $orderDetail->product_id, (int) $orderDetail->product_attribute_id);
+            $cartProduct = $this->getProductFromCart($cartProducts, (int) $orderDetail->product_id, (int) $orderDetail->product_attribute_id, (int) $orderDetail->id_customization);
 
             $this->orderDetailUpdater->updateOrderDetail(
                 $orderDetail,
                 $order,
-                new Number((string) $cartProduct['price_with_reduction_without_tax']),
-                new Number((string) $cartProduct['price_with_reduction'])
+                new DecimalNumber((string) $cartProduct['price_with_reduction_without_tax']),
+                new DecimalNumber((string) $cartProduct['price_with_reduction'])
             );
         }
     }
@@ -389,17 +389,18 @@ class OrderAmountUpdater
      *
      * @return array
      */
-    private function getProductFromCart(array $cartProducts, int $productId, int $productAttributeId): array
+    private function getProductFromCart(array $cartProducts, int $productId, int $productAttributeId, int $customizationId = 0): array
     {
-        $cartProduct = array_reduce($cartProducts, function ($carry, $item) use ($productId, $productAttributeId) {
+        $cartProduct = array_reduce($cartProducts, function ($carry, $item) use ($productId, $productAttributeId, $customizationId) {
             if (null !== $carry) {
                 return $carry;
             }
 
             $productMatch = $item['id_product'] == $productId;
             $combinationMatch = $item['id_product_attribute'] == $productAttributeId;
+            $customizationMatch = $item['id_customization'] == $customizationId;
 
-            return $productMatch && $combinationMatch ? $item : null;
+            return $productMatch && $combinationMatch && $customizationMatch ? $item : null;
         });
 
         // This shouldn't happen, if it does something was not done before updating the Order (removing an OrderDetail maybe)

@@ -1,8 +1,9 @@
 import BOBasePage from '@pages/BO/BObasePage';
 
-import type BrandAddressData from '@data/faker/brandAddress';
-
 import type {Page} from 'playwright';
+import {
+  type FakerBrandAddress,
+} from '@prestashop-core/ui-testing';
 
 /**
  * Add brand address page, contains selectors and functions for the page
@@ -43,7 +44,7 @@ class AddBrandAddress extends BOBasePage {
   constructor() {
     super();
 
-    this.pageTitle = 'Add new address • ';
+    this.pageTitle = `New brand address • ${global.INSTALL.SHOP_NAME}`;
 
     // Selectors
     this.brandSelect = 'select#manufacturer_address_id_manufacturer';
@@ -66,10 +67,10 @@ class AddBrandAddress extends BOBasePage {
   /**
    * Create or edit Brand Address
    * @param page {Page} Browser tab
-   * @param brandAddressData {BrandAddressData} Data to set in address form
+   * @param brandAddressData {FakerBrandAddress} Data to set in address form
    * @return {Promise<string>}
    */
-  async createEditBrandAddress(page: Page, brandAddressData: BrandAddressData): Promise<string> {
+  async createEditBrandAddress(page: Page, brandAddressData: FakerBrandAddress): Promise<string> {
     // Fill information data
     await this.selectByVisibleText(page, this.brandSelect, brandAddressData.brandName);
     await this.setValue(page, this.lastnameInput, brandAddressData.lastName);
@@ -79,13 +80,13 @@ class AddBrandAddress extends BOBasePage {
     await this.setValue(page, this.postalCodeInput, brandAddressData.postalCode);
     await this.setValue(page, this.cityInput, brandAddressData.city);
     await this.selectByVisibleText(page, this.countrySelect, brandAddressData.country);
-    await page.click(this.homePhoneInput);
+    await page.locator(this.homePhoneInput).click();
     await this.setValue(page, this.homePhoneInput, brandAddressData.homePhone);
     await this.setValue(page, this.mobilePhoneInput, brandAddressData.mobilePhone);
     await this.setValue(page, this.otherInput, brandAddressData.other);
 
     // Click on Save button and successful message
-    await this.clickAndWaitForNavigation(page, this.saveButton);
+    await this.clickAndWaitForURL(page, this.saveButton);
     return this.getAlertSuccessBlockParagraphContent(page);
   }
 }

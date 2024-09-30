@@ -175,8 +175,8 @@ final class LanguageCopier implements LanguageCopierInterface
                 'parameters' => [],
             ];
         } elseif (
-            $themeFrom === $themeTo &&
-            $languageFrom === $languageTo
+            $themeFrom === $themeTo
+            && $languageFrom === $languageTo
         ) {
             $errors[] = [
                 'key' => 'There is nothing to copy (same language and theme).',
@@ -224,7 +224,7 @@ final class LanguageCopier implements LanguageCopierInterface
     private function isModuleContext($source, $destination, $language)
     {
         // Legacy condition
-        return false !== strpos($destination, 'modules') && basename($source) === $language . '.php';
+        return str_contains($destination, 'modules') && basename($source) === $language . '.php';
     }
 
     /**

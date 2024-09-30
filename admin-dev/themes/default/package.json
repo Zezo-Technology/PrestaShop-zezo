@@ -9,7 +9,8 @@
     "build": "webpack --bail --progress",
     "watch": "webpack --bail --progress --watch --mode development",
     "lint": "eslint -c .eslintrc.js --ext .js,.vue .",
-    "lint-fix": "eslint -c .eslintrc.js --ext .js,.vue . --fix"
+    "lint-fix": "eslint -c .eslintrc.js --ext .js,.vue . --fix",
+    "example": "http-server ./example -o example.html -p 1000 & http-server ./public -p 1010 --cors"
   },
   "author": "PrestaShop",
   "license": "OSL-3.0",
@@ -28,6 +29,7 @@
     "eslint-plugin-html": "^6.0.0",
     "eslint-plugin-import": "^2.20.0",
     "html-webpack-plugin": "^5.5.0",
+    "http-server": "^14.1.1",
     "material-design-icons-iconfont": "^6.7.0",
     "mini-css-extract-plugin": "^1.6.1",
     "path": "^0.12.7",
@@ -47,10 +49,12 @@
     "webpack-remove-empty-scripts": "^0.7.3"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.0.20",
     "@openfonts/ubuntu-condensed_latin": "^1.44.2",
+    "material-symbols": "^0.21.3",
     "open-sans-fonts": "^1.6.2",
     "perfect-scrollbar": "^1.4.0",
-    "vazirmatn": "32.102.0",
-    "prestakit": "^1.2.5"
+    "prestakit": "^2.0.1",
+    "vazirmatn": "32.102.0"
   }
 }

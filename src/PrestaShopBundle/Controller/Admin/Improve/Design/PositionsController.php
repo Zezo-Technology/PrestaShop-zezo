@@ -33,8 +33,7 @@ use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookNotFoundException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Exception\HookUpdateHookException;
 use PrestaShop\PrestaShop\Core\Domain\Hook\Query\GetHookStatus;
 use PrestaShopBundle\Controller\Admin\FrameworkBundleAdminController;
-use PrestaShopBundle\Security\Annotation\AdminSecurity;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use PrestaShopBundle\Security\Attribute\AdminSecurity;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -52,22 +51,18 @@ class PositionsController extends FrameworkBundleAdminController
     /**
      * Display hooks positions.
      *
-     * @Template("@PrestaShop/Admin/Improve/Design/positions.html.twig")
-     * @AdminSecurity(
-     *     "is_granted('read', request.get('_legacy_controller')) || is_granted('update', request.get('_legacy_controller')) || is_granted('create', request.get('_legacy_controller')) || is_granted('delete', request.get('_legacy_controller'))",
-     *     message="Access denied.")
-     *
      * @param Request $request
      *
-     * @return array<string, mixed>
+     * @return Response
      */
-    public function indexAction(Request $request)
+    #[AdminSecurity("is_granted('read', request.get('_legacy_controller')) || is_granted('update', request.get('_legacy_controller')) || is_granted('create', request.get('_legacy_controller')) || is_granted('delete', request.get('_legacy_controller'))", message: 'Access denied.')]
+    public function indexAction(Request $request): Response
     {
         $isSingleShopContext = $this->get('prestashop.adapter.shop.context')->isSingleShopContext();
         if (!$isSingleShopContext) {
-            return [
+            return $this->render('@PrestaShop/Admin/Improve/Design/positions.html.twig', [
                 'isSingleShopContext' => $isSingleShopContext,
-            ];
+            ]);
         }
 
         $moduleAdapter = $this->get('prestashop.adapter.legacy.module');
@@ -127,16 +122,17 @@ class PositionsController extends FrameworkBundleAdminController
         }
         $saveUrl = $legacyContextService->getAdminLink('AdminModulesPositions', true, $saveUrlParams);
 
-        return [
+        return $this->render('@PrestaShop/Admin/Improve/Design/positions.html.twig', [
             'layoutHeaderToolbarBtn' => [
                 'save' => [
                     'class' => 'btn-primary transplant-module-button',
                     'href' => $saveUrl,
-                    'desc' => $this->trans('Transplant a module', 'Admin.Design.Feature'),
+                    'desc' => $this->trans('Hook a module', 'Admin.Design.Feature'),
+                    'icon' => 'anchor',
                 ],
             ],
             'selectedModule' => $this->selectedModule,
-            'layoutTitle' => $this->trans('Positions', 'Admin.Navigation.Menu'),
+            'layoutTitle' => $this->trans('Module positions', 'Admin.Navigation.Menu'),
             'requireBulkActions' => false,
             'requireFilterStatus' => false,
             'showContentHeader' => true,
@@ -145,22 +141,21 @@ class PositionsController extends FrameworkBundleAdminController
             'hooks' => $hooks,
             'modules' => $modules,
             'isSingleShopContext' => $isSingleShopContext,
-        ];
+        ]);
     }
 
     /**
      * Unhook module.
      *
-     * @AdminSecurity("is_granted('delete', request.get('_legacy_controller')~'_')", message="Access denied.")
-     *
      * @param Request $request
      *
      * @return Response
      */
+    #[AdminSecurity("is_granted('delete', request.get('_legacy_controller')~'_')", message: 'Access denied.')]
     public function unhookAction(Request $request)
     {
         $validateAdapter = $this->get('prestashop.adapter.validate');
-        $unhooks = $request->request->get('unhooks');
+        $unhooks = $request->request->all('unhooks');
         $context = null;
         if (empty($unhooks)) {
             $moduleId = $request->query->get('moduleId');
@@ -248,19 +243,18 @@ class PositionsController extends FrameworkBundleAdminController
     /**
      * Toggle hook status
      *
-     * @AdminSecurity("is_granted('update', request.get('_legacy_controller')~'_')", message="Access denied.")
-     *
      * @param Request $request
      *
      * @return JsonResponse
      */
+    #[AdminSecurity("is_granted('update', request.get('_legacy_controller')~'_')", message: 'Access denied.')]
     public function toggleStatusAction(Request $request)
     {
         $hookId = (int) $request->request->get('hookId');
         $hookStatus = false;
 
         try {
-            $hookStatus = $this->getQueryBus()->handle(new GetHookStatus($hookId));
+            $hookStatus = !$this->getQueryBus()->handle(new GetHookStatus($hookId));
             $this->getCommandBus()->handle(new UpdateHookStatusCommand($hookId, (bool) $hookStatus));
             $response = [
                 'status' => true,
@@ -273,7 +267,7 @@ class PositionsController extends FrameworkBundleAdminController
             ];
         }
 
-        $response['hook_status'] = !$hookStatus;
+        $response['hook_status'] = $hookStatus;
 
         return $this->json($response);
     }
@@ -284,7 +278,7 @@ class PositionsController extends FrameworkBundleAdminController
     private function getErrorMessages(): array
     {
         return [
-            HookNotFoundException::class => $this->trans('The object cannot be loaded (or found)', 'Admin.Notifications.Error'),
+            HookNotFoundException::class => $this->trans('The object cannot be loaded (or found).', 'Admin.Notifications.Error'),
             HookUpdateHookException::class => $this->trans('An error occurred while updating the status for an object.', 'Admin.Notifications.Error'),
         ];
     }

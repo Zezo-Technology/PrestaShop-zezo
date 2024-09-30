@@ -27,6 +27,7 @@ declare(strict_types=1);
 
 namespace PrestaShop\PrestaShop\Core\Form\ChoiceProvider;
 
+use PrestaShop\PrestaShop\Core\Domain\Configuration\ShopConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\Pack\ValueObject\PackStockType;
 use PrestaShop\PrestaShop\Core\Form\FormChoiceProviderInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -39,33 +40,33 @@ final class PackStockTypeChoiceProvider implements FormChoiceProviderInterface
     private $translator;
 
     /**
-     * @var int
+     * @var ShopConfigurationInterface
      */
-    private $defaultPackStockType;
+    private $shopConfiguration;
 
     /**
      * @param TranslatorInterface $translator
-     * @param int $defaultPackStockType
+     * @param ShopConfigurationInterface $shopConfiguration
      */
     public function __construct(
         TranslatorInterface $translator,
-        int $defaultPackStockType
+        ShopConfigurationInterface $shopConfiguration
     ) {
         $this->translator = $translator;
-        $this->defaultPackStockType = $defaultPackStockType;
+        $this->shopConfiguration = $shopConfiguration;
     }
 
     /**
      * {@inheritDoc}
      */
-    public function getChoices()
+    public function getChoices(): array
     {
         $choices = $this->getLabelValuePairs();
 
         $defaultLabel = sprintf(
             '%s (%s)',
             $this->translator->trans('Default', [], 'Admin.Global'),
-            array_search($this->defaultPackStockType, $choices, true)
+            array_search((int) $this->shopConfiguration->get('PS_PACK_STOCK_TYPE'), $choices, true)
         );
 
         $choices[$defaultLabel] = PackStockType::STOCK_TYPE_DEFAULT;
@@ -79,9 +80,9 @@ final class PackStockTypeChoiceProvider implements FormChoiceProviderInterface
     private function getLabelValuePairs(): array
     {
         return [
-            $this->translator->trans('Decrement pack only.', [], 'Admin.Catalog.Feature') => PackStockType::STOCK_TYPE_PACK_ONLY,
-            $this->translator->trans('Decrement products in pack only.', [], 'Admin.Catalog.Feature') => PackStockType::STOCK_TYPE_PRODUCTS_ONLY,
-            $this->translator->trans('Decrement both.', [], 'Admin.Catalog.Feature') => PackStockType::STOCK_TYPE_BOTH,
+            $this->translator->trans('Use pack quantity', [], 'Admin.Catalog.Feature') => PackStockType::STOCK_TYPE_PACK_ONLY,
+            $this->translator->trans('Use quantity of products in the pack', [], 'Admin.Catalog.Feature') => PackStockType::STOCK_TYPE_PRODUCTS_ONLY,
+            $this->translator->trans('Use both, whatever is lower', [], 'Admin.Catalog.Feature') => PackStockType::STOCK_TYPE_BOTH,
         ];
     }
 }

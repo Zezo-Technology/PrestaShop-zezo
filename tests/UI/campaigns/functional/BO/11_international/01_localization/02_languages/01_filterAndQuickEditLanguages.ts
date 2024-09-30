@@ -1,20 +1,20 @@
 // Import utils
-import helper from '@utils/helpers';
 import testContext from '@utils/testContext';
 
 // Import commonTests
 import loginCommon from '@commonTests/BO/loginBO';
 
 // Import pages
-import dashboardPage from '@pages/BO/dashboard';
-import localizationPage from '@pages/BO/international/localization';
 import languagesPage from '@pages/BO/international/languages';
-
-// Import data
-import Languages from '@data/demo/languages';
 
 import {expect} from 'chai';
 import type {BrowserContext, Page} from 'playwright';
+import {
+  boDashboardPage,
+  boLocalizationPage,
+  dataLanguages,
+  utilsPlaywright,
+} from '@prestashop-core/ui-testing';
 
 const baseContext: string = 'functional_BO_international_localization_languages_filterAndQuickEditLanguages';
 
@@ -30,12 +30,12 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
 
   // before and after functions
   before(async function () {
-    browserContext = await helper.createBrowserContext(this.browser);
-    page = await helper.newTab(browserContext);
+    browserContext = await utilsPlaywright.createBrowserContext(this.browser);
+    page = await utilsPlaywright.newTab(browserContext);
   });
 
   after(async () => {
-    await helper.closeBrowserContext(browserContext);
+    await utilsPlaywright.closeBrowserContext(browserContext);
   });
 
   it('should login in BO', async function () {
@@ -45,31 +45,31 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
   it('should go to \'International > Localization\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLocalizationPage', baseContext);
 
-    await dashboardPage.goToSubMenu(
+    await boDashboardPage.goToSubMenu(
       page,
-      dashboardPage.internationalParentLink,
-      dashboardPage.localizationLink,
+      boDashboardPage.internationalParentLink,
+      boDashboardPage.localizationLink,
     );
-    await localizationPage.closeSfToolBar(page);
+    await boLocalizationPage.closeSfToolBar(page);
 
-    const pageTitle = await localizationPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(localizationPage.pageTitle);
+    const pageTitle = await boLocalizationPage.getPageTitle(page);
+    expect(pageTitle).to.contains(boLocalizationPage.pageTitle);
   });
 
   it('should go to \'Languages\' page', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'goToLanguagesPage', baseContext);
 
-    await localizationPage.goToSubTabLanguages(page);
+    await boLocalizationPage.goToSubTabLanguages(page);
 
     const pageTitle = await languagesPage.getPageTitle(page);
-    await expect(pageTitle).to.contains(languagesPage.pageTitle);
+    expect(pageTitle).to.contains(languagesPage.pageTitle);
   });
 
   it('should reset all filters and get number of languages in BO', async function () {
     await testContext.addContextItem(this, 'testIdentifier', 'resetFilterFirst', baseContext);
 
     numberOfLanguages = await languagesPage.resetAndGetNumberOfLines(page);
-    await expect(numberOfLanguages).to.be.above(0);
+    expect(numberOfLanguages).to.be.above(0);
   });
 
   describe('Filter languages', async () => {
@@ -80,7 +80,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterId',
             filterType: 'input',
             filterBy: 'id_lang',
-            filterValue: Languages.english.id.toString(),
+            filterValue: dataLanguages.english.id.toString(),
           },
       },
       {
@@ -89,7 +89,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterName',
             filterType: 'input',
             filterBy: 'name',
-            filterValue: Languages.english.name,
+            filterValue: dataLanguages.english.name,
           },
       },
       {
@@ -98,7 +98,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterIsoCode',
             filterType: 'input',
             filterBy: 'iso_code',
-            filterValue: Languages.english.isoCode,
+            filterValue: dataLanguages.english.isoCode,
           },
       },
       {
@@ -107,7 +107,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterLanguageCode',
             filterType: 'input',
             filterBy: 'language_code',
-            filterValue: Languages.english.languageCode,
+            filterValue: dataLanguages.english.languageCode,
           },
       },
       {
@@ -116,7 +116,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterDateFormatLite',
             filterType: 'input',
             filterBy: 'date_format_lite',
-            filterValue: Languages.english.dateFormat,
+            filterValue: dataLanguages.english.dateFormat,
           },
       },
       {
@@ -125,7 +125,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterDateFormatFull',
             filterType: 'input',
             filterBy: 'date_format_full',
-            filterValue: Languages.english.fullDateFormat,
+            filterValue: dataLanguages.english.fullDateFormat,
           },
       },
       {
@@ -134,7 +134,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
             testIdentifier: 'filterActive',
             filterType: 'select',
             filterBy: 'active',
-            filterValue: Languages.english.enabled ? '1' : '0',
+            filterValue: dataLanguages.english.enabled ? '1' : '0',
           },
       },
     ];
@@ -152,20 +152,20 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
 
         // Check number of languages
         const numberOfLanguagesAfterFilter = await languagesPage.getNumberOfElementInGrid(page);
-        await expect(numberOfLanguagesAfterFilter).to.be.at.most(numberOfLanguages);
-        await expect(numberOfLanguagesAfterFilter).to.be.at.least(1);
+        expect(numberOfLanguagesAfterFilter).to.be.at.most(numberOfLanguages);
+        expect(numberOfLanguagesAfterFilter).to.be.at.least(1);
 
         for (let i = 1; i <= numberOfLanguagesAfterFilter; i++) {
           if (test.args.filterBy === 'active') {
             const languageStatus = await languagesPage.getStatus(page, i);
-            await expect(languageStatus).to.equal(test.args.filterValue === '1');
+            expect(languageStatus).to.equal(test.args.filterValue === '1');
           } else {
             const textColumn = await languagesPage.getTextColumnFromTable(
               page,
               i,
               test.args.filterBy,
             );
-            await expect(textColumn).to.contains(test.args.filterValue);
+            expect(textColumn).to.contains(test.args.filterValue);
           }
         }
       });
@@ -174,7 +174,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
         await testContext.addContextItem(this, 'testIdentifier', `${test.args.testIdentifier}Reset`, baseContext);
 
         const numberOfLanguagesAfterReset = await languagesPage.resetAndGetNumberOfLines(page);
-        await expect(numberOfLanguagesAfterReset).to.equal(numberOfLanguages);
+        expect(numberOfLanguagesAfterReset).to.equal(numberOfLanguages);
       });
     });
   });
@@ -183,14 +183,14 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
     it('should filter by iso_code \'en\'', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'filterToDisableDefaultLanguage', baseContext);
 
-      await languagesPage.filterTable(page, 'input', 'iso_code', Languages.english.isoCode);
+      await languagesPage.filterTable(page, 'input', 'iso_code', dataLanguages.english.isoCode);
 
       // Check number of languages
       const numberOfLanguagesAfterFilter = await languagesPage.getNumberOfElementInGrid(page);
-      await expect(numberOfLanguagesAfterFilter).to.be.at.least(1);
+      expect(numberOfLanguagesAfterFilter).to.be.at.least(1);
 
       const textColumn = await languagesPage.getTextColumnFromTable(page, 1, 'iso_code');
-      await expect(textColumn).to.contains(Languages.english.isoCode);
+      expect(textColumn).to.contains(dataLanguages.english.isoCode);
     });
 
     it('should disable \'en\' language and check error message', async function () {
@@ -199,14 +199,14 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
       await languagesPage.setStatus(page, 1, false);
 
       const textError = await languagesPage.getAlertDangerBlockParagraphContent(page);
-      await expect(textError).to.equal(languagesPage.unSuccessfulUpdateDefaultLanguageStatusMessage);
+      expect(textError).to.equal(languagesPage.unSuccessfulUpdateDefaultLanguageStatusMessage);
     });
 
     it('should reset all filters', async function () {
       await testContext.addContextItem(this, 'testIdentifier', 'disableDefaultLanguageReset', baseContext);
 
       const numberOfLanguagesAfterReset = await languagesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfLanguagesAfterReset).to.equal(numberOfLanguages);
+      expect(numberOfLanguagesAfterReset).to.equal(numberOfLanguages);
     });
   });
 
@@ -215,14 +215,14 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
       await testContext.addContextItem(this, 'testIdentifier', 'filterToQuickEdit', baseContext);
 
       // Filter table
-      await languagesPage.filterTable(page, 'input', 'iso_code', Languages.french.isoCode);
+      await languagesPage.filterTable(page, 'input', 'iso_code', dataLanguages.french.isoCode);
 
       // Check number od languages
       const numberOfLanguagesAfterFilter = await languagesPage.getNumberOfElementInGrid(page);
-      await expect(numberOfLanguagesAfterFilter).to.be.at.least(1);
+      expect(numberOfLanguagesAfterFilter).to.be.at.least(1);
 
       const textColumn = await languagesPage.getTextColumnFromTable(page, 1, 'iso_code');
-      await expect(textColumn).to.contains(Languages.french.isoCode);
+      expect(textColumn).to.contains(dataLanguages.french.isoCode);
     });
 
     const tests = [
@@ -238,10 +238,10 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
 
         if (isActionPerformed) {
           const resultMessage = await languagesPage.getAlertSuccessBlockParagraphContent(page);
-          await expect(resultMessage).to.contains(languagesPage.successfulUpdateStatusMessage);
+          expect(resultMessage).to.contains(languagesPage.successfulUpdateStatusMessage);
         }
         const languageStatus = await languagesPage.getStatus(page, 1);
-        await expect(languageStatus).to.be.equal(test.args.enabledValue);
+        expect(languageStatus).to.be.equal(test.args.enabledValue);
       });
     });
 
@@ -249,7 +249,7 @@ describe('BO - International - Languages : Filter and quick edit languages', asy
       await testContext.addContextItem(this, 'testIdentifier', 'quickEditReset', baseContext);
 
       const numberOfLanguagesAfterReset = await languagesPage.resetAndGetNumberOfLines(page);
-      await expect(numberOfLanguagesAfterReset).to.equal(numberOfLanguages);
+      expect(numberOfLanguagesAfterReset).to.equal(numberOfLanguages);
     });
   });
 });
